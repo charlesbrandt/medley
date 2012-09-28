@@ -1,26 +1,34 @@
-*2012.09.27 22:21:48 
-looks like medley is the best new name for the module
+*2012.09.28 07:17:53 
+investigating yapsy
+for plugins
+as a solution for different collections needing different, custom parsers and scrapers (always)
 
-*2012.09.27 19:21:55 
-collections conflicts with python.collections module that is part of standard libary
-http://docs.python.org/library/collections.html
-back to the drawing board here
+hg clone http://yapsy.hg.sourceforge.net:8000/hgroot/yapsy/yapsy
 
-*2012.09.26 08:13:21 
-also considering moving in media_marks.py from podcasts
+
+*2012.09.28 06:29:32 
+after looking at applications that leverage mindstream.sources, I'm not sure if I'm ready to move it out... tagger is the one that sticks out...
+wouldn't mind moving mindstream/playlists scripts in to medley
+
+cd /c 
+find * -type f -name "*.py" -exec /c/templates/scripts/global_find.py mindstream.sources \{\} \;
+/c/mindstream/mindstream/sources.py
+alpha/sequencer/sequencer.py
+
+from mindstream.sources import Converter, Sources, Source
+mindstream/playlist/copy_media.py
+
+from mindstream.sources import Converter, Sources, Source
+mindstream/scripts/copy_media.py
+
+from mindstream.sources import Items
+mindstream/tagger/tagger.py
+
+from mindstream.sources import Items
+yoga/code/quotes/quotes.py
+
+requested [2012.09.18 19:01:57] 
 and considering moving in sources from mindstream/mindstream
 
-*2012.09.18 19:01:57 
-new foundation for a media browser, sorter, tagger application
-different from pose
-in that it stores meta data locally / separately from the media itself
-
-should be based on:
-collections   (these could be labels, studios, etc)
-people        (these should be individuals, but might be generalized to bands if no group object)
-
-maybe also:
-groups
-
-(similar to subcircuit)
-
+*2012.09.28 06:35:53 
+consider subcircuit code for sources of structures
