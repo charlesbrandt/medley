@@ -14,7 +14,7 @@ syntax: glob
 
 # switch to regexp syntax.
 syntax: regexp
-markers/.*.svg
+markers/.*.svg$
 markers/.*.m3u
 archive/*
 Medley.egg-info/
