@@ -1,0 +1,26 @@
+*2012.09.27 22:21:48 
+looks like medley is the best new name for the module
+
+*2012.09.27 19:21:55 
+collections conflicts with python.collections module that is part of standard libary
+http://docs.python.org/library/collections.html
+back to the drawing board here
+
+*2012.09.26 08:13:21 
+also considering moving in media_marks.py from podcasts
+and considering moving in sources from mindstream/mindstream
+
+*2012.09.18 19:01:57 
+new foundation for a media browser, sorter, tagger application
+different from pose
+in that it stores meta data locally / separately from the media itself
+
+should be based on:
+collections   (these could be labels, studios, etc)
+people        (these should be individuals, but might be generalized to bands if no group object)
+
+maybe also:
+groups
+
+(similar to subcircuit)
+

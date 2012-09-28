@@ -1,0 +1,79 @@
+/* .class #id */
+
+// Main style sheet for site, using SASS for abstraction.
+//
+// for setup and general css abstraction notes, see README.txt
+//
+// comment lines beginning with '//' will be left out of output
+// standard comments will be left in
+//
+// To compile, run:
+// sass --watch sass:css
+// or
+// sass --line-numbers --watch sass:css
+//
+// can also use different --style options including:
+// 'nested' (default), 'expanded', 'compact', or 'compressed'
+// e.g.:
+// sass --style compressed --watch sass:css
+// http://sass-lang.com/docs/yardoc/file.SASS_REFERENCE.html#output_style
+
+// This file imports the main sections to use for a complete CSS file.
+// These sections be further broken up and restructured as needed by your site.
+
+// *2012.08.30 18:34:20 
+// currently I am using 2 subdirectories to store the subsections:
+// - libs     : for external sources / mixins
+// - partials : for site specific configurations 
+// 
+// looking at other projects is a good source of inspiration for structure
+// http://wiseheartdesign.com/articles/2010/01/22/structuring-a-sass-project/
+// bootstrap is a very polished, less based template/framework
+// https://github.com/twitter/bootstrap/tree/master/less
+
+// Variables section:
+@import '_colors.scss';
+// be sure to use compass and in config.rb include:
+// require "modular-scale"
+@import '_sizes.scss';
+// fonts and sizes:
+@import '_typography.scss';
+
+// Reset mixins attempt to make different browsers behave more consistently.
+// There are many different reset mixins.
+// Compass comes with one:
+// (IMPORTANT... if using compass, must use compass compiler!!!
+// edit config.rb and then:
+// compass watch sass
+//@import "compass/reset";
+// HTML5 boilerplate could be considered another one:
+@import 'libs/_reset.scss';
+// or wait to see if you need one.
+
+// anything that gets used in multiple places should go here:
+@import '_mixins.scss';
+
+// main, default styling elements go here
+@import '_base.scss';
+
+// nav specific defaults:
+@import '_dropdowns.scss';
+@import '_navs.scss';
+@import '_navbar.scss';
+	
+@import '_buttons.scss';
+
+// a place to keep the overall structure of the site:
+// this is also where any changes for media responses go
+// (requires _navbar first)
+@import '_layout.scss';
+// an alternative approach would be to use Susy:
+//@import '_layout-susy.scss';
+
+
+
+
+
+
+
+

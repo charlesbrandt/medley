@@ -1,0 +1,12 @@
+*2012.09.27 18:15:14 complete
+requested [2012.09.26 08:11:51] 
+considering renaming directory to collections
+making a collections module out of models.py
+could then import those and helpers into other projects
+
+*2012.09.25 09:06:41 complete
+foundation is there...
+doesn't do much at this point, but it's a good enough start
+requested [2012.09.19 14:04:39] 
+merge in original code to new foundation
+

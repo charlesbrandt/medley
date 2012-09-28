@@ -1,7 +1,97 @@
-*2012.09.27 22:25:52 todo
+*2012.09.27 22:31:48 code
+/c/medley/instances.txt
+/c/medley/medley/helpers.py
+/c/podcasts/config.json
+/c/medley/medley/templates/navigation.tpl
+/c/medley/medley/templates/footer.tpl
+/c/medley/medley/templates/main.tpl
+/c/medley/medley/js/script.js
+/c/medley/medley/medley.py
+/c/medley/medley/application.py
+
+*2012.09.27 22:31:52 blank
+/c/medley/instances.txt
+
+*2012.09.27 22:31:55 todo
 /c/medley/instances.txt
 /c/medley/launch.sh
 /c/medley/journal.txt
 /c/medley/todo.txt
+
+*2012.09.27 16:27:14 code
+/c/collections/instances.txt
+/c/collections/collections/helpers.py
+/c/podcasts/config.json
+/c/collections/collections/templates/navigation.tpl
+/c/collections/collections/templates/footer.tpl
+/c/collections/collections/templates/main.tpl
+/c/collections/collections/js/script.js
+/c/collections/collections/collections.py
+/c/collections/collections/application.py
+
+*2012.09.27 16:22:03 blank
+/c/collections/instances.txt
+
+*2012.09.27 16:19:08 todo
+/c/collections/instances.txt
+/c/collections/launch.sh
+/c/collections/journal.txt
+/c/collections/todo.txt
+
+*2012.09.25 09:15:10 code
+/c/browser/instances.txt
+/c/browser/code/helpers.py
+/c/podcasts/config.json
+/c/browser/code/templates/navigation.tpl
+/c/browser/code/templates/footer.tpl
+/c/browser/code/templates/main.tpl
+/c/browser/code/js/script.js
+/c/browser/code/models.py
+/c/browser/code/application.py
+
+*2012.09.24 22:45:49 todo
+/c/browser/instances.txt
+/c/browser/launch.sh
+/c/browser/journal.txt
+/c/browser/todo.txt
+
+*2012.09.19 18:05:57 code
+/c/browser/instances.txt
+/c/browser/code/js/script.js
+/c/browser/code/templates/main.tpl
+/c/browser/code/templates/footer.tpl
+/c/browser/code/templates/navigation.tpl
+/c/podcasts/config.json
+/c/browser/code/helpers.py
+/c/browser/code/application.py
+
+*2012.09.19 13:59:29 blank
+/c/browser/instances.txt
+
+*2012.09.19 13:59:01 code
+/c/browser/instances.txt
+/c/browser/code/js/script.js
+/c/browser/code/templates/footer.tpl
+/c/browser/code/templates/navigation.tpl
+/c/browser/code/templates/main.tpl
+/c/browser/code/application.py
+
+*2012.09.19 13:46:05 code
+/c/browser/instances.txt
+/c/browser/code/application.py
+
+*2012.09.19 13:45:46 todo
+/c/browser/instances.txt
+/c/browser/launch.sh
+/c/browser/journal.txt
+/c/browser/todo.txt
+/c/templates/web/README.txt
+
+*2012.09.18 19:00:36 todo
+/c/browser/instances.txt
+/c/browser/launch.sh
+/c/browser/journal.txt
+/c/browser/todo.txt
+
 
 
