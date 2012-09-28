@@ -1,0 +1,34 @@
+Welcome to Medley!
+===================================
+
+You might want to consider regenerating this following the steps outlined at:
+
+http://sphinx.pocoo.org/tutorial.html
+
+which can be summarized as:
+::
+
+  sphinx-quickstart
+  
+Or, you can see what happens with (new_module attempts to configure):
+::
+
+  cd docs/
+  sphinx-build -b html . ./_build/html/
+
+
+Contents:
+
+.. toctree::
+   :maxdepth: 2
+
+   installation
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+

@@ -1,0 +1,15 @@
+Installation
+====================
+
+The best way to get moments is to clone the mercurial repository:
+::
+
+  hg clone http://bitbucket.org/cbrandt/moments
+  cd moments
+  sudo python setup.py install
+
+Another way to get moments is via easy_install. This version is not always the latest and greatest:
+::
+
+  sudo easy_install moments
+
