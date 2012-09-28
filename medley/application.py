@@ -36,7 +36,7 @@ bottle.TEMPLATE_PATH.append(template_path)
 import sys, codecs, json
 
 from helpers import load_json
-from models import Collections, Collection
+from medley import Collections, Collection
 
 #from moments.tag import to_tag
 #from moments.timestamp import Timestamp

@@ -16,3 +16,4 @@ syntax: glob
 syntax: regexp
 markers/.*.svg
 markers/.*.m3u
+archive/*

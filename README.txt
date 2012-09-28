@@ -2,7 +2,9 @@
 Medley
 ==============
 
-Medley provides...
+I was going to call this package Collections, but that conflicts with the standard library module with the same name.  Hence, Medley.
+
+
 
 DOCS
 ---------
