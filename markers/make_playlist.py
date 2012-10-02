@@ -18,13 +18,13 @@ def usage():
 def add_markers(dest):
     #Add in marker items to help with sorting
     dest.write("""#EXTINF:0,1.svg
-/c/collections/markers/1.svg
+/c/medley/markers/1.svg
 #EXTINF:0,2.svg
-/c/collections/markers/2.svg
+/c/medley/markers/2.svg
 #EXTINF:0,3.svg
-/c/collections/markers/3.svg
+/c/medley/markers/3.svg
 #EXTINF:0,4.svg
-/c/collections/markers/4.svg
+/c/medley/markers/4.svg
 """)
 
 def print_m3u(items, dest_file="temp.m3u", append=False):
@@ -53,7 +53,7 @@ def print_m3u(items, dest_file="temp.m3u", append=False):
     dest.close()
 
 if __name__ == '__main__':
-    root = '/c/collections/markers'
+    root = '/c/medley/markers'
     all_items = os.listdir(root)
     items = []
     for i in all_items:
