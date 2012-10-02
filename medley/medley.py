@@ -20,6 +20,8 @@ from helpers import find_and_load_json, load_json, save_json
 
 from moments.path import Path, check_ignore
 
+from yapsy.PluginManager import PluginManager
+
 class Content(object):
     """
     class to hold details of a particular piece of content (media)
@@ -223,13 +225,34 @@ class Content(object):
         
 class Collection(list):
     """
-    object to hold a collection of contents...
-    there are many different ways a collection of contents is stored
+    object to hold the complete meta data for a collection of content...
+    there are many different ways a collection of content can be represented
       - dictionary based on a common key
       - groups (list of lists)
       - flat list
 
     generally a flat list is easiest... allows ordering
+
+    When it comes to all of the data stored for a Collection,
+    including the Content items, there are different ways to represent them.
+    
+    Collections are typically local mirrors of remote content
+    In some media applications, these could be considered a Subscription
+    to an RSS feed.
+    As such, they often need to be checked for new content, but the way
+    this is done is often customized for the source.
+    e.g. not everything *is* RSS based, so a custom scraper is required
+
+    Adding in tailored Content acuisition routines to the Collection would
+    cause clutter.
+
+    Subclassing doesn't make much sense either in this case.
+
+    What would probably work best is a plugin customized for the particular
+    Collection.
+
+    Looking at YAPSY for this.
+    
     """
     def __init__(self, source='', root='', contents=[], walk=False, as_dict=False):
         """
@@ -238,6 +261,9 @@ class Collection(list):
         #this is a json representation of the whole Collection:
         self.source = source
 
+        #can be useful to look back at how the object was loaded.
+        self.walk = walk
+        
         #if we were passed a list of contents, apply them
         if len(contents):
             for s in contents:
@@ -251,23 +277,41 @@ class Collection(list):
 
         if not root:
             #print "Warning, no root"
-            pass
-
-        if self.root and not self.source:
+            self.summary = None
+        else:
             #load CollectionSummary:
             #cs = self.load_collection_summary()
-            cs = CollectionSummary(self.root)
-            meta = cs.latest_meta()
+            self.summary = CollectionSummary(self.root)
+            #TODO:
+            #load custom Synchronizer Plugin (scraper) for this Collection:
+
+            # Build the manager
+            simplePluginManager = PluginManager(plugin_info_ext="medley-plugin")
+            # Tell it the default place(s) where to find plugins
+            #simplePluginManager.setPluginPlaces(["path/to/myplugins"])
+            simplePluginManager.setPluginPlaces([self.root])
+            # Load all plugins
+            simplePluginManager.collectPlugins()            
+
+            # Activate all loaded plugins
+            for pluginInfo in simplePluginManager.getAllPlugins():
+                print "Activating: %s" % pluginInfo.name
+                simplePluginManager.activatePluginByName(pluginInfo.name)
+
+            self.synchronizer = simplePluginManager.getPluginByName(pluginInfo.name)
+
+        if self.root and not self.source:
+            meta = self.summary.latest_meta()
             if meta:
                 self.source = meta
             else:
                 # couldn't find anything, so better walk
-                walk = True
+                self.walk = True
             
             #if we get this far, contents.json seems like a safer default
             #self.source = os.path.join(self.root, 'contents.json')
 
-        if walk:
+        if self.walk:
             #need to know where to walk
             assert root, "NO ROOT SPECIFIED!"
             self.rescan()

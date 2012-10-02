@@ -1,3 +1,17 @@
+*2012.10.01 18:46:38 layout
+/c/medley/instances.txt
+/c/medley/medley/templates/navigation.tpl
+/c/medley/medley/templates/footer.tpl
+/c/medley/medley/templates/layout.tpl
+/c/medley/medley/templates/collections.tpl
+
+*2012.10.01 18:44:50 layout
+/c/medley/instances.txt
+/c/medley/medley/templates/navigation.tpl
+/c/medley/medley/templates/footer.tpl
+/c/medley/medley/templates/main.tpl
+
+
 *2012.09.27 22:31:48 code
 /c/medley/instances.txt
 /c/medley/medley/helpers.py

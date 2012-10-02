@@ -11,7 +11,7 @@
 
 	  <a href="/" title="Collections" class="home_link">
 	    <div class="logo">
-	      <img src="img/logo.png" alt="Collections Logo" /> Collections
+	      <img src="/img/logo.png" alt="Collections Logo" /> Collections
 	    </div>
 	  </a>
 

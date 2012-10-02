@@ -149,6 +149,8 @@ def rescan(collection_name=None):
         collection = get_collection(collection_name)
         
         
+    return template('rescan', collection=collection)
+        
 
 
 @route('/')

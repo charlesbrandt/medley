@@ -19,12 +19,12 @@
   <link href="img/splash-portrait.png" media="screen and (min-device-width: 768px) and (orientation: portrait)" rel="apple-touch-startup-image">
   <link href="img/splash-landscape.png" media="screen and (min-device-width: 768px) and (orientation: landscape)" rel="apple-touch-startup-image">
 
-  <link href="css/style.css" rel="stylesheet" type="text/css" />
+  <link href="/css/style.css" rel="stylesheet" type="text/css" />
 
   <!--[if lte IE 8]>
   <link rel="stylesheet" href="css/fallback.css" />
   <![endif]-->
 
-  <script src="js/libs/modernizr-2.5.2.min.js"></script>
+  <script src="/js/libs/modernizr-2.5.2.min.js"></script>
 
   %#include other javascript at the end of the page to improve loading
