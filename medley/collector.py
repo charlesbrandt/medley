@@ -282,23 +282,13 @@ class Collection(list):
             #load CollectionSummary:
             #cs = self.load_collection_summary()
             self.summary = CollectionSummary(self.root)
-            #TODO:
-            #load custom Synchronizer Plugin (scraper) for this Collection:
 
-            # Build the manager
-            simplePluginManager = PluginManager(plugin_info_ext="medley-plugin")
-            # Tell it the default place(s) where to find plugins
-            #simplePluginManager.setPluginPlaces(["path/to/myplugins"])
-            simplePluginManager.setPluginPlaces([self.root])
-            # Load all plugins
-            simplePluginManager.collectPlugins()            
-
-            # Activate all loaded plugins
-            for pluginInfo in simplePluginManager.getAllPlugins():
-                print "Activating: %s" % pluginInfo.name
-                simplePluginManager.activatePluginByName(pluginInfo.name)
-
-            self.synchronizer = simplePluginManager.getPluginByName(pluginInfo.name)
+            self.summary.load_scraper()
+            print "Finished loading scraper: %s" % self.summary.scraper
+            print type(self.summary.scraper)
+            print dir(self.summary.scraper)
+            #this also makes scraper available via:
+            #self.summary.scraper
 
         if self.root and not self.source:
             meta = self.summary.latest_meta()
@@ -377,23 +367,81 @@ class Collection(list):
 
         print "walking directory for contents: %s" % self.root
         json_check = re.compile('.*\.json$')
-        ignores = ["contents", "collection", "incompletes"]
+        #it might be inefficient to try to filter these here...
+        #too many different names that might work in different contexts
+        #ignores = ["contents", "collection", "incompletes"]
+
+        #instead of looking for ignores
+        #will limit by convention
+        #top level directory should only contain meta jsons
+        #(that should be ignored as content data)
+        #content jsons will always be in a subdirectory
+        #similarly, meta jsons should never be in a subdirectory
         self_root_path = Path(self.root)
         parent = self_root_path.parent()
         if os.path.isdir(self.root):
-            for root,dirs,files in os.walk(self.root):
-                for f in files:
-                    if json_check.search(f) and not check_ignore(f, ignores):
-                        json_file = os.path.join(root, f)
-                        p_root = Path(root)
-                        relative_root = p_root.to_relative(str(parent))
-                        #get rid of leading slash
-                        relative_root = relative_root[1:]
-                        print "loading content from: %s" % json_file
-                        s = Content(json_file, root=relative_root)
-                        self.append(s)
+            #for root,dirs,files in os.walk(self.root):
+            subdirs = self_root_path.load().directories
+            for subdir in subdirs:
+                for root,dirs,files in os.walk(str(subdir)):
+                    for f in files:
+                        #if json_check.search(f) and not check_ignore(f, ignores):
+                        if json_check.search(f):
+                            json_file = os.path.join(root, f)
+                            p_root = Path(root)
+                            relative_root = p_root.to_relative(str(parent))
+                            #get rid of leading slash
+                            relative_root = relative_root[1:]
+                            print "loading content from: %s" % json_file
+                            s = Content(json_file, root=relative_root)
+                            self.append(s)
 
         print "Finished loading %s contents manually" % (len(self))
+
+    def reparse(self):
+        """
+        similar to rescan
+        but this time go through and regenerate the individual json files
+        for each content item
+        from the original HTML source file
+
+        this will utilize the customized Scraper IPlugin module
+        for the given Collection
+
+        typically this should be performed by the Scraper itself
+        during content scans
+
+        not sure how useful this will be
+        other than to make sure integration of YAPSY is working
+        """
+        print "walking directory for contents: %s" % self.root
+        html_check = re.compile('.*\.html$')
+        #any directories that do not contain content should be listed here
+        ignores = [ "pages" ]
+        self_root_path = Path(self.root)
+        parent = self_root_path.parent()
+        #probably safe to assume this, but...
+        if os.path.isdir(self.root):
+            subdirs = self_root_path.load().directories
+            for subdir in subdirs:
+                if not check_ignore(str(subdir), ignores):
+                    for root,dirs,files in os.walk(str(subdir)):
+                        for f in files:
+                            if html_check.search(f):
+                                html_file = os.path.join(root, f)
+                                json = self.summary.scraper.parse_details(html_file)
+                                print json
+                                ## p_root = Path(root)
+                                ## relative_root = p_root.to_relative(str(parent))
+                                ## #get rid of leading slash
+                                ## relative_root = relative_root[1:]
+                                ## print "loading content from: %s" % html_file
+                                ## s = Content(html_file, root=relative_root)
+                                ## self.append(s)
+
+        print "Finished parsing %s contents manually" % (len(self))
+
+
 
     def update(self, new_group):
         """
@@ -455,11 +503,14 @@ class CollectionSummary(object):
      - directories with collection data / images
      - json item lists
      - collection indexes
+
+     this might be a good place to make parent class for subclassing for
+     plugins based on YAPSY and IPlugins.
     """
     def __init__(self, root):
         #if this changes, might need to rename existing files to stay consistent
         #aka: index.json, collection-meta.json
-        self.file = 'collection.json'
+        self.file = 'summary.json'
 
         self.root = root
         self.name = os.path.basename(root)
@@ -472,20 +523,29 @@ class CollectionSummary(object):
         self.locations = []
         self.available = []
 
-        for l in self.locations:
-            if os.path.exists(l):
-                self.available.append(l)
-        
         # a place to keep track of the local json meta indexes
         # and the last time that this system accessed that index
         self.metas = {}
 
         #do not store with collection (might take too long to load quickly)
-        self.items = []
+        #self.items = []
+
+        #data loaded from json representation
+        self.json_data = {}
+
+        #not loaded by default
+        self.collection = None
 
         self.load()
         self.scan_metas()
+
+        for l in self.locations:
+            if os.path.exists(l):
+                self.available.append(l)
+        
+
         self.save()
+
 
     def __str__(self):
         return self.name
@@ -508,11 +568,51 @@ class CollectionSummary(object):
         if not os.path.exists(json_file):
             print "WARNING: couldn't find json on collection load: %s" % (json_file)
         else:
-            loaded = load_json(json_file)
-            if loaded.has_key('locations'):
-                self.locations = loaded['locations']
-            if loaded.has_key('metas'):
-                self.metas = loaded['metas']        
+            self.json_data = load_json(json_file)
+            if self.json_data.has_key('locations'):
+                self.locations = self.json_data['locations']
+            if self.json_data.has_key('metas'):
+                self.metas = self.json_data['metas']        
+
+    def save(self, json_file=None):
+        """
+        save current data for faster lookup next time
+        """
+        if not json_file:
+            json_file = os.path.join(self.root, self.file)
+
+        #collection = { 'locations':self.locations, 'metas':self.metas }
+        self.json_data['locations'] = self.locations
+        self.json_data['metas'] = self.metas
+        self.json_data['name'] = self.name
+        self.json_data['root'] = self.root
+        save_json(json_file, self.json_data) 
+
+    def load_scraper(self):
+        #TODO:
+        #load custom Scraper Plugin (synchronizer) for this Collection:
+
+        print "loading logging"
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
+        
+        print "loading scraper from: %s" % self.root
+        # Build the manager
+        simplePluginManager = PluginManager(plugin_info_ext="medley-plugin")
+        # Tell it the default place(s) where to find plugins
+        #simplePluginManager.setPluginPlaces(["path/to/myplugins"])
+        simplePluginManager.setPluginPlaces([self.root])
+        # Load all plugins
+        simplePluginManager.collectPlugins()    
+
+        # Activate all loaded plugins
+        for pluginInfo in simplePluginManager.getAllPlugins():
+            print "Activating: %s" % pluginInfo.name
+            simplePluginManager.activatePluginByName(pluginInfo.name)
+
+        #self.scraper = simplePluginManager.getPluginByName(pluginInfo.name)
+        self.scraper = simplePluginManager.getPluginByName(self.name)
+        
 
     def load_collection(self, json_file=None):
         """
@@ -531,6 +631,9 @@ class CollectionSummary(object):
                 collection = Collection(root=self.root, walk=True)
         else:
             collection = Collection(json_file)
+
+        #keep track of it here, once it has been loaded
+        self.collection = collection
 
         return collection
 
@@ -554,16 +657,6 @@ class CollectionSummary(object):
             print parts
             #TODO: identify datestring, choose based on datestring
         
-
-    def save(self, json_file=None):
-        """
-        save current data for faster lookup next time
-        """
-        if not json_file:
-            json_file = os.path.join(self.root, self.file)
-
-        collection = { 'locations':self.locations, 'metas':self.metas }
-        save_json(json_file, collection) 
 
     def scan_metas(self):
         """

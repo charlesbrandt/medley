@@ -36,7 +36,7 @@ bottle.TEMPLATE_PATH.append(template_path)
 import sys, codecs, json
 
 from helpers import load_json
-from medley import Collections, Collection
+from collector import Collections, Collection
 
 #from moments.tag import to_tag
 #from moments.timestamp import Timestamp
@@ -138,6 +138,8 @@ def get_collection(collection_name):
     """
     collections = Collections(configs['root'], configs['collection_list'])
     collections.load_summaries()
+    #print "# of collection summaries loaded: %s" % len(collections)
+    #print "looking for: %s" % collection_name
     collection_summary = collections.get_summary(collection_name)
     collection = collection_summary.load_collection()
     return collection
@@ -148,7 +150,8 @@ def rescan(collection_name=None):
     if collection_name:
         collection = get_collection(collection_name)
         
-        
+    collection.reparse()
+    
     return template('rescan', collection=collection)
         
 

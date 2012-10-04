@@ -1,3 +1,11 @@
+*2012.10.03 11:11:44 code
+/c/medley/instances.txt
+/c/podcasts/config.json
+/c/medley/medley/application.py
+/c/medley/medley/scraper.py
+/c/medley/medley/helpers.py
+/c/medley/medley/medley.py
+
 *2012.10.01 18:46:38 layout
 /c/medley/instances.txt
 /c/medley/medley/templates/navigation.tpl
