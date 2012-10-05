@@ -486,9 +486,11 @@ class PluginManager(object):
 			
 			if "__init__" in  os.path.basename(candidate_filepath):
 				sys.path.remove(plugin_info.path)
+
 			# now try to find and initialise the first subclass of the correct plugin interface
 			for element in candidate_globals.itervalues():
 				current_category = None
+				#logging.debug("Checking element: %s" % element)
 				for category_name in self.categories_interfaces:
 					try:
 						is_correct_subclass = issubclass(element, self.categories_interfaces[category_name])
@@ -498,6 +500,7 @@ class PluginManager(object):
 						if element is not self.categories_interfaces[category_name]:
 							current_category = category_name
 							break
+				logging.debug("Current Category: %s" % current_category)
 				if current_category is not None:
 					if not (candidate_infofile in self._category_file_mapping[current_category]): 
 						# we found a new plugin: initialise it and search for the next one

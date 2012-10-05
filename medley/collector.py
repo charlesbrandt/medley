@@ -605,12 +605,15 @@ class CollectionSummary(object):
         # Load all plugins
         simplePluginManager.collectPlugins()    
 
-        # Activate all loaded plugins
-        for pluginInfo in simplePluginManager.getAllPlugins():
-            print "Activating: %s" % pluginInfo.name
-            simplePluginManager.activatePluginByName(pluginInfo.name)
+        number_found = len(simplePluginManager.getAllPlugins())
+        print "Activate all loaded plugins: %s" % number_found
+        for plugin in simplePluginManager.getAllPlugins():
+            plugin.plugin_object.print_name()
+            
+            print "Activating: %s" % plugin.name
+            simplePluginManager.activatePluginByName(plugin.name)
 
-        #self.scraper = simplePluginManager.getPluginByName(pluginInfo.name)
+        #self.scraper = simplePluginManager.getPluginByName(plugin.name)
         self.scraper = simplePluginManager.getPluginByName(self.name)
         
 

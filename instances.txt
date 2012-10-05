@@ -1,3 +1,11 @@
+*2012.10.04 08:32:30 code
+/c/medley/instances.txt
+/c/podcasts/config.json
+/c/medley/medley/helpers.py
+/c/medley/medley/scraper.py
+/c/medley/medley/collector.py
+/c/medley/medley/application.py
+
 *2012.10.03 11:11:44 code
 /c/medley/instances.txt
 /c/podcasts/config.json
