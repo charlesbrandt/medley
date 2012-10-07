@@ -17,6 +17,7 @@ launch by running:
 python application.py /path/to/collection/root/
 
 """
+import logging
 
 from bottle import static_file
 from bottle import get, post, request
@@ -37,6 +38,10 @@ import sys, codecs, json
 
 from helpers import load_json
 from collector import Collections, Collection
+
+logging.basicConfig(level=logging.DEBUG)
+
+
 
 #from moments.tag import to_tag
 #from moments.timestamp import Timestamp

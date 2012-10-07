@@ -122,9 +122,16 @@ import os
 import logging
 import ConfigParser
 
-from yapsy.IPlugin import IPlugin
-from yapsy.PluginInfo import PluginInfo
+#from yapsy.IPlugin import IPlugin
+#from yapsy.PluginInfo import PluginInfo
 
+## from IPlugin import IPlugin
+## from PluginInfo import PluginInfo
+
+#This needs to be the same as our parent class
+#so that issubclass() returns True 
+from medley.yapsy.IPlugin import IPlugin
+from medley.yapsy.PluginInfo import PluginInfo
 
 PLUGIN_NAME_FORBIDEN_STRING=";;"
 """
@@ -487,7 +494,7 @@ class PluginManager(object):
 			if "__init__" in  os.path.basename(candidate_filepath):
 				sys.path.remove(plugin_info.path)
 
-			# now try to find and initialise the first subclass of the correct plugin interface
+		    # now try to find and initialise the first subclass of the correct plugin interface
 			for element in candidate_globals.itervalues():
 				current_category = None
 				#logging.debug("Checking element: %s" % element)
@@ -495,6 +502,7 @@ class PluginManager(object):
 					try:
 						is_correct_subclass = issubclass(element, self.categories_interfaces[category_name])
 					except:
+					    logging.debug("Not a subclass of: %s:%s" % (category_name, self.categories_interfaces[category_name]) )
 						continue
 					if is_correct_subclass:
 						if element is not self.categories_interfaces[category_name]:

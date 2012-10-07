@@ -1,11 +1,3 @@
-*2012.09.28 07:17:53 
-investigating yapsy
-for plugins
-as a solution for different collections needing different, custom parsers and scrapers (always)
-
-hg clone http://yapsy.hg.sourceforge.net:8000/hgroot/yapsy/yapsy
-
-
 *2012.09.28 06:29:32 
 after looking at applications that leverage mindstream.sources, I'm not sure if I'm ready to move it out... tagger is the one that sticks out...
 wouldn't mind moving mindstream/playlists scripts in to medley

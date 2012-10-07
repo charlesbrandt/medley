@@ -284,9 +284,10 @@ class Collection(list):
             self.summary = CollectionSummary(self.root)
 
             self.summary.load_scraper()
-            print "Finished loading scraper: %s" % self.summary.scraper
-            print type(self.summary.scraper)
-            print dir(self.summary.scraper)
+            #print "Finished loading scraper: %s" % self.summary.scraper
+            #print type(self.summary.scraper)
+            #print dir(self.summary.scraper)
+            
             #this also makes scraper available via:
             #self.summary.scraper
 
@@ -414,12 +415,17 @@ class Collection(list):
         not sure how useful this will be
         other than to make sure integration of YAPSY is working
         """
+        ## print "loading logging"
+        ## import logging
+        ## logging.basicConfig(level=logging.DEBUG)
+
         print "walking directory for contents: %s" % self.root
         html_check = re.compile('.*\.html$')
         #any directories that do not contain content should be listed here
         ignores = [ "pages" ]
         self_root_path = Path(self.root)
         parent = self_root_path.parent()
+
         #probably safe to assume this, but...
         if os.path.isdir(self.root):
             subdirs = self_root_path.load().directories
@@ -429,8 +435,16 @@ class Collection(list):
                         for f in files:
                             if html_check.search(f):
                                 html_file = os.path.join(root, f)
+                                print
+                                print
+                                print "Starting check of: %s" % html_file
+
                                 json = self.summary.scraper.parse_details(html_file)
-                                print json
+
+                                json['root'] = relative_episode_dest
+                                save_json(json_path, json)
+
+                                #print json
                                 ## p_root = Path(root)
                                 ## relative_root = p_root.to_relative(str(parent))
                                 ## #get rid of leading slash
@@ -589,12 +603,10 @@ class CollectionSummary(object):
         save_json(json_file, self.json_data) 
 
     def load_scraper(self):
-        #TODO:
-        #load custom Scraper Plugin (synchronizer) for this Collection:
 
-        print "loading logging"
-        import logging
-        logging.basicConfig(level=logging.DEBUG)
+        #print "loading logging"
+        #import logging
+        #logging.basicConfig(level=logging.DEBUG)
         
         print "loading scraper from: %s" % self.root
         # Build the manager
@@ -608,13 +620,13 @@ class CollectionSummary(object):
         number_found = len(simplePluginManager.getAllPlugins())
         print "Activate all loaded plugins: %s" % number_found
         for plugin in simplePluginManager.getAllPlugins():
-            plugin.plugin_object.print_name()
+            #plugin.plugin_object.print_name()
             
             print "Activating: %s" % plugin.name
             simplePluginManager.activatePluginByName(plugin.name)
 
         #self.scraper = simplePluginManager.getPluginByName(plugin.name)
-        self.scraper = simplePluginManager.getPluginByName(self.name)
+        self.scraper = simplePluginManager.getPluginByName(self.name).plugin_object
         
 
     def load_collection(self, json_file=None):

@@ -1,3 +1,13 @@
+*2012.10.05 17:08:19 complete
+took some effort, but I think Yapsy is working for plugins for medley now
+requested [2012.09.28 07:17:53] 
+investigating yapsy
+for plugins
+as a solution for different collections needing different, custom parsers and scrapers (always)
+
+hg clone http://yapsy.hg.sourceforge.net:8000/hgroot/yapsy/yapsy
+
+
 *2012.09.28 07:18:26 complete
 moved in as medley.marks
 requested [2012.09.26 08:13:21] 

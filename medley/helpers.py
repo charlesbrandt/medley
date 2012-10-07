@@ -9,7 +9,8 @@ helper functions, often needed in multiple modules
 
 """
 
-import os, json, codecs
+import os, json, codecs, re
+import logging
 
 from moments.path import Path
 
@@ -37,13 +38,16 @@ def load_json(source_file, create=False):
         json_file.close()
     return json_objects
 
-def find_and_load_json(item):
+def find_and_load_json(item, debug=False):
     """
     look in the same directory as item for a json file
     if found, load it and return the loaded object
     otherwise return None
     """
     if re.search('.*\.json', item):
+        if debug:
+            #print "find_and_load_json: item is a json string: %s" % item
+            logging.debug("find_and_load_json: item is a json string: %s" % item)
         loaded = load_json(item)
     else:
         p = Path(item)
@@ -57,6 +61,9 @@ def find_and_load_json(item):
         loaded = None
         for j in d.files:
             if re.search('.*\.json', str(j)):
+                logging.debug("find_and_load_json: loading from: %s" % j)
+                #print "find_and_load_json: loading from: %s" % j
+
                 match = os.path.join(str(parent), str(j))
                 loaded = load_json(match)
                 #jso = file(os.path.join(str(parent), str(j)))
