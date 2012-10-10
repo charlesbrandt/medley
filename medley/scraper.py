@@ -287,3 +287,13 @@ class Scraper(IPlugin):
 
     def download_items(self, items):
         raise ValueError, "Define in subclass"
+
+    def local_index(self):
+        """
+        render html for use in medley
+        these are always custom for the type of collection involved
+        """
+        pass
+
+    def local_item(self):
+        pass

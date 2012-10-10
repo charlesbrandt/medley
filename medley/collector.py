@@ -14,11 +14,12 @@ these are too specific:
 Song, Podcast, Album, Image, Book, Movie, Scene, 
 
 """
-import os, re
+import os, re, logging
 
 from helpers import find_and_load_json, load_json, save_json
 
 from moments.path import Path, check_ignore
+from moments.timestamp import Timestamp
 
 from yapsy.PluginManager import PluginManager
 
@@ -419,10 +420,10 @@ class Collection(list):
         ## import logging
         ## logging.basicConfig(level=logging.DEBUG)
 
-        print "walking directory for contents: %s" % self.root
+        logging.debug("walking directory for reparse: %s" % self.root)
         html_check = re.compile('.*\.html$')
         #any directories that do not contain content should be listed here
-        ignores = [ "pages" ]
+        ignores = [ "pages", "archive" ]
         self_root_path = Path(self.root)
         parent = self_root_path.parent()
 
@@ -440,20 +441,32 @@ class Collection(list):
                                 print "Starting check of: %s" % html_file
 
                                 json = self.summary.scraper.parse_details(html_file)
+                                self.summary.scraper.save_details(json, html_source=html_file)
 
-                                json['root'] = relative_episode_dest
-                                save_json(json_path, json)
-
-                                #print json
-                                ## p_root = Path(root)
+                                #TODO:
+                                #consider moving json saving into parse_details
+                                #to avoid duplication of efforts
+                                ## p_root = Path(html_file)
                                 ## relative_root = p_root.to_relative(str(parent))
+                                ## logging.debug("html relative path: %s" % relative_root)
                                 ## #get rid of leading slash
                                 ## relative_root = relative_root[1:]
-                                ## print "loading content from: %s" % html_file
-                                ## s = Content(html_file, root=relative_root)
+                                ## json['root'] = relative_root
+                                
+                                ## if json.has_key('date'):
+                                ##     ts = Timestamp(json['date'])
+                                ## else:
+                                ##     ts = Timestamp(f.split('.')[0])
+                                ##     json['date'] = str(ts.compact(accuracy="day"))
+                                ## json_path = os.path.join(root, ts.filename(".json"))
+                                
+                                ## save_json(json_path, json)
+
                                 ## self.append(s)
+                                #(or rescan)
 
         print "Finished parsing %s contents manually" % (len(self))
+        self.rescan()
 
 
 

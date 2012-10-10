@@ -131,7 +131,7 @@ def login_submit():
 def help():
     return template('help')
 
-def get_collection(collection_name):
+def get_summary(collection_name):
     """
     helper to look through local config list of collections
     find the right path
@@ -146,6 +146,10 @@ def get_collection(collection_name):
     #print "# of collection summaries loaded: %s" % len(collections)
     #print "looking for: %s" % collection_name
     collection_summary = collections.get_summary(collection_name)
+    return collection_summary
+    
+def get_collection(collection_name):
+    collection_summary = get_summary(collection_name)
     collection = collection_summary.load_collection()
     return collection
 
@@ -154,10 +158,21 @@ def get_collection(collection_name):
 def rescan(collection_name=None):
     if collection_name:
         collection = get_collection(collection_name)
-        
+
+    print "REPARSING COLLECTION: %s" % (collection_name)
     collection.reparse()
     
     return template('rescan', collection=collection)
+        
+@route('/collection/:collection_name')
+def collection(collection_name=None):
+    if collection_name:
+        summary = get_summary(collection_name)
+        summary.load_scraper()
+    else:
+        summary = None
+
+    return template('collection', summary=summary)
         
 
 

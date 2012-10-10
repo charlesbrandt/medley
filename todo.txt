@@ -1,3 +1,18 @@
+*2012.10.09 22:37:50 
+considering keeping track of states (maybe use a journal? state.txt?)
+many different stages of processing:
+-new item
+-html converted to json
+-downloaded media
+-initial bookmarks (either mort player (mpb) or vlc (m3u))
+-sync bookmarks with track
+-manually tweak/adjust bookmarks with tracks
+-pull out plus items
+-rank plus items 
+-  (consider downloading youtube for plus items? easier to sort that way?)
+-push plus items to discogs
+-global sort of all items in discogs queue
+
 *2012.09.28 06:29:32 
 after looking at applications that leverage mindstream.sources, I'm not sure if I'm ready to move it out... tagger is the one that sticks out...
 wouldn't mind moving mindstream/playlists scripts in to medley
