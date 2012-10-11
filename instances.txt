@@ -1,3 +1,14 @@
+*2012.10.10 17:35:32 code
+/c/medley/instances.txt
+/c/podcasts/config.json
+/c/medley/medley/yapsy/PluginManager.py
+/c/medley/medley/yapsy/IPlugin.py
+/c/medley/medley/helpers.py
+/c/medley/medley/scraper.py
+/c/medley/medley/marks.py
+/c/medley/medley/collector.py
+/c/medley/medley/application.py
+
 *2012.10.04 08:32:30 code
 /c/medley/instances.txt
 /c/podcasts/config.json

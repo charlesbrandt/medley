@@ -38,6 +38,24 @@ def load_json(source_file, create=False):
         json_file.close()
     return json_objects
 
+def find_htmls(item):
+    p = Path(item)
+    if p.type() == "Directory":
+        root = item
+    else:
+        parent = p.parent()
+        root = str(parent)
+
+    matches = []
+    options = os.listdir(root)
+    for o in options:
+        if re.search('.*\.html$', o):
+            html = os.path.join(root, o)
+            matches.append(html)
+            
+    return matches
+    
+
 def find_and_load_json(item, debug=False):
     """
     look in the same directory as item for a json file
