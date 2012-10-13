@@ -38,6 +38,7 @@ class Mark(object):
         self.source = source
 
         #only used in mortplayer
+        #assuming length should be ms?
         self.length = length
         self.created = created
 
@@ -106,15 +107,21 @@ class Mark(object):
         created = str(int(self.created.epoch() * 1000))
         return '\t'.join( [self.source, '1', self.tag, self.position, self.length, created] ) + '\n'
 
-    def as_m3u(self):
+    def as_m3u(self, bitrate=192000):
         """
         return a string representation needed for m3u playlist bookmarks:
+
+        (bitrate is kilobits per second)
         """
         #{name=talk2,bytes=916293,time=37},
+        new_tag = self.tag.replace(',', '_')
         if self.bytes:
-            result = "{name=%s,bytes=%s,time=%s}" % (self.tag, self.bytes, self.total_seconds())
+            result = "{name=%s,bytes=%s,time=%s}" % (new_tag, self.bytes, self.total_seconds())
         else:
-            result = "{name=%s,time=%s}" % (self.tag, self.total_seconds())
+            bytes_per_second = bitrate / 8.0
+            bytes = int((float(self.position) * bytes_per_second) / 1000)
+            result = "{name=%s,bytes=%s,time=%s}" % (new_tag, bytes, self.total_seconds())
+            self.bytes = bytes
         return result
 
 
@@ -179,6 +186,88 @@ class Marks(list):
         f.close()
 
         return self
+
+    def from_m3u(self, source=None):
+        """
+        read in the source
+        update the "files" dictionary with marks
+        """
+        if source is None:
+            source = self.source
+
+        if source is None:
+            raise ValueError, "Need a source sooner or later: %s" % source
+        
+        print "opening: %s" % source
+        #for reading unicode
+        f = codecs.open(source, 'r', encoding='utf-8')
+
+        marks_options = []
+        for line in f.readlines():
+            if re.match("#EXTM3U", line):
+                pass
+            elif re.match("#EXTINF", line):
+                line = line[8:]
+                #print line
+                length, title = line.split(',')
+                #print "length: %s, title: %s" % (length, title)
+            elif re.match("#EXTVLCOPT", line):
+                #latest bookmarks:
+                line = line[21:]
+                parts = line.split('},')
+                #reset this every time... we only want the last one
+                marks_options = []
+                for part in parts:
+                    part = part.replace('{', '')
+                    #print part
+                    part = part.replace('}', '')
+                    sub_parts = part.split(',')
+                    if len(sub_parts) == 3:
+                        fullname, fullbytes, fulltime = sub_parts
+                        #print fullname, fullbytes, fulltime
+                        name = fullname.split('=')[1]
+                        bytes = fullbytes.split('=')[1]
+                        time = fulltime.split('=')[1]
+
+                        bytes_per_second = 24032.0
+                        ms = (float(bytes) / bytes_per_second) * 1000
+                        ms = int(ms)
+
+                        ## if int(time) < 0:
+                        ##     # need to figure out time based on bytes
+                        ##     # sometimes vlc gives negative values 
+                        ##     # that doesn't help
+                        ##     # also [2012.10.12 11:24:19] 
+                        ##     # not just negative values that can be wrong
+                        ##     #
+                        ##     # this value could change based on encoding:
+                        ##     # current bytes per second:
+                        ##     # 24069.11418685121107
+                        ##     # 24023.08172902288413
+                        ##     ms = (float(bytes) / 24032.0) * 1000
+                        ##     ms = int(ms)
+                        ## else:
+                        ##     ms = int(time) * 1000
+                        
+                    else:
+                        raise ValueError, "Unknown number of sub parts in bookmarks: %s" % sub_parts
+
+                    marks_options.append( [ int(ms), name, bytes ] )
+            else:
+                #must have a filename here
+                #now we can process mark options
+                location = line
+                marks_options.sort()
+                for mo in marks_options:
+                    ms, name, bytes = mo
+                    length_ms = int(length) * 1000
+                    details = Mark(name, ms, location, length_ms, bytes=bytes)
+                    self.append(details)
+                    
+        f.close()
+
+        return self
+
 
     def to_mortplayer(self, destination='temp.mpb'):
         """
