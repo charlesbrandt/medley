@@ -1,3 +1,6 @@
+*2012.10.18 11:52:31 
+launch notes in launch.sh
+
 *2012.10.09 22:37:50 
 considering keeping track of states (maybe use a journal? state.txt?)
 many different stages of processing:
