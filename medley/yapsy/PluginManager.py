@@ -664,5 +664,5 @@ class PluginManagerSingleton(object):
 
 # For backward compatility import the most basic decorator (it changed
 # place as of v1.8)
-from yapsy.PluginManagerDecorator import PluginManagerDecorator
+from PluginManagerDecorator import PluginManagerDecorator
 

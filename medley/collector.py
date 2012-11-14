@@ -14,14 +14,15 @@ these are too specific:
 Song, Podcast, Album, Image, Book, Movie, Scene, 
 
 """
-import os, re, logging
+import os, re, logging, codecs, json
 
 from helpers import find_and_load_json, load_json, save_json
 
 from moments.path import Path, check_ignore
 from moments.timestamp import Timestamp
+from moments.journal import Journal
 
-from yapsy.PluginManager import PluginManager
+from medley.yapsy.PluginManager import PluginManager
 
 class Content(object):
     """
@@ -257,6 +258,8 @@ class Collection(list):
     """
     def __init__(self, source='', root='', contents=[], walk=False, as_dict=False):
         """
+        source should be the full path to source
+        
         walk will force a walk, regardless of if a source is available
         """
         #this is a json representation of the whole Collection:
@@ -284,7 +287,13 @@ class Collection(list):
             #cs = self.load_collection_summary()
             self.summary = CollectionSummary(self.root)
 
-            self.summary.load_scraper()
+            #TODO:
+            #*2012.11.09 12:15:37 
+            #this should be optional or configurable
+            #can take a while to scan for a meta directory 
+            #with a lot of meta data
+            #self.summary.load_scraper()
+
             #print "Finished loading scraper: %s" % self.summary.scraper
             #print type(self.summary.scraper)
             #print dir(self.summary.scraper)
@@ -517,7 +526,8 @@ class Collection(list):
         look through all available cluster files
         and choose the right one based on most recent date
         """
-        pass
+        print "MAY WANT TO CALL LOAD CLUSTER DIRECT ON SUMMARY!"
+        return self.summary.load_cluster()
 
 
 
@@ -562,6 +572,8 @@ class CollectionSummary(object):
 
         #not loaded by default
         self.collection = None
+        self.scraper = None
+        self.cluster = None
 
         self.load()
         self.scan_metas()
@@ -639,7 +651,11 @@ class CollectionSummary(object):
             simplePluginManager.activatePluginByName(plugin.name)
 
         #self.scraper = simplePluginManager.getPluginByName(plugin.name)
-        self.scraper = simplePluginManager.getPluginByName(self.name).plugin_object
+        plugin = simplePluginManager.getPluginByName(self.name)
+        if plugin:
+            self.scraper = plugin.plugin_object
+        else:
+            self.scraper = None
         
 
     def load_collection(self, json_file=None):
@@ -654,6 +670,8 @@ class CollectionSummary(object):
         if json_file is None:
             meta = self.latest_meta()
             if meta:
+                #Collection will set root accordingly if meta has full path
+                meta = os.path.join(self.root, meta)
                 collection = Collection(meta)
             else:
                 collection = Collection(root=self.root, walk=True)
@@ -665,10 +683,41 @@ class CollectionSummary(object):
 
         return collection
 
-
-    def latest_meta(self):
+    def load_cluster(self, json_file=None):
         """
-        look through all metas, and return the newest one
+        load the corresponding cluster object
+        should automatically determine the latest version of the meta file
+        and default to that if no other json_file is specified manually
+
+        """
+        print "LOADING CLUSTER: "
+        cluster = None
+        if json_file is None:
+            meta = self.latest_groups()
+            print "meta: %s" % meta
+            if meta:
+                meta = os.path.join(self.root, meta)
+                cluster = Cluster(meta)
+            else:
+                #TODO:
+                #could generate an intial list of all group items
+                #available in the collection
+                #this may be collection specific though
+                pass
+
+        else:
+            cluster = Cluster(json_file)
+
+        #keep track of it here, once it has been loaded
+        self.cluster = cluster
+
+        return cluster
+
+    #aka def latest_cluster(self):
+    def latest_groups(self, debug=True):
+        """
+        similar to latest_meta
+        but only returns the groups meta
         """
         if not len(self.metas.items()):
             self.scan_metas()
@@ -678,13 +727,104 @@ class CollectionSummary(object):
 
 
         assert len(self.metas.items())
-        #find newest meta now
+
+        metas = []
+        groups = []
         for name in self.metas.keys():
+            if re.search('.*\.groups', name):
+                groups.append(name)
+            else:
+                metas.append(name)
+
+            
+        newest_group = None
+        newest_date = None
+        #find newest group now
+        for name in groups:
             #http://stackoverflow.com/questions/1059559/python-strings-split-with-multiple-separators
+            #w+ = a word character (a-z etc.) repeated one or more times
+            #match all of those regardless of separator
             parts = re.findall(r'\w+', name)
-            print parts
-            #TODO: identify datestring, choose based on datestring
-        
+            #print parts
+            for part in parts:
+                try: 
+                    ts = Timestamp(part)
+                    #print ts
+                    if newest_date and (ts.datetime > newest_date.datetime):
+                        #print "Found a newer group: %s (previously: %s)" % (
+                        #    name, newest_date.compact())
+                        newest_date = ts
+                        newest_group = name
+                    elif not newest_date:
+                        newest_date = ts
+                        newest_group = name
+                    else:
+                        #must be an older item 
+                        pass
+                    
+                except:
+                    #must not be a datestring
+                    pass
+                
+        return newest_group
+
+
+    def latest_meta(self):
+        """
+        look through all metas, and return the newest one
+
+        two meta items in common use,
+        the full collection representation
+
+        and the grouping of various meta data into "groups" files
+        """
+        if not len(self.metas.items()):
+            self.scan_metas()
+            #if still no metas exists, then nothing to return
+            if not len(self.metas.items()):
+                return None
+
+
+        assert len(self.metas.items())
+
+        metas = []
+        groups = []
+        for name in self.metas.keys():
+            if re.search('.*\.groups', name):
+                groups.append(name)
+            else:
+                metas.append(name)
+            
+        newest_meta = None
+        newest_date = None
+        #find newest meta now
+        for name in metas:
+            #http://stackoverflow.com/questions/1059559/python-strings-split-with-multiple-separators
+            #w+ = a word character (a-z etc.) repeated one or more times
+            #match all of those regardless of separator
+            parts = re.findall(r'\w+', name)
+            #print parts
+            for part in parts:
+                try: 
+                    ts = Timestamp(part)
+                    #print ts
+                    if newest_date and (ts.datetime > newest_date.datetime):
+                        #print "Found a newer meta: %s (previously: %s)" % (
+                        #    name, newest_date.compact())
+                        newest_date = ts
+                        newest_meta = name
+                    elif not newest_date:
+                        newest_date = ts
+                        newest_meta = name
+                    else:
+                        #must be an older item 
+                        pass
+                    
+                except:
+                    #must not be a datestring
+                    pass
+                
+        return newest_meta
 
     def scan_metas(self):
         """
@@ -698,9 +838,14 @@ class CollectionSummary(object):
             options.remove(self.file)
 
         old_metas = self.metas.keys()
-            
+
+        ignores = [ '~', ]
+
+        #*2012.11.09 11:47:34
+        #not always ending in .json anymore
+        #(but should always have .json in the name)            
         for o in options:
-            if re.search('.*\.json$', o):
+            if re.search('.*\.json', o) and not check_ignore(o, ignores):
                 if not self.metas.has_key(o):
                     #self.metas.append(o)
                     self.metas[o] = { 'length':None, 'updated':None }
@@ -846,8 +991,12 @@ class Cluster(list):
     def __init__(self, source=None, ordered_list=[ [], [], [], [], [], [], [], [], [], [], ]):
         self.extend(ordered_list)
         self.source = source
+        if self.source:
+            self.load()
+
+        #used in from_cloud and to_cloud
+        self.tag = None
         
-    #def save_groups(self, destination, ordered_list):
     def save(self, destination=None):
         """
         similar to save json, but custom formatting to make editing easier
@@ -869,7 +1018,6 @@ class Cluster(list):
         json_file.write(split)
         json_file.close()    
 
-    #def load_groups(self, source):
     def load(self, source=None, create=False):
         """
         """
@@ -901,7 +1049,7 @@ class Cluster(list):
             groups = json.loads(unsplit)
         except:
             #try to pinpoint where the error is occurring:
-            #print unsplit
+            print unsplit
 
             #get rid of outer list:
             unsplit = unsplit[1:-1]
@@ -921,7 +1069,7 @@ class Cluster(list):
 
                     #print count
                     #print summary
-                    print "%s - %s" % (count, summary)
+                    #print "%s - %s" % (count, summary)
                     raise ValueError, "Trouble loading JSON in part %s: %s" % (count, summary)
                 count += 1
 
@@ -932,3 +1080,170 @@ class Cluster(list):
 
         return groups
     
+
+    def from_cloud(self, cloud_file, tag):
+        """
+        sometimes clusters are stored in a cloud file
+        less decoration in that case
+
+        tag will be used to find the latest entry with that tag
+        
+        """
+        self.source = cloud_file
+        self.tag = tag
+        clouds = Journal(cloud_file)
+
+        if clouds.tag(tag):
+            lines = clouds.tags(tag)[0].data.splitlines()
+        else:
+            print "no %s tags found!" % tag
+
+        print len(lines)
+        groups = []
+        for l in lines:
+            new_group = l.split()
+            groups.append(new_group)
+        
+        del self[:]
+        self.extend(groups)
+
+        return groups
+
+    def to_cloud(self, destination=None, tag=None):
+        if destination is None:
+            print "Using previous source: %s" % self.source
+            destination = self.source
+            #print "Using previous source: %s" % ('temp.txt')
+            #destination = 'temp.txt'
+        if tag is None:
+            tag = self.tag
+
+        if not tag:
+            raise ValueError, "Need a tag! (%s)" % tag
+        
+        data = ''
+        ct = 0
+        for group in self:
+            #if you want numbers in the group:
+            #for i in range(20):
+            #    if str(i) in g:
+            #        g.remove(str(i))
+            #group.insert(0, str(ct))
+            
+            data += " ".join(group) + '\n'
+            ct += 1
+
+        clouds = Journal(destination)
+        #make_entry
+        clouds.make(data=data, tags=[tag])
+        clouds.save(destination)
+        print "Saved cloud: %s" % destination
+        
+    
+    def remove(self, ignores):
+        """
+        go through lists and remove all matching items in ignores
+        """
+
+        count = 0
+        for group in self:
+            for item in group:
+                if item in ignores:
+                    print "removing item: %s" % item
+                    group.remove(item)
+                    count += 1
+        print "Removed: %s items from: %s" % (count, self.source)
+        print
+
+    def flatten(self, remove_dupes=True):
+        flat = []
+        for group in self:
+            #print len(group)
+            for item in group:
+                if (not item in flat):
+                    flat.append(item)
+                else:
+                    if remove_dupes:
+                        print "removing dupe: %s" % item
+                        group.remove(item)
+                    else:
+                        print "keeping dupe: %s" % item
+                        
+            #print len(group)
+
+        return flat
+        
+
+    def merge_in(self, incoming, add_new=False, keep_order=False):
+        """
+        take the incoming cluser and merge its items in, moving our items around
+        incoming will be taken as the authority on group membership
+
+        incoming should be modified before merge in
+        if anything should not be merged
+
+        e.g. current unsorted items...
+        wouldn't want those to undo items sorted elsewhere
+
+        if you want to add new items, be sure to set add_new to True
+
+        keep_order will keep the existing order of items in this group
+        probably not what you want
+        """
+
+        self_all = self.flatten()
+        incoming_all = incoming.flatten()
+
+        for ct in range(len(self)):
+            if len(incoming) <= ct:
+                print "skipping index: %s (incoming too short: %s)" % (ct, len(incoming))
+            else:
+                print "checking index: %s" % (ct)
+                cur_self = self[ct]
+                cur_incoming = incoming[ct]
+
+                print "%s items in self.  %s items in incoming" % (len(cur_self), len(cur_incoming))
+
+                new_ct = 0
+
+                #place to keep track of the new order being applied by incoming
+                new_sub = []
+                
+                for item in cur_incoming:
+                    if (not item in self_all) and add_new:
+                        if keep_order:
+                            cur_self.append(item)
+                        else:
+                            new_sub.append(item)
+                        print "New item added: %s" % item
+                    elif not item in self_all:
+                        print "Skipping new item: %s" % item
+                        print
+                    elif not item in cur_self:
+                        #need to go find it in another group and remove it
+                        for sub_ct in range(len(self)):
+                            if sub_ct != ct and (item in self[sub_ct]):
+                                self[sub_ct].remove(item)
+                                if keep_order:
+                                    cur_self.append(item)
+                                else:
+                                    new_sub.append(item)
+                                    
+                                if sub_ct < ct:
+                                    print "down: %s (from %s to %s)" % (item, sub_ct, ct)
+                                else:
+                                    print "up:   %s (from %s to %s)" % (item, sub_ct, ct)
+
+                    else:
+                        #must be in the current group...
+                        #just need to check order preferences
+                        if not keep_order:
+                            new_sub.append(item)
+                            cur_self.remove(item)
+
+                if not keep_order:
+                    new_sub.extend(cur_self)
+                    self[ct] = new_sub
+
+                print "%s: now %s items in destination (self)" % (ct, len(cur_self))
+                print

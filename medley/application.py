@@ -168,11 +168,17 @@ def rescan(collection_name=None):
 def collection(collection_name=None):
     if collection_name:
         summary = get_summary(collection_name)
-        summary.load_scraper()
+        #needed for current podcasts rendering approach:
+        #summary.load_scraper()
+
+        collection = get_collection(collection_name)
+        print "APP load_cluster()"
+        cluster = summary.load_cluster()
+        
     else:
         summary = None
 
-    return template('collection', summary=summary)
+    return template('collection', summary=summary, c=collection, cluster=cluster)
         
 
 

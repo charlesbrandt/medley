@@ -29,7 +29,7 @@
   <!--[if lt IE 7]><p class=chromeframe>Your browser is <em>ancient!</em> <a href="http://browsehappy.com/">Upgrade to a different browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a> to experience this site.</p><![endif]-->
   <div class="page">
 
-  %include navigation active=active
+  %#include navigation active=active
   
   <div id="result"> </div>
 
@@ -37,7 +37,7 @@
   %#easier than passing in body from application.py
   %include
 	
-  %include footer
+  %#include footer
     
   </div><!-- END .page -->    
 

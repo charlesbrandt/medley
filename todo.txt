@@ -1,5 +1,5 @@
-*2012.10.18 11:52:31 
-launch notes in launch.sh
+*2012.11.07 13:39:30 
+wondering if its possible to abstract presentation aspect more?
 
 *2012.10.09 22:37:50 
 considering keeping track of states (maybe use a journal? state.txt?)

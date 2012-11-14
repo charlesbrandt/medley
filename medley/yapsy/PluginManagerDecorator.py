@@ -29,7 +29,7 @@ API
 import os
 import logging
 
-from yapsy.IPlugin import IPlugin
+from IPlugin import IPlugin
 
 
 class PluginManagerDecorator(object):
