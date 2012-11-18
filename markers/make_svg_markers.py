@@ -39,7 +39,7 @@ from svgfig import SVG, Text, Fig, canvas
 #http://code.google.com/p/svgfig/wiki/Introduction
 
 #lounge, calm, chill, move, 
-markers = [ 'relax', 'sleep', 'meditate', 'link', 'love', 'other', 'dance', 'work', 'captain', 'rock', 'podcast', 'jazz', 'dinner', 'highschool', 'disco', 'classics', 'classic_rock', '80s', '90s', 'club', 'hip_hop',  ]
+markers = [ 'relax', 'sleep', 'meditate', 'link', 'love', 'other', 'dance', 'work', 'captain', 'rock', 'podcast', 'jazz', 'dinner', 'highschool', 'disco', 'classics', 'classic_rock', '80s', '90s', 'club', 'hip_hop', 'toget', 'vinyl', 'work' ]
 
 #this is in pixels:
 font_size = "240"
