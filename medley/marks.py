@@ -16,7 +16,7 @@ load in the tab delimited bookmark exported by Mort Player (on Android)
 """
 
 # see also:
-# /c/mindstream/mindstream/sources.py
+# /c/medley/medley/sources.py
 
 import os, sys, codecs, re
 import logging
