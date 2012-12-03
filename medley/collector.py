@@ -14,7 +14,7 @@ these are too specific:
 Song, Podcast, Album, Image, Book, Movie, Scene, 
 
 """
-import os, re, logging, codecs, json
+import os, re, logging, codecs, json, copy
 
 from helpers import find_and_load_json, load_json, save_json
 
@@ -64,7 +64,7 @@ class Content(object):
         self.title = ''
         self.description = ''
         #when content was created or published (according to publisher)
-        self.timestamp = ''
+        self.timestamp = None
 
         self.added = ''
         self.visited = ''
@@ -86,6 +86,7 @@ class Content(object):
         # depending on the process being used to parse 
         self.complete = False
 
+        self.remainder = {}
 
     def load(self, json):
         if source:
@@ -114,7 +115,14 @@ class Content(object):
         if content.has_key('media'):
             self.media = content['media']
             del content['media']
+
+        if content.has_key('sites'):
+            self.sites = content['sites']
+            del content['sites']
             
+        if content.has_key('site'):
+            self.sites.append(content['site'])
+            del content['site']
 
         if content.has_key('people'):
             for person in content['people']:
@@ -133,15 +141,19 @@ class Content(object):
 
         #keep everything left over so we have it later for storing
         self.remainder = content
+        print "Could not process the following when loading Content:"
+        print self.remainder
 
     def to_dict(self):
         snapshot = copy.deepcopy(self.remainder)
         snapshot['tags'] = self.tags
         snapshot['people'] = self.people
-        snapshot['site_name'] = self.site
+        snapshot['sites'] = self.sites
         snapshot['description'] = self.description
         snapshot['title'] = self.title
-        snapshot['timestamp'] = self.timestamp.compact()
+        if self.timestamp:
+            snapshot['timestamp'] = self.timestamp.compact()
+            
         #root can sometimes be full path to a specific drive
         #here we use it as a relative path, so it's the same as base
         snapshot['content_root'] = self.root

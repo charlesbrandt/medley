@@ -11,6 +11,7 @@ helper functions, often needed in multiple modules
 
 import os, json, codecs, re
 import logging
+import subprocess
 
 from moments.path import Path
 
@@ -90,14 +91,14 @@ def find_and_load_json(item, debug=False):
     return loaded
 
 
-
-def get_media_dimensions(movie_p):
+def get_media_dimensions(movie_p, debug=False):
     """
     expects a full path to a media item
     use ffmpeg to query media for dimensions
     return a string representation of the size
     """
-    command1 = "ffmpeg -i %s" % (movie_p)
+    #command1 = "ffmpeg -i %s" % (movie_p)
+    command1 = "avconv -i %s" % (movie_p)
     #print command1
     process = subprocess.Popen(command1, shell=True,
                                stdout=subprocess.PIPE,
@@ -112,9 +113,21 @@ def get_media_dimensions(movie_p):
         #print line
         if re.search('Stream', line):
             if re.search('Video', line):
+                #this is specific to the version of ffmpeg you are using
+                #adjust accordingly
                 parts = line.split(' ')
-                #print "FOUND: %s" % parts[-1]
-                size = parts[-1]
+                if debug:
+                    print "FOUND: %s" % parts
+                #size = parts[-1]
+                for p in parts:
+                    if re.search('x', p) and len(p.split('x')) == 2:
+                        size = p
+
+                #get rid of trailing commas:
+                if re.search(',$', size):
+                    size = size[:-1]
+                    
+                #size = parts[-11]
 
     #print size
     return size
