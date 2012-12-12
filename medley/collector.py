@@ -16,11 +16,12 @@ Song, Podcast, Album, Image, Book, Movie, Scene,
 """
 import os, re, logging, codecs, json, copy
 
-from helpers import find_and_load_json, load_json, save_json
+from helpers import find_and_load_json, load_json, save_json, get_media_dimensions
 
 from moments.path import Path, check_ignore
 from moments.timestamp import Timestamp
 from moments.journal import Journal
+from moments.tag import to_tag
 
 from medley.yapsy.PluginManager import PluginManager
 
@@ -81,6 +82,7 @@ class Content(object):
         # along with dimensions if we calculate those
         # (could be other properties of the media to store)
         self.media = []
+        self.filename = ''
 
         # there are many different states that a piece of content could be in
         # depending on the process being used to parse 
@@ -88,10 +90,25 @@ class Content(object):
 
         self.remainder = {}
 
-    def load(self, json):
+        self.content = content
+
+    def load(self, source=None, debug=False):
+        """
+        TODO:
+        add filename here
+        should be unique
+        this would solve the issue with multiple files in the same directory
+
+        update save() too
+        """
         if source:
             #if it's a path, scan for json:
             content = find_and_load_json(source)
+        else:
+            content = self.content
+
+        if not content:
+            raise ValueError, "No Content!"
 
         if debug:
             print content
@@ -112,9 +129,18 @@ class Content(object):
             self.description = content['description']
             del content['description']
             
+        if content.has_key('content_base'):
+            self.root = content['content_base']
+            del content['content_base']
+
         if content.has_key('media'):
             self.media = content['media']
             del content['media']
+
+        #no path here! filename only!
+        if content.has_key('filename'):
+            self.filename = content['filename']
+            del content['filename']
 
         if content.has_key('sites'):
             self.sites = content['sites']
@@ -141,8 +167,11 @@ class Content(object):
 
         #keep everything left over so we have it later for storing
         self.remainder = content
-        print "Could not process the following when loading Content:"
-        print self.remainder
+
+        if debug:
+            print "Could not process the following when loading Content:"
+            print self.remainder
+
 
     def to_dict(self):
         snapshot = copy.deepcopy(self.remainder)
@@ -156,10 +185,11 @@ class Content(object):
             
         #root can sometimes be full path to a specific drive
         #here we use it as a relative path, so it's the same as base
-        snapshot['content_root'] = self.root
+        #snapshot['content_root'] = self.root
         snapshot['content_base'] = self.root
         snapshot['complete'] = self.complete
         snapshot['media'] = self.media
+        snapshot['filename'] = self.filename
         return snapshot
 
     def save(self, destination=None):
@@ -173,66 +203,212 @@ class Content(object):
 
         save_json(destination, d)
 
-
-    def find_media(self, location, search_for, ignores=[], debug=False):
+    def find_extension(self, search_for, location=None, ignores=[], debug=False):
         """
         search for should be a regular expression, like:
         '.*mp4$'
 
         ignores is a list of regular expressions to exclude
+
+        only look for a specific type of content
         """
+        if location is None:
+            location = self.root
+
         media_check = re.compile(search_for)
-        alternate = re.compile('.*\.wmv')
         options = []
-        alts = []
-        if self.root:
-            path = os.path.join(location, self.root)
-            if os.path.isdir(path):
-                for root,dirs,files in os.walk(path):
-                    for f in files:
-                        ignore = False
-                        for i in ignores:
-                            if re.search(i, f):
-                                ignore = True
-                        if not ignore:
-                            media = os.path.join(root, f)
-                            if media_check.search(f):
-                                options.append(media)
-                            if alternate.search(f):
-                                alts.append(media)
+        
+        if location and os.path.exists(location) and os.path.isdir(location):
+            if debug:
+                print "Drive Available!: %s" % disk
+            for root,dirs,files in os.walk(location):
+                for f in files:
+                    ignore = False
+                    for i in ignores:
+                        if re.search(i, f):
+                            ignore = True
+                    if not ignore:
+                        media = os.path.join(root, f)
+                        if media_check.search(f):
+                            options.append(media)
+        return options
 
-# original version stopped here:
-##         if not len(options) and len(alts):
-##             return alts
-##         else:
-##             return options
+    def find_media(self, location=None, kind="Movie", ignores=[], limit_by_name=False, debug=False):
+        """
+        ideally we just use self.root as the location to look in
+        might be nice to pass it in though
 
-        if not len(options) and len(alts):
-            checking = alts
-        else:
-            checking = options
+        using moments.path.Path.type() here
+        kind can be either "Movie", "Image", or "Sound"
+        """
+        if location is None:
+            location = self.root
+        
+        extensions = {}
+
+        if location and os.path.exists(location) and os.path.isdir(location):
+            if debug: 
+                print "Location Available!: %s" % location
+            for root,dirs,files in os.walk(location):
+                for f in files:
+                    ignore = False
+                    for i in ignores:
+                        if re.search(i, f):
+                            ignore = True
+                    if not ignore:
+                        media = os.path.join(root, f)
+                        mpath = Path(media)
+                        #if debug:
+                        #    print "looking at: %s" % media
+                        if mpath.type() == kind:
+                            if debug:
+                                print "Found %s: %s" % (kind, f)
+                            if extensions.has_key(mpath.extension):
+                                extensions[mpath.extension].append(media)
+                            else:
+                                extensions[mpath.extension] = [ media ]
+                        else:
+                            #this can be *very* verbose...
+                            #probably want to keep it commented out,
+                            #even for debugging!
+                            ## if debug:
+                            ##     #print "Skipping %s: %s" % (mpath.type(), media)
+                            ##     print "Skipping %s: %s" % (mpath.type(), f)
+                            pass
 
         if debug:
-            print "before looking at cache, found: %s items" % len(checking)
+            print "found the following:"
+
+        combined = []
+        for key in extensions.keys():
+            combined.extend(extensions[key])
+
+            if debug:
+                print "%s %ss" % (len(extensions[key]), key)
+
+        if debug:
+            print "Found %s media files" % (len(combined))
+            #print combined
+
+
+        print "LIMIT BY NAME: %s, FILENAME: %s" % (limit_by_name, self.filename)
+        if limit_by_name and self.filename:
+            if debug:
+                print "using filename: %s to filter list" % self.filename
+
+            accepted = []
+            for item in combined:
+                if re.search(self.filename, item):
+                    accepted.append(item)
+
+            if debug:
+                print "The following items match: %s" % accepted
+            combined = accepted
+            
+        #at this point, could store result
+        #or could look for sizes
+        #or could generate generic summary files based on what we do know
+
+        return combined
+
+    def update_dimensions(self, options, force=False, debug=False):
+        """
+        compare options with our internal list of media
+        
+        options is a list of paths to media
+
+        #two common ways to generate them:
+        #this will not distinguish between different file formats
+        options = self.find_media()
+
+        #if you need to do that:
+        #options = self.find_extension()
+        """
+        if debug:
+            print "before looking at cache, found: %s items" % len(options)
 
         matches = []
-        for item in checking[:]:
-            for m in self.media:
-                if item == m[0]:
-                    matches.append(m)
-                    checking.remove(item)
 
+        if not force:
+            for item in options[:]:
+                for m in self.media:
+                    if item == m[0] and (len(m) > 1):
+                        matches.append(m)
+                        if item in options:
+                            options.remove(item)
+        
         if debug:
             print "after looking at cache, matched: %s items" % len(matches)
-            print "still need to find: %s new items" % len(checking)
+            print "still need to find: %s new items" % len(options)
 
-        for item in checking:
+        for item in options:
             size = get_media_dimensions(item)
             matches.append( [item, size] )
 
         self.media = matches
 
         return self.media
+
+
+##     def find_media(self, location, search_for, ignores=[], debug=False):
+##         """
+##         search for should be a regular expression, like:
+##         '.*mp4$'
+
+##         ignores is a list of regular expressions to exclude
+##         """
+##         media_check = re.compile(search_for)
+##         alternate = re.compile('.*\.wmv')
+##         options = []
+##         alts = []
+##         if self.root:
+##             path = os.path.join(location, self.root)
+##             if os.path.isdir(path):
+##                 for root,dirs,files in os.walk(path):
+##                     for f in files:
+##                         ignore = False
+##                         for i in ignores:
+##                             if re.search(i, f):
+##                                 ignore = True
+##                         if not ignore:
+##                             media = os.path.join(root, f)
+##                             if media_check.search(f):
+##                                 options.append(media)
+##                             if alternate.search(f):
+##                                 alts.append(media)
+
+## # original version stopped here:
+## ##         if not len(options) and len(alts):
+## ##             return alts
+## ##         else:
+## ##             return options
+
+##         if not len(options) and len(alts):
+##             checking = alts
+##         else:
+##             checking = options
+
+##         if debug:
+##             print "before looking at cache, found: %s items" % len(checking)
+
+##         matches = []
+##         for item in checking[:]:
+##             for m in self.media:
+##                 if item == m[0]:
+##                     matches.append(m)
+##                     checking.remove(item)
+
+##         if debug:
+##             print "after looking at cache, matched: %s items" % len(matches)
+##             print "still need to find: %s new items" % len(checking)
+
+##         for item in checking:
+##             size = get_media_dimensions(item)
+##             matches.append( [item, size] )
+
+##         self.media = matches
+
+##         return self.media
             
 
 
@@ -268,7 +444,7 @@ class Collection(list):
     Looking at YAPSY for this.
     
     """
-    def __init__(self, source='', root='', contents=[], walk=False, as_dict=False):
+    def __init__(self, source='', root='', contents=[], walk=False, as_dict=False, debug=False):
         """
         source should be the full path to source
         
@@ -328,10 +504,15 @@ class Collection(list):
             #need to know where to walk
             assert root, "NO ROOT SPECIFIED!"
             self.rescan()
+        elif self.source:
+            if debug:
+                print "Loading Collection from: %s" % self.source
+            self.load(debug=debug)
         else:
-            self.load()
+            #might want to create one from scratch.
+            pass
         
-    def load(self, source=None):
+    def load(self, source=None, debug=False):
         if source:
             self.source = source
             
@@ -344,16 +525,25 @@ class Collection(list):
 
                 #if as_dict:
                 if isinstance(json_contents, dict):
+                    if debug:
+                        print "Reading JSON as dictionary"
                     for content in json_contents.values():
                         s = Content(content=content)
+                        s.load()
+                        if debug:
+                            print s
                         self.append(s)
                 else:
+                    if debug:
+                        print "Reading JSON as list"
                     # storing as a list seems most versatile
                     # can create a dictionary version later
                     # (too many ways to index)
                     for content in json_contents:
-                        #print content
+                        if debug:
+                            print content
                         s = Content(content=content)
+                        s.load()
                         self.append(s)
             else:
                 print "WARNING: couldn't find contents json path: %s" % self.source
@@ -1000,7 +1190,7 @@ class Cluster(list):
     to generate intricate playlists based on a number of factors
     """
 
-    def __init__(self, source=None, ordered_list=[ [], [], [], [], [], [], [], [], [], [], ]):
+    def __init__(self, source=None, ordered_list=[]):
         self.extend(ordered_list)
         self.source = source
         if self.source:

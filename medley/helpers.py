@@ -14,6 +14,7 @@ import logging
 import subprocess
 
 from moments.path import Path
+from moments.journal import Journal
 
 def save_json(destination, json_objects):
     json_file = codecs.open(destination, 'w', encoding='utf-8', errors='ignore')
