@@ -660,7 +660,7 @@ class M3U(list):
             else:
                 #must have a filename here
                 #now we can process mark options
-                location = line
+                location = line.strip()
                 marks_options.sort()
                 for mo in marks_options:
                     ms, name, bytes = mo
@@ -673,6 +673,53 @@ class M3U(list):
 
         return self
 
+    def save(self, destination, verify=True, flat=False):
+        """
+        TODO:
+        this does not yet deal with saving marks
+        that can be added as needed
+        see marks.to_m3u()
+        """
+        if destination is None:
+            destination = self.source
+
+        if destination is None:
+            raise ValueError, "Need a destination sooner or later: %s" % destination
+        
+        print "opening: %s" % destination
+        f = codecs.open(destination, 'w', encoding='utf-8')
+
+        m3u = u"#EXTM3U\r\n"
+        for item in self:
+            #TODO:
+            #debug path with special characters:
+            #print item
+            #s = Path(item)
+            #if (verify and s.exists()) or (not verify):
+            if (verify and os.path.exists(item)) or (not verify):
+                #could use an ID3 library to load this information here:
+                length = 0
+                artist = u""
+                title = os.path.basename(item)
+                #either of these should work as long as no paths
+                #have been converted to strings along the way
+                #m3u += u"#EXTINF:{0}\r\n".format(title)
+                m3u += u"#EXTINF:%s,%s - %s\r\n" % (unicode(length), unicode(artist), unicode(title))
+                
+
+                if flat:
+                    #m3u += s.path.filename
+                    m3u += title
+                else:
+                    m3u += item
+
+                m3u += u"\r\n"
+            else:
+                print "Ignoring. Item not found: %s" % s.path
+
+        f.write(m3u)
+        f.close()
+        return m3u
         
 
 

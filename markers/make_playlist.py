@@ -12,20 +12,24 @@
 
 import os, sys, codecs, re
 
+ROOT = "/c/medley/markers"
+
 def usage():
     print __doc__
+
             
 def add_markers(dest):
+    global ROOT
     #Add in marker items to help with sorting
     dest.write("""#EXTINF:0,1.svg
-/c/medley/markers/1.svg
+%s/1.svg
 #EXTINF:0,2.svg
-/c/medley/markers/2.svg
+%s/2.svg
 #EXTINF:0,3.svg
-/c/medley/markers/3.svg
+%s/3.svg
 #EXTINF:0,4.svg
-/c/medley/markers/4.svg
-""")
+%s/4.svg
+""" % (ROOT, ROOT, ROOT, ROOT))
 
 def print_m3u(items, dest_file="temp.m3u", append=False):
     if append:
@@ -53,7 +57,8 @@ def print_m3u(items, dest_file="temp.m3u", append=False):
     dest.close()
 
 if __name__ == '__main__':
-    root = '/c/medley/markers'
+    #root = '/c/medley/markers'
+    root = ROOT
     all_items = os.listdir(root)
     items = []
     for i in all_items:
