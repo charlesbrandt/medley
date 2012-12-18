@@ -332,7 +332,11 @@ class Content(object):
         if not force:
             for item in options[:]:
                 for m in self.media:
-                    if item == m[0] and (len(m) > 1):
+                    #if the path matches,
+                    #media has a size field,
+                    #and the size has a value
+                    if item == m[0] and (len(m) > 1) and (m[1]):
+                        print "skipping: %s because it matched %s" % (item, m)
                         matches.append(m)
                         if item in options:
                             options.remove(item)
@@ -343,6 +347,8 @@ class Content(object):
 
         for item in options:
             size = get_media_dimensions(item)
+            if debug:
+                print "FOUND SIZE: %s" % size
             matches.append( [item, size] )
 
         self.media = matches
@@ -752,6 +758,9 @@ class CollectionSummary(object):
         self.file = 'summary.json'
 
         self.root = root
+        #just incase meta files are not stored in the root of the collection
+        self.meta_root = root
+        
         self.name = os.path.basename(root)
         if not self.name:
             #maybe there was a trailing slash... this should fix that:
@@ -807,8 +816,17 @@ class CollectionSummary(object):
             json_file = os.path.join(self.root, self.file)
 
         if not os.path.exists(json_file):
-            print "WARNING: couldn't find json on collection load: %s" % (json_file)
-        else:
+            #check one more place...
+            #common to keep these files in a 'meta' directory
+            alt_json_file = os.path.join(self.root, 'meta', self.file)
+            if not os.path.exists(alt_json_file):
+                print "WARNING: couldn't find json on collection load: %s" % (json_file)
+            else:
+                self.meta_root = os.path.join(self.root, 'meta')
+                json_file = alt_json_file
+
+        #now see if we have something
+        if os.path.exists(json_file):
             self.json_data = load_json(json_file)
             if self.json_data.has_key('locations'):
                 self.locations = self.json_data['locations']
@@ -820,13 +838,14 @@ class CollectionSummary(object):
         save current data for faster lookup next time
         """
         if not json_file:
-            json_file = os.path.join(self.root, self.file)
+            json_file = os.path.join(self.meta_root, self.file)
 
         #collection = { 'locations':self.locations, 'metas':self.metas }
         self.json_data['locations'] = self.locations
         self.json_data['metas'] = self.metas
         self.json_data['name'] = self.name
         self.json_data['root'] = self.root
+        self.json_data['meta_root'] = self.meta_root
         save_json(json_file, self.json_data) 
 
     def load_scraper(self):
@@ -898,7 +917,7 @@ class CollectionSummary(object):
             meta = self.latest_groups()
             print "meta: %s" % meta
             if meta:
-                meta = os.path.join(self.root, meta)
+                meta = os.path.join(self.meta_root, meta)
                 cluster = Cluster(meta)
             else:
                 #TODO:
@@ -925,6 +944,7 @@ class CollectionSummary(object):
             self.scan_metas()
             #if still no metas exists, then nothing to return
             if not len(self.metas.items()):
+                print "No meta found in scan (latest_groups())"
                 return None
 
 
@@ -984,6 +1004,7 @@ class CollectionSummary(object):
             self.scan_metas()
             #if still no metas exists, then nothing to return
             if not len(self.metas.items()):
+                print "No meta found in scan"
                 return None
 
 
@@ -1034,9 +1055,10 @@ class CollectionSummary(object):
         make sure any previously found ones still exist
         add new ones        
         """
-        options = os.listdir(self.root)
+        options = os.listdir(self.meta_root)
+        print "scan_metas in %s, %s options found" % (self.meta_root, len(options))
         if self.file in options:
-            self.load()
+            #self.load()
             options.remove(self.file)
 
         old_metas = self.metas.keys()
@@ -1126,6 +1148,7 @@ class Collections(list):
         del self[:]
         
         if collection_list:
+            print "Updating Collections.paths to: %s" % collection_list
             self.paths = collection_list
             
         for path in self.paths:
@@ -1395,6 +1418,13 @@ class Cluster(list):
 
         self_all = self.flatten()
         incoming_all = incoming.flatten()
+
+        #expand self to be legth of incoming:
+        if len(incoming) > len(self):
+            size_diff = len(incoming) - len(self)
+            print "EXPANDING CLUSTER BY %s" % size_diff
+            for ct in range(size_diff):
+                self.append([])
 
         for ct in range(len(self)):
             if len(incoming) <= ct:
