@@ -613,7 +613,10 @@ class M3U(list):
             elif re.match("#EXTINF", line):
                 line = line[8:]
                 #print line
-                length, title = line.split(',')
+                #length, title = line.split(',')
+                parts = line.split(',')
+                length = parts[0]
+                title = parts[1]
                 #print "length: %s, title: %s" % (length, title)
             elif re.match("#EXTVLCOPT", line):
                 #latest bookmarks:
@@ -715,7 +718,7 @@ class M3U(list):
 
                 m3u += u"\r\n"
             else:
-                print "Ignoring. Item not found: %s" % s.path
+                print "Ignoring. Item not found: %s" % item
 
         f.write(m3u)
         f.close()

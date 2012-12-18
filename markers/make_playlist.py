@@ -17,11 +17,10 @@ ROOT = "/c/medley/markers"
 def usage():
     print __doc__
 
-            
-def add_markers(dest):
+
+def get_markers():
     global ROOT
-    #Add in marker items to help with sorting
-    dest.write("""#EXTINF:0,1.svg
+    return """#EXTINF:0,1.svg
 %s/1.svg
 #EXTINF:0,2.svg
 %s/2.svg
@@ -29,7 +28,11 @@ def add_markers(dest):
 %s/3.svg
 #EXTINF:0,4.svg
 %s/4.svg
-""" % (ROOT, ROOT, ROOT, ROOT))
+""" % (ROOT, ROOT, ROOT, ROOT)
+
+def add_markers(dest):
+    #Add in marker items to help with sorting
+    dest.write(get_markers())
 
 def print_m3u(items, dest_file="temp.m3u", append=False):
     if append:

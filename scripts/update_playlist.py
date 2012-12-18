@@ -30,6 +30,12 @@ from medley.marks import M3U
 from moments.path import Path, check_ignore
 from moments.timestamp import Timestamp
 
+# one directory up, 
+_root_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+_module_dir = os.path.join(_root_dir, "markers")
+sys.path.insert(0, _module_dir)
+from make_playlist import ROOT
+
 def usage():
     print __doc__
 
@@ -42,9 +48,10 @@ def usage():
 ## media_check.search(b)
 
 def add_new(source_list, source_dir, destination=None):
-    ignores = ["classics", "misc", "other", "youtube-dl", "playlists"]
+    #ignores = ["classics", "misc", "other", "youtube-dl", "playlists"]
+    ignores = ["playlists"]
 
-    media_check = re.compile('(.*\.flv$|.*\.mp4$|.*\.mp3$)')
+    media_check = re.compile('(.*\.flv$|.*\.mp4$|.*\.mp3$|.*\.mov$)')
 
     m3u = M3U(source_list)
     if os.path.isdir(source_dir):
@@ -53,8 +60,12 @@ def add_new(source_list, source_dir, destination=None):
         #subdirs = os.listdir(source_dir)
         for subdir in subdirs:
             print ""
-            print "SUBDIR: %s" % subdir
-            if not check_ignore(str(subdir), ignores):
+            if check_ignore(str(subdir), ignores):
+                print "SKIP (IGNORES): %s" % subdir
+            else:
+                print "SUBDIR: %s" % subdir
+                m3u.extend( [ "%s/1.svg" % ROOT, "%s/2.svg" % ROOT, "%s/3.svg" % ROOT, "%s/4.svg" % ROOT, "%s.svg" % (subdir) ] )
+
                 for root,dirs,files in os.walk(unicode(subdir)):
                     for f in files:
                         #TODO:
@@ -69,6 +80,9 @@ def add_new(source_list, source_dir, destination=None):
                             if not media_file in m3u:
                                 m3u.append(media_file)
                                 print "adding: %s" % media_file
+                            else:
+                                #print "already have: %s" % media_file
+                                pass
                         else:
                             print "skipping: %s" % media_file
 
