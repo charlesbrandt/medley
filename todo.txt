@@ -1,3 +1,7 @@
+*2013.01.03 12:40:39 
+consider connections with sequencing, movie_db, etc
+should those be kept separate?
+
 *2012.11.07 13:39:30 
 wondering if its possible to abstract presentation aspect more?
 

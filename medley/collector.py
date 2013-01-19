@@ -279,6 +279,26 @@ class Content(object):
         if debug:
             print "found the following:"
 
+        if len(extensions.keys()) > 1:
+            #more than one extension...
+            #check for duplicate versions of the same file
+
+            #could order some how... just sorting for now
+            filenames = []
+            sorted_keys = extensions.keys()
+            sorted_keys.sort()
+            print "SORTED KEYS: %s" % sorted_keys
+            for ext in sorted_keys:
+                for media in extensions[ext][:]:
+                    mpath = Path(media)
+                    if mpath.name in filenames:
+                        extensions[ext].remove(media)
+                        print "REMOVING DUPE: %s" % media
+                    else:
+                        filenames.append(mpath.name)
+                    
+                
+
         combined = []
         for key in extensions.keys():
             combined.extend(extensions[key])
