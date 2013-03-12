@@ -47,11 +47,35 @@ def usage():
 ## media_check.search(a)
 ## media_check.search(b)
 
+def scan_dir(m3u, subdir):
+    media_check = re.compile('(.*\.flv$|.*\.mp4$|.*\.mp3$|.*\.mov$)')
+
+    m3u.extend( [ "%s/1.svg" % ROOT, "%s/2.svg" % ROOT, "%s/3.svg" % ROOT, "%s/4.svg" % ROOT, "%s.svg" % (subdir) ] )
+
+    for root,dirs,files in os.walk(unicode(subdir)):
+        for f in files:
+            #TODO:
+            #general function is_media(f)
+            #one place that looks for file types
+            #and can group based on type (sound, video, image)
+            #maybe part of path?
+            #already there?
+
+            media_file = os.path.abspath(os.path.join(root, f))
+            if media_check.search(f):
+                if not media_file in m3u:
+                    m3u.append(media_file)
+                    print "adding: %s" % media_file
+                else:
+                    #print "already have: %s" % media_file
+                    pass
+            else:
+                print "skipping: %s" % media_file
+    
+
 def add_new(source_list, source_dir, destination=None):
     #ignores = ["classics", "misc", "other", "youtube-dl", "playlists"]
     ignores = ["playlists"]
-
-    media_check = re.compile('(.*\.flv$|.*\.mp4$|.*\.mp3$|.*\.mov$)')
 
     m3u = M3U(source_list)
     if os.path.isdir(source_dir):
@@ -64,27 +88,13 @@ def add_new(source_list, source_dir, destination=None):
                 print "SKIP (IGNORES): %s" % subdir
             else:
                 print "SUBDIR: %s" % subdir
-                m3u.extend( [ "%s/1.svg" % ROOT, "%s/2.svg" % ROOT, "%s/3.svg" % ROOT, "%s/4.svg" % ROOT, "%s.svg" % (subdir) ] )
+                scan_dir(m3u, subdir)
 
-                for root,dirs,files in os.walk(unicode(subdir)):
-                    for f in files:
-                        #TODO:
-                        #general function is_media(f)
-                        #one place that looks for file types
-                        #and can group based on type (sound, video, image)
-                        #maybe part of path?
-                        #already there?
+        scan_dir(m3u, source_dir)
 
-                        media_file = os.path.abspath(os.path.join(root, f))
-                        if media_check.search(f):
-                            if not media_file in m3u:
-                                m3u.append(media_file)
-                                print "adding: %s" % media_file
-                            else:
-                                #print "already have: %s" % media_file
-                                pass
-                        else:
-                            print "skipping: %s" % media_file
+
+    else:
+        print "NOT A DIRECTORY: %s" % source_dir
 
     print ""
     print ""
