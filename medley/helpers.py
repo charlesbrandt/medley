@@ -97,6 +97,8 @@ def get_media_dimensions(movie_p, debug=False):
     expects a full path to a media item
     use ffmpeg to query media for dimensions
     return a string representation of the size
+
+    sudo apt-get install libav-tools
     """
     #command1 = "ffmpeg -i %s" % (movie_p)
     command1 = "avconv -i %s" % (movie_p)

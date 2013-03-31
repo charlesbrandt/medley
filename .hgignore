@@ -18,3 +18,5 @@ markers/.*.svg$
 markers/.*.m3u
 archive/*
 Medley.egg-info/
+build/*
+dist/*
