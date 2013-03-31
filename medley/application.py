@@ -143,8 +143,8 @@ def get_summary(collection_name):
     """
     collections = Collections(configs['root'], configs['collection_list'])
     collections.load_summaries()
-    #print "# of collection summaries loaded: %s" % len(collections)
-    #print "looking for: %s" % collection_name
+    print "# of collection summaries loaded: %s" % len(collections)
+    print "looking for: %s" % collection_name
     collection_summary = collections.get_summary(collection_name)
     return collection_summary
     
@@ -168,12 +168,15 @@ def rescan(collection_name=None):
 def collection(collection_name=None):
     if collection_name:
         summary = get_summary(collection_name)
+        print summary
         #needed for current podcasts rendering approach:
         #summary.load_scraper()
 
         collection = get_collection(collection_name)
+        print collection
         print "APP load_cluster()"
         cluster = summary.load_cluster()
+        print cluster
         
     else:
         summary = None

@@ -935,7 +935,7 @@ class CollectionSummary(object):
         cluster = None
         if json_file is None:
             meta = self.latest_groups()
-            print "meta: %s" % meta
+            print "meta: %s (None means no clusters/.groups files found)" % meta
             if meta:
                 meta = os.path.join(self.meta_root, meta)
                 cluster = Cluster(meta)
@@ -944,7 +944,7 @@ class CollectionSummary(object):
                 #could generate an intial list of all group items
                 #available in the collection
                 #this may be collection specific though
-                pass
+                cluster = Cluster()
 
         else:
             cluster = Cluster(json_file)
@@ -958,7 +958,7 @@ class CollectionSummary(object):
     def latest_groups(self, debug=True):
         """
         similar to latest_meta
-        but only returns the groups meta
+        but only returns the groups/cluster meta
         """
         if not len(self.metas.items()):
             self.scan_metas()
@@ -978,7 +978,8 @@ class CollectionSummary(object):
             else:
                 metas.append(name)
 
-            
+
+        print "FOUND THE FOLLOWING GROUP OPTIONS (%s): %s" % (len(groups), groups)
         newest_group = None
         newest_date = None
         #find newest group now
