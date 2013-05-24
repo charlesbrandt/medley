@@ -16,6 +16,15 @@ more of a movie / media database front end.
 launch by running:
 python application.py /path/to/collection/root/
 
+
+
+*2013.05.17 15:17:53
+SEE ALSO:
+python /c/mindstream/mindstream/launch.py -c /c/alpha/music_manager todo
+
+python /c/mindstream/mindstream/launch.py -c /c/trees todo
+
+
 """
 import logging
 
