@@ -60,6 +60,7 @@ class Content(object):
 
         """
         self.collection = ''
+        #a relative root / source relative to collection base
         self.root = root
         
         self.title = ''
@@ -246,6 +247,9 @@ class Content(object):
         
         extensions = {}
 
+        if debug:
+            print "Looking at Location: %s" % location
+
         if location and os.path.exists(location) and os.path.isdir(location):
             if debug: 
                 print "Location Available!: %s" % location
@@ -311,7 +315,8 @@ class Content(object):
             #print combined
 
 
-        print "LIMIT BY NAME: %s, FILENAME: %s" % (limit_by_name, self.filename)
+        if debug:
+            print "LIMIT BY NAME: %s, FILENAME: %s" % (limit_by_name, self.filename)
         if limit_by_name and self.filename:
             if debug:
                 print "using filename: %s to filter list" % self.filename
@@ -839,11 +844,11 @@ class CollectionSummary(object):
             #check one more place...
             #common to keep these files in a 'meta' directory
             alt_json_file = os.path.join(self.root, 'meta', self.file)
+            json_file = alt_json_file
+            self.meta_root = os.path.join(self.root, 'meta')
             if not os.path.exists(alt_json_file):
                 print "WARNING: couldn't find json on collection load: %s" % (json_file)
-            else:
-                self.meta_root = os.path.join(self.root, 'meta')
-                json_file = alt_json_file
+                                
 
         #now see if we have something
         if os.path.exists(json_file):
