@@ -61,6 +61,7 @@ if len(sys.argv) > 1:
                 count += 1
                 
         destination.write(line)
-    print "%s updated from %s" % (count, source_name)
+    print "%s updated from: %s" % (count, source_name)
+    print "and saved to: %s" % (output)
     source.close()
     destination.close()
