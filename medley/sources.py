@@ -56,18 +56,18 @@ class Position(object):
     error checking and representing positions
     """
     def __init__(self, length=0, position=0, loop=True):
-        self._position = position
+        self._index = position
         self._length = length
         self.loop = loop
 
     def __int__(self):
-        return self.position
+        return self.index
 
     def __str__(self):
-        return str(self.position)
+        return str(self.index)
 
     def __repr__(self):
-        return self.position
+        return self.index
 
     def _get_length(self):
         return self._length
@@ -75,20 +75,12 @@ class Position(object):
         self.change_length(l)
     length = property(_get_length, _set_length)
 
-    def _get_position(self):
-        return self._position
-    def _set_position(self, p):
-        self._position = self.check(p)
-    position = property(_get_position, _set_position)
+    def _get_index(self):
+        return self._index
+    def _set_index(self, p):
+        self._index = self.check(p)
+    index = property(_get_index, _set_index)
     
-##     def set(self, position):
-##         """
-##         would be nice if this just overrides the default set
-##         TODO: look up overriding that, maybe check moments.timestamp
-##         """
-##         self.position = self.check(position)
-
-
     def end(self):
         """
         the value for the last object
@@ -99,7 +91,7 @@ class Position(object):
         """
         return a boolean value for if our position is equal to the end
         """
-        return self.position == self.end()
+        return self.index == self.end()
 
     def change_length(self, length):
         """
@@ -132,25 +124,25 @@ class Position(object):
     def next(self, value=1):
         """
         gives the position for the next item
-        but does not actually increment the position
+        but does not actually increment the index
         """
-        if self.position+value >= self.length:
+        if self.index+value >= self.length:
             if self.loop:
                 return 0
             else:
                 #staying at the end
-                #return self.position
+                #return self.index
                 #return self.length-1
                 return self.end()
         else:
-            return self.position+value
+            return self.index+value
     
     def previous(self, value=1):
         """
         gives the position for the next item
-        but does not actually increment the position
+        but does not actually increment the index
         """
-        if self.position-value < 0:
+        if self.index-value < 0:
             if self.loop:
                 #return self.length-1
                 return self.end()
@@ -159,23 +151,25 @@ class Position(object):
                 #(should be 0 already)
                 return 0
         else:
-            return self.position-value
+            return self.index-value
 
     def increment(self, value=1):
         """
-        changes the actual position variable
+        changes the actual index variable
         """
-        self.position = self.next(value)
-        return self.position
+        self.index = self.next(value)
+        return self.index
 
     def decrement(self, value=1):
         """
-        changes the actual position variable
+        changes the actual index variable
         """
-        self.position = self.previous(value)
-        return self.position
+        self.index = self.previous(value)
+        return self.index
 
-class Items(list):
+#previously: (too generic)
+#class Items(list):
+class PositionList(list):
     """
     generic list with a position associated with it
     position will get updated with call to update()
@@ -211,7 +205,8 @@ class Items(list):
     position = property(_get_position, _set_position)
     
     #aka get_current?
-    def get(self, position=None):
+    #def get(self, position=None):
+    def current(self, position=None):
         """
         get calls will not change our position
         """
@@ -230,10 +225,19 @@ class Items(list):
             #checking if position is out of range here:
             return self[self._position.check(position)]
 
-    def get_previous(self):
+    #changing the interface to be the same as it is with Position object:
+    #def get_previous(self):
+    def previous(self):
+        """
+        get the previous item in the list without changing position
+        """
         return self.get(self._position.previous())
 
-    def get_next(self):
+    #def get_next(self):
+    def next(self):
+        """
+        get the next item in the list without changing position
+        """
         if self.new:
             self.new = False
             return self.get()
@@ -252,14 +256,25 @@ class Items(list):
         self.current = item
         return item
 
-    def go_next(self):
+    #changing the interface to be the same as it is with Position object:
+    #def go_next(self):
+    def increment(self):
+        """
+        go to the next item in the list (and change our position accordingly)
+        """
         return self.go(self._position.next())
         
-    def go_previous(self):
+    #def go_previous(self):
+    def decrement(self):
+        """
+        go to the previous item in the list
+        (and change our position accordingly)
+        """
         return self.go(self._position.previous())
 
     #maybe rename to update_length to avoid confusion with replace functionality
-    def update(self):
+    #def update(self):
+    def update_length(self):
         """
         update the position so it knows our new length
         should be called any time items are added or removed to the list
@@ -300,6 +315,11 @@ class Items(list):
     ##     ## while key and reverse touch each element only once.
         
     ##     self.sort(*args, **kwargs)
+
+#*2013.06.11 17:21:17
+#deprecated...
+#should either use just a simple Path object
+#or a medley.collector.Content object
 
 class Source(object):
     """
@@ -364,6 +384,7 @@ class Source(object):
         else:
             key = ( self.path )
         return key
+
 
 def sorter(source):
     p = str(source.path)
