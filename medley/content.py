@@ -121,6 +121,8 @@ class Mark(object):
 
 
 
+
+
 class Content(object):
     """
     Object to hold details of a particular piece of content (media)
@@ -192,6 +194,16 @@ class Content(object):
         self.remainder = {}
 
         self.content = content
+
+    def __str__(self):
+        """
+        when cast to a string, probably want the first media file path
+        """
+        #return self.as_moment().render()
+        if len(self.media):
+            return self.media[0]
+        else:
+            return ""
 
     def load(self, source=None, debug=False):
         """
@@ -479,6 +491,31 @@ class Content(object):
         self.media = matches
 
         return self.media
+
+    def as_moment(self, use_file_created=True, new_entry=False):
+        moment = Moment()
+        if self.entry and not new_entry:
+            moment.tags = self.entry.tags
+            moment.created = self.entry.created
+        elif new_entry:
+            #want to keep the file the same, but nothing else
+            moment.tags = Tags()
+            
+        else:
+            moment.tags = Tags()
+            
+            created = self.path.created()
+            if created and use_file_created:
+                moment.created = created
+                #otherwise we just want to stick with 'now' default of init
+
+        if self.jumps:
+            moment.data = "# -sl %s %s" % (self.jumps.to_comma(), self.path)
+        else:
+            moment.data = str(self.path)
+
+
+        return moment
 
 
 ##     def find_media(self, location, search_for, ignores=[], debug=False):
