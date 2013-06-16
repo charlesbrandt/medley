@@ -20,7 +20,7 @@ import logging
 from moments.timestamp import Timestamp
 from moments.path import Path
 
-from content import Mark
+from content import Mark, Content
 
 def usage():
     print __doc__
@@ -33,106 +33,21 @@ class M3U(list):
     the most simple format is simply a list of strings,
     where each string represents a path to a specific media
 
-    TODO:
-    should also support a list of Content objects (both save and load)
-    for more complex sorting.
     """
     def __init__(self, source=None):
         self.source = source
 
-        #TODO:
-        #marks should be associated with a Content object
-        self.marks = Marks()
         if source:
             self.load()
 
-    #TODO:
-    #incorporate this version that handles marks
-    def from_m3u(self, source=None):
+    def load(self, source=None, look_for_meta=False):
         """
         read in the source
-        update the "files" dictionary with marks
-        """
-        if source is None:
-            source = self.source
+        update the 'self.marks' dictionary with found marks
 
-        if source is None:
-            raise ValueError, "Need a source sooner or later: %s" % source
-        
-        print "opening: %s" % source
-        #for reading unicode
-        f = codecs.open(source, 'r', encoding='utf-8')
-
-        marks_options = []
-        for line in f.readlines():
-            if re.match("#EXTM3U", line):
-                pass
-            elif re.match("#EXTINF", line):
-                line = line[8:]
-                #print line
-                length, title = line.split(',')
-                #print "length: %s, title: %s" % (length, title)
-            elif re.match("#EXTVLCOPT", line):
-                #latest bookmarks:
-                line = line[21:]
-                parts = line.split('},')
-                #reset this every time... we only want the last one
-                marks_options = []
-                for part in parts:
-                    part = part.replace('{', '')
-                    #print part
-                    part = part.replace('}', '')
-                    sub_parts = part.split(',')
-                    if len(sub_parts) == 3:
-                        fullname, fullbytes, fulltime = sub_parts
-                        #print fullname, fullbytes, fulltime
-                        name = fullname.split('=')[1]
-                        bytes = fullbytes.split('=')[1]
-                        time = fulltime.split('=')[1]
-
-                        bytes_per_second = 24032.0
-                        ms = (float(bytes) / bytes_per_second) * 1000
-                        ms = int(ms)
-
-                        ## if int(time) < 0:
-                        ##     # need to figure out time based on bytes
-                        ##     # sometimes vlc gives negative values 
-                        ##     # that doesn't help
-                        ##     # also [2012.10.12 11:24:19] 
-                        ##     # not just negative values that can be wrong
-                        ##     #
-                        ##     # this value could change based on encoding:
-                        ##     # current bytes per second:
-                        ##     # 24069.11418685121107
-                        ##     # 24023.08172902288413
-                        ##     ms = (float(bytes) / 24032.0) * 1000
-                        ##     ms = int(ms)
-                        ## else:
-                        ##     ms = int(time) * 1000
-                        
-                    else:
-                        raise ValueError, "Unknown number of sub parts in bookmarks: %s" % sub_parts
-
-                    marks_options.append( [ int(ms), name, bytes ] )
-            else:
-                #must have a filename here
-                #now we can process mark options
-                location = line
-                marks_options.sort()
-                for mo in marks_options:
-                    ms, name, bytes = mo
-                    length_ms = int(length) * 1000
-                    details = Mark(name, ms, location, length_ms, bytes=bytes)
-                    self.append(details)
-                    
-        f.close()
-
-        return self
-
-    def load(self, source=None):
-        """
-        read in the source
-        update the "files" dictionary with marks
+        if look_for_meta,
+        scan for json file in same directory as media file
+        then load Content data
         """
         if source is None:
             source = self.source
@@ -202,22 +117,222 @@ class M3U(list):
                 #must have a filename here
                 #now we can process mark options
                 location = line.strip()
+                content = Content()
+                content.media.append(location)
+
+                #TODO:
+                #update Content filename and root with location data
+
+                #could also look for json data and load it if available.
+                
                 marks_options.sort()
                 for mo in marks_options:
+                    #TODO:
+                    #could check for duplicate marks here
                     ms, name, bytes = mo
                     length_ms = int(length) * 1000
                     details = Mark(name, ms, location, length_ms, bytes=bytes)
-                    self.marks.append(details)
-                self.append(location)
+                    content.marks.append(details)
+                self.append(content)
+
+                if look_for_meta:
+                    content.load()
                     
         f.close()
 
         return self
 
-    #TODO:
-    #incorporate this version that handles saving marks
+
+    def save(self, destination, verify=False, flat=False):
+        """
+        Save the M3U to a file
+        """
+        if destination is None:
+            destination = self.source
+
+        if destination is None:
+            raise ValueError, "Need a destination sooner or later: %s" % destination
+        
+        print "opening: %s" % destination
+        f = codecs.open(destination, 'w', encoding='utf-8')
+
+        m3u = u"#EXTM3U\r\n"
+        for item in self:
+            #check if item is a string or a Content object
+            if isinstance(item, Content):
+                path = item.media[0]
+                bmarks = []
+                for mark in item.marks:
+                    bmarks.append(mark.as_m3u())
+                bookmarks = ','.join(bmarks)
+            else:
+                path = item
+                bookmarks = ''
+                
+            if (verify and os.path.exists(path)) or (not verify):
+                #TODO:
+                #could use an ID3 library to load this information here:
+                length = 0
+                artist = u""
+                title = os.path.basename(path)
+
+                #either of these should work as long as no paths
+                #have been converted to strings along the way
+                #m3u += u"#EXTINF:{0}\r\n".format(title)
+                m3u += u"#EXTINF:%s,%s - %s\r\n" % (unicode(length), unicode(artist), unicode(title))
+                
+                if bookmarks:
+                    m3u += "#EXTVLCOPT:bookmarks=%s\r\n" % bookmarks
+
+
+                if flat:
+                    #m3u += s.path.filename
+                    m3u += title
+                else:
+                    m3u += path
+
+                m3u += u"\r\n"
+            else:
+                print "Ignoring. Item not found: %s" % path
+
+        f.write(m3u)
+        f.close()
+        return m3u
+        
+
+
+
+class TextIndex():
+    
+    #previously Marks.save_marks
+    #outputs a text list of media and track lists
+    def save_marks(self, files):
+        for key in files.keys():
+            files[key].sort()
+            pre_parts = key.split('/') 
+            parts = pre_parts[-1].split('.')
+            destination = parts[0] + '.txt'
+            f = codecs.open(destination, 'w', encoding='utf-8')
+
+            ##TODO
+            # print original bookmark source filename (in case we ever want to load them back in)
+
+            #concise version
+            for item in files[key]:
+                print item
+                [ ms1, hours, minutes, seconds, name, created, location ] = item
+                f.write("%02d:%02d:%02d %s\n" % (hours, minutes, seconds, name))
+
+            f.write("\n\n\n")
+
+            #detailed (moments) version
+            for item in files[key]:
+                [ ms1, hours, minutes, seconds, name, created, location ] = item
+                f.write("*%s\n" % created)
+                f.write("%02d:%02d:%02d %s\n\n" % (hours, minutes, seconds, name))
+
+            f.close()
+
+
+#previously:
+#class Marks(list):
+class MortplayerBookmarks(list):
+    """
+    focusing this class specifically on the Mortplayer Bookmark format
+
+    A collection of marks should start showing up in many places
+    and ideally should just be a list of Mark objects
+    associated with a specific Content object
+
+    format specific methods should be grouped by the format
+    to avoid a collosal 'Converter' type object again.
+
+
+    
+    
+    marks is a dictionary of files and their corresponding Mark objects
+
+    can probably just use a standard dictionary for this
+
+    (or, if you want a list of Marks for a file, a standard list should suffice)
+
+    *2012.10.10 17:51:52
+    starting with a list
+
+    if a dictionary is needed, it can be generated with specific details
+
+    """
+    def __init__(self, source=None):
+        self.source = source
+
+    
+    #def from_mortplayer(self, source=None):
+    def load(self, source=None):
+        """
+        read in the source
+        update the "files" dictionary with marks
+        """
+        if source is None:
+            source = self.source
+
+        if source is None:
+            raise ValueError, "Need a source sooner or later: %s" % source
+        
+        print "opening: %s" % source
+        #for reading unicode
+        f = codecs.open(source, 'r', encoding='utf-8')
+
+        for line in f.readlines():
+            (location, number, name, ms1, end, utime) = line.strip().split('\t')
+            if number == "1":
+                created = Timestamp()
+                created.from_epoch(float(utime) / 1000)
+                #print "*%s %s" % (created, name)
+
+                ## #print (location, number, name, ms1, end, utime)
+                ## (hours, minutes, seconds) = convert_milliseconds(ms1)
+                ## #print "%s:%02d:%02d" % (hours, minutes, seconds)
+
+                ## ## if not end:
+                ## ##     end = 0
+                ## ## (hours, minutes, seconds) = convert_milliseconds(end)
+                ## ## print "%s:%02d:%02d" % (hours, minutes, seconds)
+
+                ## details = [ int(ms1), hours, minutes, seconds, name, created, location ]
+
+                #name, position, length, created, source
+                #details = Mark(name, ms1, end, created, location)
+
+                #name, position, source, length, created
+                details = Mark(name, ms1, location, end, created)
+
+                self.append(details)
+
+        f.close()
+
+        return self
+
+
+    #def to_mortplayer(self, destination='temp.mpb'):
+    def save(self, destination='temp.mpb'):
+        """
+        """
+        print "saving to: %s" % destination
+        #for writing unicode
+        f = codecs.open(destination, 'w', encoding='utf-8')
+
+        for mark in self:
+            f.write(mark.as_mortplayer())
+        f.close()
+
 
     def to_m3u(self, destination="temp.m3u", verify=False):
+        """
+        this is a helper for going directly from mortplayer to m3u
+
+        it is also possible to convert to a standard M3U object first
+        then save from there.
+        """
         f_marks = {}
         self.group_marks_by_file(f_marks)
         m3u = "#EXTM3U\r\n"
@@ -248,56 +363,247 @@ class M3U(list):
         return m3u
 
 
+    def group_marks_by_file(self, files=None, source=None):
+        if not source is None:
+            self.from_mortplayer(source)
 
-    def save(self, destination, verify=True, flat=False):
-        """
-        TODO:
-        this does not yet deal with saving marks
-        that can be added as needed
-        see marks.to_m3u()
-        """
-        if destination is None:
-            destination = self.source
+        if not len(self):
+            raise ValueError, "no marks to process: %s" % len(self)
 
-        if destination is None:
-            raise ValueError, "Need a destination sooner or later: %s" % destination
-        
-        print "opening: %s" % destination
-        f = codecs.open(destination, 'w', encoding='utf-8')
+        if files is None:
+            files = {}
 
-        m3u = u"#EXTM3U\r\n"
-        for item in self:
-            #TODO:
-            #debug path with special characters:
-            #print item
-            #s = Path(item)
-            #if (verify and s.exists()) or (not verify):
-            if (verify and os.path.exists(item)) or (not verify):
-                #could use an ID3 library to load this information here:
-                length = 0
-                artist = u""
-                title = os.path.basename(item)
-                #either of these should work as long as no paths
-                #have been converted to strings along the way
-                #m3u += u"#EXTINF:{0}\r\n".format(title)
-                m3u += u"#EXTINF:%s,%s - %s\r\n" % (unicode(length), unicode(artist), unicode(title))
-                
-
-                if flat:
-                    #m3u += s.path.filename
-                    m3u += title
-                else:
-                    m3u += item
-
-                m3u += u"\r\n"
+        for mark in self:
+            location = mark.source
+            if files.has_key(location):
+                files[location].append(mark)
             else:
-                print "Ignoring. Item not found: %s" % item
+                files[location] = [ mark ] 
 
-        f.write(m3u)
-        f.close()
-        return m3u
+        return files
+
+    def group_marks_by_tracks(self, f_marks=None, default_pattern='bis*'):
+        """
+        take group_marks_by_file one step further
+        and group the marks based on common tagging patterns
+
+        does not pair sub groups with a track automatically
+        this can be done elsewhere
+
+        default_pattern can be specified based on
+        what the application making bookmarks used when no tag/title supplied
+        (can vary from application to application...
+        e.g. filename, track title from ID3, etc)
+        """
+        if f_marks is None:
+            f_marks = self.group_marks_by_file()
+
+        new_f_marks = {}
         
+        for key in f_marks.keys():
+            #could find default pattern and insert it here instead of "start"
+            file_groups = [ ]
 
+            in_talk = False
+
+            current_group = [ Mark("start", 0, key) ]
+            for next_mark in f_marks[key]:
+                if re.search('skip*', next_mark.tag) or re.search('talk*', next_mark.tag) or re.search('\+', next_mark.tag):
+                    current_group.append( next_mark )
+                    if re.search('talk*', next_mark.tag):
+                        in_talk = True
+
+                    #can deal with plusses externally
+                    #elif re.search('\+', next_mark.tag):
+                    #    plusses.append(previous_track)
+                    #    plusses.append(line)
+
+                elif in_talk:
+                    #we want to skip the normal tag after an item...
+                    #this usually ends the talking
+                    #TODO:
+                    #sometimes the end of talking
+                    #and the start of the next track
+                    #is the same
+                    #would be nice to identify...
+                    #might be one of the manual steps
+                    
+                    current_group.append( next_mark )
+                    in_talk = False
+
+                #this is the start of a new track / current_group
+                elif re.match(default_pattern, next_mark.tag):
+                    #add previous track to file_groups
+                    file_groups.append(current_group)
+                    current_group = [ next_mark ]
+
+                else:
+                    #probably just a description of some kind:
+                    current_group.append( next_mark )
+                    print "Unmatched tag: %s" % next_mark.tag
+
+            #don't forget last group found:
+            file_groups.append(current_group)
+            new_f_marks[key] = file_groups
+            
+        return new_f_marks
+
+
+
+
+
+
+    #def find_pluses(files):
+    #def find_bookmarks(source):
+    def find_pluses(self, source):
+
+        log_check = re.compile('.*\.mpb$')    
+        if os.path.isdir(source):
+            f_marks = {}
+            for root,dirs,files in os.walk(source):
+                for f in files:
+                    current_file = os.path.join(root, f)
+                    if log_check.search(f):
+                        #marks = from_mortplayer(current_file)
+                        marks = Marks(current_file)
+                        marks.from_mortplayer()
+                        marks.group_marks_by_file(f_marks)
+
+                        print current_file
+
+            #pluses = find_pluses(f_marks)
+            files = f_marks
+
+            matched = []
+            for key in files.keys():
+                for mark in files[key]:
+                    if re.search('\+', mark.tag):
+                        matched.append(mark)
+
+            pluses = matched
+            to_mortplayer(pluses)
+            #print f_marks
+
+        #print matched
+        #return matched
+
+    def update_locations(self, old_prefix, new_prefix):
+        """
+        only update locations for loaded marks
+        
+        """
+        for mark in self:
+            #year = date[0:4]
+            #prefix = '/mnt/sdcard/external_sd/podcasts/beats_in_space/'
+            #new_source = os.path.join(prefix, year, date, correct_name)
+            relative = Path(mark.source).to_relative(old_prefix)
+            new_source = os.path.join(new_prefix, relative)
+            
+            if new_source != mark.source:
+                logging.debug("original source: %s" % mark.source)
+                logging.debug("new source: %s" % new_source)
+
+            mark.source = new_source
+
+    #TODO
+    #haven't checked past here since converting to Marks object
+
+
+
+    def update_locations_many_files(self, source):
+        """
+        go through all bookmark files (mpb) and update any old locations to be the new one in use
+        (don't want to lose those marks!)
+        """
+        log_check = re.compile('.*\.mpb$')    
+        if os.path.isdir(source):
+            for root,dirs,files in os.walk(source):
+                for f in files:
+                    current_file = os.path.join(root, f)
+                    if log_check.search(f):
+
+                        marks = from_mortplayer(current_file)
+                        print current_file
+                        for mark in marks:
+                            #print mark.source
+                            parts = mark.source.split('/')
+                            name_parts = parts[-1].split('-')
+
+                            #print len(name_parts)
+                            if len(name_parts) == 3:
+                                #print "new name format: %s" % parts[-1]
+                                correct_name = parts[-1]
+                                date = correct_name.split('-')[1]                        
+                            else:
+                                #print "old name format: %s" % parts[-1]
+                                date = ''.join(name_parts[1:4])
+                                correct_name = '-'.join( [ name_parts[0], date, name_parts[-1] ] )
+                                #print correct_name
+
+                            year = date[0:4]
+                            prefix = '/mnt/sdcard/external_sd/podcasts/beats_in_space/'
+                            new_source = os.path.join(prefix, year, date, correct_name)
+                            if new_source != mark.source:
+                                print mark.source
+                                print new_source
+
+                            mark.source = new_source
+
+                        #save the update
+                        to_mortplayer(marks, current_file)
+
+
+    #TODO:
+    #Move this as part of a Collection???
+    def check_bookmark_availability(self, source):
+        """
+        find bookmarks and directories with text files available
+
+        (should also populate f_marks via group_marks_by_file)
+        """
+        log_check = re.compile('.*\.mpb$')    
+        text_check = re.compile('.*\.txt$')    
+        f_marks = {}
+        if os.path.isdir(source):
+            for root,dirs,files in os.walk(source):
+                bookmark_found = False
+                for f in files:
+                    current_file = os.path.join(root, f)
+                    if log_check.search(f):
+                        #print current_file
+
+                        marks = from_mortplayer(current_file)
+                        group_marks_by_file(marks, f_marks)
+                        bookmark_found = True
+                if not bookmark_found:
+                    print "No bookmarks for: %s" % root
+                    for f in files:
+                        if text_check.search(f):
+                            print f
+                    print ""
+
+        return f_marks
+
+    #TODO:
+    #Move this as part of a Collection???
+    def find_bookmarks(self, source):
+        """
+        find and load all bookmarks under source
+        return results
+        """
+        log_check = re.compile('.*\.mpb$')    
+        f_marks = {}
+        if os.path.isdir(source):
+            for root,dirs,files in os.walk(source):
+                bookmark_found = False
+                for f in files:
+                    current_file = os.path.join(root, f)
+                    if log_check.search(f):
+                        #print current_file
+                        marks = from_mortplayer(current_file)
+                        group_marks_by_file(marks, f_marks)
+
+        return f_marks
 
 
 class Converter(object):
@@ -609,26 +915,6 @@ class Converter(object):
         destination.update()
         return destination
     
-    def from_m3u(self, filename=None, sources=None):
-        if not filename:
-            filename = self.path
-        f = codecs.open(filename, encoding='latin_1')
-
-        if not sources:
-            sources = Sources()
-                        
-        for line in f.readlines():
-            line = unicode(line)
-            if line.startswith('#') or len(line.strip()) == 0:
-                pass
-            else:
-                sources.append(Source(path=line.strip()))
-                #self.append(line.strip())
-
-        f.close
-        sources.update()
-        return sources
-
     def from_copy_all_urls(self, data):
         """
         parse a buffer that contains output from copy all urls as a list
@@ -694,29 +980,6 @@ class Converter(object):
             links += "\r\n"
         return links
 
-    def to_m3u(self, sources, verify=True, flat=False, remote=False):
-        m3u = "#EXTM3U\r\n"
-        for s in sources:
-            if (verify and s.path.exists()) or (not verify):
-                #obj = self.get_object(i)
-                i = str(s.path)
-                #could use an ID3 library to load this information here:
-                length = 0
-                artist = ""
-                title = os.path.basename(i)
-                m3u += "#EXTINF:%s,%s - %s\r\n" % (length, artist, title)
-                if remote:
-                    m3u += url_for(obj.custom_relative_path(prefix="/sound"), qualified=True)
-                elif flat:
-                    m3u += s.path.filename
-                else:
-                    m3u += i
-
-                m3u += "\r\n"
-            else:
-                print "Ignoring. Item not found: %s" % s.path
-        return m3u
-
     def to_xspf(self, filename=None):        
         xspf = StringIO.StringIO("Hello")
         xml = XmlWriter(xspf, indentAmount='  ')
@@ -753,378 +1016,6 @@ class Converter(object):
         xspf.seek(0)
         return xspf.read()
 
-class TextIndex():
-    
-    #previously Marks.save_marks
-    #outputs a text list of media and track lists
-    def save_marks(self, files):
-        for key in files.keys():
-            files[key].sort()
-            pre_parts = key.split('/') 
-            parts = pre_parts[-1].split('.')
-            destination = parts[0] + '.txt'
-            f = codecs.open(destination, 'w', encoding='utf-8')
-
-            ##TODO
-            # print original bookmark source filename (in case we ever want to load them back in)
-
-            #concise version
-            for item in files[key]:
-                print item
-                [ ms1, hours, minutes, seconds, name, created, location ] = item
-                f.write("%02d:%02d:%02d %s\n" % (hours, minutes, seconds, name))
-
-            f.write("\n\n\n")
-
-            #detailed (moments) version
-            for item in files[key]:
-                [ ms1, hours, minutes, seconds, name, created, location ] = item
-                f.write("*%s\n" % created)
-                f.write("%02d:%02d:%02d %s\n\n" % (hours, minutes, seconds, name))
-
-            f.close()
-
-
-#TODO:
-#consider moving this to formats file
-
-
-#previously:
-#class Marks(list):
-class MortplayerBookmarks(list):
-    """
-    focusing this class specifically on the Mortplayer Bookmark format
-
-    A collection of marks should start showing up in many places
-    and ideally should just be a list of Mark objects
-    associated with a specific Content object
-
-    format specific methods should be grouped by the format
-    to avoid a collosal 'Converter' type object again.
-
-
-    
-    
-    marks is a dictionary of files and their corresponding Mark objects
-
-    can probably just use a standard dictionary for this
-
-    (or, if you want a list of Marks for a file, a standard list should suffice)
-
-    *2012.10.10 17:51:52
-    starting with a list
-
-    if a dictionary is needed, it can be generated with specific details
-
-    """
-    def __init__(self, source=None):
-        self.source = source
-
-    
-    #def from_mortplayer(self, source=None):
-    def load(self, source=None):
-        """
-        read in the source
-        update the "files" dictionary with marks
-        """
-        if source is None:
-            source = self.source
-
-        if source is None:
-            raise ValueError, "Need a source sooner or later: %s" % source
-        
-        print "opening: %s" % source
-        #for reading unicode
-        f = codecs.open(source, 'r', encoding='utf-8')
-
-        for line in f.readlines():
-            (location, number, name, ms1, end, utime) = line.strip().split('\t')
-            if number == "1":
-                created = Timestamp()
-                created.from_epoch(float(utime) / 1000)
-                #print "*%s %s" % (created, name)
-
-                ## #print (location, number, name, ms1, end, utime)
-                ## (hours, minutes, seconds) = convert_milliseconds(ms1)
-                ## #print "%s:%02d:%02d" % (hours, minutes, seconds)
-
-                ## ## if not end:
-                ## ##     end = 0
-                ## ## (hours, minutes, seconds) = convert_milliseconds(end)
-                ## ## print "%s:%02d:%02d" % (hours, minutes, seconds)
-
-                ## details = [ int(ms1), hours, minutes, seconds, name, created, location ]
-
-                #name, position, length, created, source
-                #details = Mark(name, ms1, end, created, location)
-
-                #name, position, source, length, created
-                details = Mark(name, ms1, location, end, created)
-
-                self.append(details)
-
-        f.close()
-
-        return self
-
-
-    #def to_mortplayer(self, destination='temp.mpb'):
-    def save(self, destination='temp.mpb'):
-        """
-        """
-        print "saving to: %s" % destination
-        #for writing unicode
-        f = codecs.open(destination, 'w', encoding='utf-8')
-
-        for mark in self:
-            f.write(mark.as_mortplayer())
-        f.close()
-
-
-
-    def group_marks_by_file(self, files=None, source=None):
-        if not source is None:
-            self.from_mortplayer(source)
-
-        if not len(self):
-            raise ValueError, "no marks to process: %s" % len(self)
-
-        if files is None:
-            files = {}
-
-        for mark in self:
-            location = mark.source
-            if files.has_key(location):
-                files[location].append(mark)
-            else:
-                files[location] = [ mark ] 
-
-        return files
-
-    def group_marks_by_tracks(self, f_marks=None, default_pattern='bis*'):
-        """
-        take group_marks_by_file one step further
-        and group the marks based on common tagging patterns
-
-        does not pair sub groups with a track automatically
-        this can be done elsewhere
-
-        default_pattern can be specified based on
-        what the application making bookmarks used when no tag/title supplied
-        (can vary from application to application...
-        e.g. filename, track title from ID3, etc)
-        """
-        if f_marks is None:
-            f_marks = self.group_marks_by_file()
-
-        new_f_marks = {}
-        
-        for key in f_marks.keys():
-            #could find default pattern and insert it here instead of "start"
-            file_groups = [ ]
-
-            in_talk = False
-
-            current_group = [ Mark("start", 0, key) ]
-            for next_mark in f_marks[key]:
-                if re.search('skip*', next_mark.tag) or re.search('talk*', next_mark.tag) or re.search('\+', next_mark.tag):
-                    current_group.append( next_mark )
-                    if re.search('talk*', next_mark.tag):
-                        in_talk = True
-
-                    #can deal with plusses externally
-                    #elif re.search('\+', next_mark.tag):
-                    #    plusses.append(previous_track)
-                    #    plusses.append(line)
-
-                elif in_talk:
-                    #we want to skip the normal tag after an item...
-                    #this usually ends the talking
-                    #TODO:
-                    #sometimes the end of talking
-                    #and the start of the next track
-                    #is the same
-                    #would be nice to identify...
-                    #might be one of the manual steps
-                    
-                    current_group.append( next_mark )
-                    in_talk = False
-
-                #this is the start of a new track / current_group
-                elif re.match(default_pattern, next_mark.tag):
-                    #add previous track to file_groups
-                    file_groups.append(current_group)
-                    current_group = [ next_mark ]
-
-                else:
-                    #probably just a description of some kind:
-                    current_group.append( next_mark )
-                    print "Unmatched tag: %s" % next_mark.tag
-
-            #don't forget last group found:
-            file_groups.append(current_group)
-            new_f_marks[key] = file_groups
-            
-        return new_f_marks
-
-
-
-
-
-
-    #def find_pluses(files):
-    #def find_bookmarks(source):
-    def find_pluses(self, source):
-
-        log_check = re.compile('.*\.mpb$')    
-        if os.path.isdir(source):
-            f_marks = {}
-            for root,dirs,files in os.walk(source):
-                for f in files:
-                    current_file = os.path.join(root, f)
-                    if log_check.search(f):
-                        #marks = from_mortplayer(current_file)
-                        marks = Marks(current_file)
-                        marks.from_mortplayer()
-                        marks.group_marks_by_file(f_marks)
-
-                        print current_file
-
-            #pluses = find_pluses(f_marks)
-            files = f_marks
-
-            matched = []
-            for key in files.keys():
-                for mark in files[key]:
-                    if re.search('\+', mark.tag):
-                        matched.append(mark)
-
-            pluses = matched
-            to_mortplayer(pluses)
-            #print f_marks
-
-        #print matched
-        #return matched
-
-    def update_locations(self, old_prefix, new_prefix):
-        """
-        only update locations for loaded marks
-        
-        """
-        for mark in self:
-            #year = date[0:4]
-            #prefix = '/mnt/sdcard/external_sd/podcasts/beats_in_space/'
-            #new_source = os.path.join(prefix, year, date, correct_name)
-            relative = Path(mark.source).to_relative(old_prefix)
-            new_source = os.path.join(new_prefix, relative)
-            
-            if new_source != mark.source:
-                logging.debug("original source: %s" % mark.source)
-                logging.debug("new source: %s" % new_source)
-
-            mark.source = new_source
-
-    #TODO
-    #haven't checked past here since converting to Marks object
-
-
-
-    def update_locations_many_files(self, source):
-        """
-        go through all bookmark files (mpb) and update any old locations to be the new one in use
-        (don't want to lose those marks!)
-        """
-        log_check = re.compile('.*\.mpb$')    
-        if os.path.isdir(source):
-            for root,dirs,files in os.walk(source):
-                for f in files:
-                    current_file = os.path.join(root, f)
-                    if log_check.search(f):
-
-                        marks = from_mortplayer(current_file)
-                        print current_file
-                        for mark in marks:
-                            #print mark.source
-                            parts = mark.source.split('/')
-                            name_parts = parts[-1].split('-')
-
-                            #print len(name_parts)
-                            if len(name_parts) == 3:
-                                #print "new name format: %s" % parts[-1]
-                                correct_name = parts[-1]
-                                date = correct_name.split('-')[1]                        
-                            else:
-                                #print "old name format: %s" % parts[-1]
-                                date = ''.join(name_parts[1:4])
-                                correct_name = '-'.join( [ name_parts[0], date, name_parts[-1] ] )
-                                #print correct_name
-
-                            year = date[0:4]
-                            prefix = '/mnt/sdcard/external_sd/podcasts/beats_in_space/'
-                            new_source = os.path.join(prefix, year, date, correct_name)
-                            if new_source != mark.source:
-                                print mark.source
-                                print new_source
-
-                            mark.source = new_source
-
-                        #save the update
-                        to_mortplayer(marks, current_file)
-
-
-    #TODO:
-    #Move this as part of a Collection???
-    def check_bookmark_availability(self, source):
-        """
-        find bookmarks and directories with text files available
-
-        (should also populate f_marks via group_marks_by_file)
-        """
-        log_check = re.compile('.*\.mpb$')    
-        text_check = re.compile('.*\.txt$')    
-        f_marks = {}
-        if os.path.isdir(source):
-            for root,dirs,files in os.walk(source):
-                bookmark_found = False
-                for f in files:
-                    current_file = os.path.join(root, f)
-                    if log_check.search(f):
-                        #print current_file
-
-                        marks = from_mortplayer(current_file)
-                        group_marks_by_file(marks, f_marks)
-                        bookmark_found = True
-                if not bookmark_found:
-                    print "No bookmarks for: %s" % root
-                    for f in files:
-                        if text_check.search(f):
-                            print f
-                    print ""
-
-        return f_marks
-
-    #TODO:
-    #Move this as part of a Collection???
-    def find_bookmarks(self, source):
-        """
-        find and load all bookmarks under source
-        return results
-        """
-        log_check = re.compile('.*\.mpb$')    
-        f_marks = {}
-        if os.path.isdir(source):
-            for root,dirs,files in os.walk(source):
-                bookmark_found = False
-                for f in files:
-                    current_file = os.path.join(root, f)
-                    if log_check.search(f):
-                        #print current_file
-                        marks = from_mortplayer(current_file)
-                        group_marks_by_file(marks, f_marks)
-
-        return f_marks
-
-
 
 
 def main():
@@ -1156,3 +1047,4 @@ def main():
         
 if __name__ == '__main__':
     main()
+

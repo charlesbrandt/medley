@@ -1,4 +1,4 @@
-lo"""
+"""
 what best describes this object?
 ??? Content, Thing, Item, Medium, Source, 
 
@@ -20,10 +20,17 @@ class Mark(object):
     position time associated with a specific media file
 
     AKA:
-    jump, bookmark
+    jump, bookmark, markpoint/MarkPoint
     """
     def __init__(self, tag, position, source, length=None, created=None, bytes=None, title=""):
+        #*2013.06.16 08:24:49 
+        #not sure how the following 2 differ:
+        #also what about 'name' or 'description'
         self.tag = tag
+        #once we've determined the real title of the mark location:
+        self.title = title
+        
+
         #in milliseconds
         self.position = position
         self.source = source
@@ -36,12 +43,9 @@ class Mark(object):
         #these are used in m3u lists
         self.bytes = bytes
         
-        #once we've determined the real title of the mark location:
-        self.title = title
-        
 
     def __repr__(self):
-        return "%s, %s, %s, %s" % (self.position, self.tag, self.title, self.source)
+        return "%s, %s, %s, %s\n" % (self.position, self.tag, self.title, self.source)
 
     def as_time(self):
         """
@@ -120,7 +124,102 @@ class Mark(object):
         return result
 
 
+# aka Marks, or MarkPoints
+#class Jumps(PositionList):
+class MarkPoints(list):
+    """
+    object for keeping track of a list of Marks
+    and comparing one list to anther for easier merging 
+    """
+    def __init__(self, comma='', items=[]):
+        #Items.__init__(self, items)
+        self.extend(items)
+        #we don't want to loop over jumps
+        self._position.loop = False
+        if comma:
+            self.from_comma(comma)
+        
+    def from_comma(self, source):
+        """
+        split a comma separated string into jumps
+        """
+        temps = source.split(',')
+        for j in temps:
+            try:
+                self.append(int(j))
+            except:
+                print "could not convert %s to int from: %s" % (j, source)
+        return self
+    
+    def to_comma(self):
+        """
+        combine self into a comma separated string
+        """
+        temp = []
+        for j in self:
+            if j not in temp:
+                temp.append(str(j))
+        jump_string = ','.join(temp)
+        return jump_string
 
+    def relate(self, compare):
+        """
+        take another list of items
+        see if we are a subset, superset, or how many items in common there are
+        returns a tuple:
+        (int(items_in_common), description_of_relationship)
+        where description is one of 3:
+        subset
+        superset
+        same
+        different
+
+        requires that all items in both lists are useable in a python set
+        i.e. distinct hashable objects
+        (source objects themselves won't work)
+
+        may want this to be part of general Items object
+        """
+        response = ''
+        local = set(self)
+        other = set(compare)
+ 
+        #check if either is a subset of the other
+        #cset = set(c[0][1])
+        #iset = set(i[0][1])
+        
+        common = local.intersection(other)
+        
+        if len(local.difference(other)) == 0:
+            #same set!
+            #could be the same item
+            response = 'same'
+        elif local.issubset(other):
+            response = 'subset'
+        elif other.issubset(local):
+            response = 'superset'
+        else:
+            response = 'different'
+
+        return (len(common), response)
+
+
+
+#aka Section
+class Segment(object):
+    """
+    use a start Mark and an end Mark
+    to designate a distinct section of a piece of content
+    """
+    def __init__(self, start=None, end=None):
+        self.start = start
+        self.end = end
+
+        #should use the same naming scheme as a Mark for this attribute:
+        if self.start:
+            self.title = start.title
+        else:
+            self.title = ''
 
 
 class Content(object):
@@ -157,10 +256,35 @@ class Content(object):
           - can pass a root where a meta data file is located
 
         """
+        #TODO:
+        #need a better way to quickly determine the current full path
+        #for calls to __repr__
+        #Content object might not always be part of a Collection 
+        #or the Collection may not be loaded (e.g. in a Playlist)
+        #all we really need in this case is the collection base
+        #(the part of the path that changes due to storage shifts / mounts)
+        #
+        #previously, in Source objects, it was just .path
+        #but this can be brittle when drive locations change (as they do)
+
         self.collection = ''
-        #a relative root / source relative to collection base
+        #the root location relative to collection base
         self.root = root
         
+        # json file to save and load from?
+        # maybe rename to json_source?
+        self.json_file = source
+
+        #the default filename associated with the content
+        self.filename = ''
+
+        # store a list of local media files,
+        # along with dimensions if we calculate those
+        # (could be other properties of the media to store)
+        self.media = []
+
+
+
         self.title = ''
         self.description = ''
         #when content was created or published (according to publisher)
@@ -174,25 +298,22 @@ class Content(object):
         self.people = []
         self.tags = []
 
-        # json file to save and load from?
-        self.source = source
-
-        # store a list of local media files,
-        # along with dimensions if we calculate those
-        # (could be other properties of the media to store)
-        self.media = []
-        self.filename = ''
-
         #TODO:
-        #allow marks to be saved and loaded:
+        #allow marks and segments to be saved and loaded with json:
         self.marks = []
+        self.segments = []
 
         # there are many different states that a piece of content could be in
         # depending on the process being used to parse 
         self.complete = False
+        #TODO:
+        #instead of complete, use a more general status field
+        #can be customized based on process used to add/update meta data
+        self.status = 'new'
 
         self.remainder = {}
 
+        #store this for subsequent call to load:
         self.content = content
 
     def __str__(self):
@@ -207,12 +328,8 @@ class Content(object):
 
     def load(self, source=None, debug=False):
         """
-        TODO:
-        add filename here
-        should be unique
-        this would solve the issue with multiple files in the same directory
-
-        update save() too
+        filename attribute should be unique
+        this solves the issue with multiple files in the same directory
         """
         if source:
             #if it's a path, scan for json:
@@ -307,10 +424,10 @@ class Content(object):
 
     def save(self, destination=None):
         if not destination:
-            if self.source:
-                destination = self.source
+            if self.json_file:
+                destination = self.json_file
             else:
-                raise ValueError, "unknown destination: %s and unknown source: %s" % (destination, self.source)
+                raise ValueError, "unknown destination: %s and unknown source: %s" % (destination, self.json_file)
 
         d = self.to_dict()
 

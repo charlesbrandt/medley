@@ -276,80 +276,8 @@ class PositionList(list):
         
     ##     self.sort(*args, **kwargs)
 
-
-class Jumps(PositionList):
-    def __init__(self, comma='', items=[]):
-        Items.__init__(self, items)
-        #we don't want to loop over jumps
-        self._position.loop = False
-        if comma:
-            self.from_comma(comma)
-        
-    def from_comma(self, source):
-        """
-        split a comma separated string into jumps
-        """
-        temps = source.split(',')
-        for j in temps:
-            try:
-                self.append(int(j))
-            except:
-                print "could not convert %s to int from: %s" % (j, source)
-        return self
-    
-    def to_comma(self):
-        """
-        combine self into a comma separated string
-        """
-        temp = []
-        for j in self:
-            if j not in temp:
-                temp.append(str(j))
-        jump_string = ','.join(temp)
-        return jump_string
-
-    def relate(self, compare):
-        """
-        take another list of items
-        see if we are a subset, superset, or how many items in common there are
-        returns a tuple:
-        (int(items_in_common), description_of_relationship)
-        where description is one of 3:
-        subset
-        superset
-        same
-        different
-
-        requires that all items in both lists are useable in a python set
-        i.e. distinct hashable objects
-        (source objects themselves won't work)
-
-        may want this to be part of general Items object
-        """
-        response = ''
-        local = set(self)
-        other = set(compare)
- 
-        #check if either is a subset of the other
-        #cset = set(c[0][1])
-        #iset = set(i[0][1])
-        
-        common = local.intersection(other)
-        
-        if len(local.difference(other)) == 0:
-            #same set!
-            #could be the same item
-            response = 'same'
-        elif local.issubset(other):
-            response = 'subset'
-        elif other.issubset(local):
-            response = 'superset'
-        else:
-            response = 'different'
-
-        return (len(common), response)
-
-
+#aka
+## class Sources(Items):
 class Playlist(PositionList):
     """
     Similar to a collection in that it holds a group of Content objects,
@@ -364,21 +292,29 @@ class Playlist(PositionList):
     /c/medley/medley/sources.py
 
     A generic Playlist object
-    """
-    pass
 
-        
+    These may help:
+    http://docs.python.org/2/library/collections.html
 
-
-class Sources(Items):
-    """
+    Previously:
     A collection of Source objects
     and a destination path for the logs generated
 
     aka Playlist, Medialist
+
+
+    TODO:
+    consider the best way to handle Segments in a Content object
+    for Playlist use:
+    Separate copies of Content in the Playlist for each Segment?
+      -- be careful not to save that Content object back and overwrite all
+         previous segments
+    Playlist reorders list of Segments associated with Content
+      -- more difficult to split segments of one piece of content in between
+         segments of another piece of content, within a list
     """
     def __init__(self, items=[], log_path=None):
-        Items.__init__(self, items)
+        PositionList.__init__(self, items)
         if log_path is None:
             self.log_path = '/c/logs/transfer'
         else:
