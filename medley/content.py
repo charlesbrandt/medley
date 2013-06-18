@@ -313,6 +313,12 @@ class Content(object):
 
         self.remainder = {}
 
+        #TODO:
+        #keep a log of when actions happened:
+        #used to do this with Moment logs to track media plays
+        self.history = ""
+
+        #what was passed in for manual initialization:
         #store this for subsequent call to load:
         self.content = content
 

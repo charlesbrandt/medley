@@ -144,11 +144,11 @@ class PositionList(list):
         
         #quick way to access the current item directly
         #rather than having get return the value
-        if items:
-            self.current = self.get()
-        else:
-            #if nothing was sent, be sure to initialize current later!
-            self.current = None
+        #if items:
+        #    self.current = self.get()
+        #else:
+        #    #if nothing was sent, be sure to initialize current later!
+        #    self.current = None
 
         #special case for get_next...
         #if we're new, return 0
@@ -166,7 +166,13 @@ class PositionList(list):
     
     #aka get_current?
     #def get(self, position=None):
-    def current(self, position=None):
+    def current(self):
+        """
+        shortcut for get() without a specific position passed in
+        """
+        return self.get()
+
+    def get(self, position=None):
         """
         get calls will not change our position
         """
@@ -213,7 +219,7 @@ class PositionList(list):
             #whew!  this is a tricky line...
             #setting the position object's internal position:
             self._position.position = position
-        self.current = item
+        #self.current = item
         return item
 
     #changing the interface to be the same as it is with Position object:
@@ -368,7 +374,7 @@ class Playlist(PositionList):
         j.to_file()
 
         # log in action.txt for current media's directory
-        cur_item = self.get()
+        cur_item = self.current()
         parent_path = os.path.dirname(str(cur_item.path))
         action = os.path.join(parent_path, 'action.txt')
         j2 = Journal()
