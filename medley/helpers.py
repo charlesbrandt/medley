@@ -58,38 +58,52 @@ def find_htmls(item):
     return matches
     
 
-def find_and_load_json(item, debug=False):
+def find_json(item, debug=False):
     """
-    look in the same directory as item for a json file
-    if found, load it and return the loaded object
-    otherwise return None
-    """
+    take any string
+    see if it is a path for a json file
+    or a path to a directory that contains a json file
+    or look in the same directory as the item
+
+    if more than one json file found, print a warning
+    return the last json file
+        """
     if re.search('.*\.json', item):
         if debug:
             #print "find_and_load_json: item is a json string: %s" % item
-            logging.debug("find_and_load_json: item is a json string: %s" % item)
-        loaded = load_json(item)
+            logging.debug("find_json: item is a json string: %s" % item)
+        return item
     else:
+        parent = ''
         p = Path(item)
         if p.type() == "Directory":
+            #item must be a directory... just look here
             parent = p
             d = p.load()
         else:
+            #must be some other file type... load the parent directory:
             parent = p.parent()
             d = parent.load()
             
-        loaded = None
+        matches = []
         for j in d.files:
             if re.search('.*\.json', str(j)):
-                logging.debug("find_and_load_json: loading from: %s" % j)
-                #print "find_and_load_json: loading from: %s" % j
-
                 match = os.path.join(str(parent), str(j))
-                loaded = load_json(match)
-                #jso = file(os.path.join(str(parent), str(j)))
-                #loaded = json.loads(jso.read())
-                
-    return loaded
+                matches.append(match)
+
+        if not matches:
+            return None
+        elif len(matches) == 1:
+            logging.debug("find_json: found match: %s" % matches[0])
+            return matches[0]
+        else:
+            #found more than one
+            logging.debug("find_json: found many: %s" % matches)
+            print "WARNING: find_json: more than one match found: %s" % matches
+
+            logging.debug("find_json: returning last: %s" % matches[-1])
+
+            return matches[-1]
 
 
 def get_media_dimensions(movie_p, debug=False):
@@ -152,4 +166,43 @@ def load_cloud(cloud_name, cloud_file):
             print "no tags found!"    
     return cur_cloud
 
+
+
+def find_and_load_json(item, debug=False):
+    """
+    look in the same directory as item for a json file
+    if found, load it and return the loaded object
+    otherwise return None
+
+    also [2013.07.03 10:30:19]
+    deprecated:
+    probably better to find_json()
+    then load_json()
+    """
+    if re.search('.*\.json', item):
+        if debug:
+            #print "find_and_load_json: item is a json string: %s" % item
+            logging.debug("find_and_load_json: item is a json string: %s" % item)
+        loaded = load_json(item)
+    else:
+        p = Path(item)
+        if p.type() == "Directory":
+            parent = p
+            d = p.load()
+        else:
+            parent = p.parent()
+            d = parent.load()
+            
+        loaded = None
+        for j in d.files:
+            if re.search('.*\.json', str(j)):
+                logging.debug("find_and_load_json: loading from: %s" % j)
+                #print "find_and_load_json: loading from: %s" % j
+
+                match = os.path.join(str(parent), str(j))
+                loaded = load_json(match)
+                #jso = file(os.path.join(str(parent), str(j)))
+                #loaded = json.loads(jso.read())
+                
+    return loaded
 

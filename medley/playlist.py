@@ -1,6 +1,5 @@
 import os, codecs, re
 
-
 class Position(object):
     """
     more than just a number of an item
@@ -282,6 +281,7 @@ class PositionList(list):
         
     ##     self.sort(*args, **kwargs)
 
+
 #aka
 ## class Sources(Items):
 class Playlist(PositionList):
@@ -325,6 +325,17 @@ class Playlist(PositionList):
             self.log_path = '/c/logs/transfer'
         else:
             self.log_path = log_path
+
+        #whether or not to update a content's source json file
+        #or just make the changes to the list locally
+        #
+        #generally with a playlist you don't want to update the content source
+        #e.g. subtractively limiting content segments to only favorites...
+        #     wouldn't want to remove those segments from the content source
+        #     just from the current playlist
+        #
+        #this should not matter if a content object is edited directly
+        self.sync_contents = False
 
     def add_if_new(self, source):
         if not self.has_path(source.path):
@@ -390,3 +401,16 @@ class Playlist(PositionList):
         return cur_item.as_moment(new_entry=True)
 
 
+class ListTree(object):
+    """
+    hold a hierarchy of playlists and collections
+    
+    """
+    def __init__(self):
+        #a place to keep track of all playlists and collections
+        #associated with the grouping
+        #can be hierarchical
+        self.playlists = []
+        
+
+        #the goal is to store these for easy loading later

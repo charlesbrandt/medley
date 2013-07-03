@@ -8,11 +8,13 @@ Song, Podcast, Album, Image, Book, Movie, Scene,
 """
 import os, re, copy
 
-from helpers import find_and_load_json, save_json, get_media_dimensions
+#from helpers import find_and_load_json, save_json, get_media_dimensions
+from helpers import save_json, get_media_dimensions, find_json, load_json
 
 from moments.path import Path
 from moments.timestamp import Timestamp
 from moments.tag import to_tag
+
 
 
 class Mark(object):
@@ -24,13 +26,16 @@ class Mark(object):
     """
     def __init__(self, tag, position, source, length=None, created=None, bytes=None, title=""):
         #*2013.06.16 08:24:49 
-        #not sure how the following 2 differ:
-        #also what about 'name' or 'description'
-        self.tag = tag
-        #once we've determined the real title of the mark location:
-        self.title = title
-        
+        #not sure how tag and title differ... (see note below)
+        #also what about 'name' or 'description' (better in a segment)
 
+        #tag is a user specified tag or category ('work', 'chill', 'other')
+        self.tag = tag
+        
+        #once we've determined the real title of the mark location:
+        #self.title = title
+        #this is better represented in a segment instead of a mark
+        
         #in milliseconds
         self.position = position
         self.source = source
@@ -45,15 +50,17 @@ class Mark(object):
         
 
     def __repr__(self):
-        return "%s, %s, %s, %s\n" % (self.position, self.tag, self.title, self.source)
+        #return "%s, %s, %s, %s\n" % (self.position, self.tag, self.title, self.source)
+        return "%s, %s, %s\n" % (self.position, self.tag, self.source)
 
     def as_time(self):
         """
         shortcut to print the position in time format
         """
-        return "%02d:%02d:%02d" % self.from_milliseconds()
+        return "%02d:%02d:%02d" % self.as_hms()
         
-    def from_milliseconds(self, milli_seconds=None):
+    #def from_milliseconds(self, milli_seconds=None):
+    def as_hms(self, milli_seconds=None):
         """
         take a string representation of a value in milli_seconds
         convert it to hours, minutes, seconds
@@ -68,33 +75,48 @@ class Mark(object):
         hours = total_minutes / 60
         return (hours, minutes, seconds)
 
-    def to_milliseconds(self, hours=0, minutes=0, seconds=0, ms=0):
+    def from_hms(self, hours=0, minutes=0, seconds=0, ms=0):
         """
-        opposite of from_milliseconds
+        opposite of as_hms
         take hours, minutes, and seconds
 
         automatically set our local ms / position attribute ???
         """
         total_minutes = hours * 60 + minutes
         total_seconds = total_minutes * 60 + seconds
-        return (total_seconds * 1000 + ms)
+        self.position = (total_seconds * 1000 + ms)
+        return self.position
 
     def _get_hours(self):
-        return self.from_milliseconds[0]
+        return self.as_hms[0]
     hours = property(_get_hours)
 
     def _get_minutes(self):
-        return self.from_milliseconds[1]
+        return self.as_hms[1]
     minutes = property(_get_minutes)
 
     def _get_seconds(self):
-        return self.from_milliseconds[2]
-    seconds = property(_get_seconds)
+        return self.as_hms[2]
+    def _set_seconds(self, seconds):
+        self.position = seconds * 1000
+    seconds = property(_get_seconds, _set_seconds)
 
     def total_seconds(self):
         return int(self.position) / 1000
 
 
+    def as_tuple(self):
+        """
+        the two main attributes of a Mark are:
+        the position
+        and
+        the tag
+        return these as a tuple for easy jsonification
+
+        when storing these with a content item, we already know self.source
+        """
+        new_tag = self.tag.replace(',', '_')
+        return (self.total_seconds, new_tag)
 
     # FORMAT SPECIFC CONVERTERS:
     
@@ -124,20 +146,45 @@ class Mark(object):
         return result
 
 
-# aka Marks, or MarkPoints
+
+#I don't think position is necessary here...
+#that should be utilized via a playlist/segment level
+#class MarkList(PositionList):
+
 #class Jumps(PositionList):
-class MarkPoints(list):
+# aka Marks, or MarkPoints
+class MarkList(list):
     """
-    object for keeping track of a list of Marks
-    and comparing one list to anther for easier merging 
+    instead of a list of integers (as in MarkListSimple)
+    use acutal Mark objects
+    this adds complexity, but also makes the object more powerful
+    
+    includes methods for comparing one list to anther for easier merging 
     """
     def __init__(self, comma='', items=[]):
-        #Items.__init__(self, items)
-        self.extend(items)
-        #we don't want to loop over jumps
-        self._position.loop = False
+        super(MarkList, self).__init__()
+        
+        #self.extend(items)
+        for item in items:
+            assert isinstance(item, Mark)
+            self.append(item)
+
         if comma:
             self.from_comma(comma)
+
+    def to_tuples(self):
+
+        result = []
+        for mark in self:
+            result.append(mark.as_tuple())
+        return result
+
+    def from_tuples(self, tuples):
+        for t in tuples:
+            mark = Mark()
+            mark.seconds = t[0]
+            mark.tags = t[1]
+            self.append(mark)
         
     def from_comma(self, source):
         """
@@ -146,7 +193,9 @@ class MarkPoints(list):
         temps = source.split(',')
         for j in temps:
             try:
-                self.append(int(j))
+                mark = Mark()
+                mark.seconds = int(j)
+                self.append(mark)
             except:
                 print "could not convert %s to int from: %s" % (j, source)
         return self
@@ -157,8 +206,9 @@ class MarkPoints(list):
         """
         temp = []
         for j in self:
-            if j not in temp:
-                temp.append(str(j))
+            seconds = j.total_seconds()
+            if seconds not in temp:
+                temp.append(str(seconds))
         jump_string = ','.join(temp)
         return jump_string
 
@@ -205,21 +255,25 @@ class MarkPoints(list):
 
 
 
-#aka Section
-class Segment(object):
-    """
-    use a start Mark and an end Mark
-    to designate a distinct section of a piece of content
-    """
-    def __init__(self, start=None, end=None):
-        self.start = start
-        self.end = end
+## #aka Section
+## class Segment(object):
+##     """
+##     use a start Mark and an end Mark
+##     to designate a distinct section of a piece of content
 
-        #should use the same naming scheme as a Mark for this attribute:
-        if self.start:
-            self.title = start.title
-        else:
-            self.title = ''
+##     Seems like it may be more appropriate
+##     to simply assign a start and an end point to a Content object
+##     (optional... None implies full length)
+##     """
+##     def __init__(self, start=None, end=None):
+##         self.start = start
+##         self.end = end
+
+##         #should use the same naming scheme as a Mark for this attribute:
+##         if self.start:
+##             self.title = start.title
+##         else:
+##             self.title = ''
 
 
 class Content(object):
@@ -243,7 +297,7 @@ class Content(object):
 
     this is a place to draw those together
     """
-    def __init__(self, source=None, content={}, root='', debug=False):
+    def __init__(self, source=None, content={}, debug=False):
         """
         few different ways to initialize an item of content:
 
@@ -256,31 +310,29 @@ class Content(object):
           - can pass a root where a meta data file is located
 
         """
-        #TODO:
-        #need a better way to quickly determine the current full path
-        #for calls to __repr__
-        #Content object might not always be part of a Collection 
-        #or the Collection may not be loaded (e.g. in a Playlist)
-        #all we really need in this case is the collection base
-        #(the part of the path that changes due to storage shifts / mounts)
-        #
-        #previously, in Source objects, it was just .path
-        #but this can be brittle when drive locations change (as they do)
-
-        self.collection = ''
         #the root location relative to collection base
-        self.root = root
-        
-        # json file to save and load from?
-        # maybe rename to json_source?
-        self.json_file = source
+        #self.root = root
 
+        #everything leading up to the base_dir 
+        #this is the start of the collection (collection root path)
+        self.drive_dir = ''
+
+        #aka path from collection root
+        #relative path for other content
+        self.base_dir = ''
+
+        
         #the default filename associated with the content
         self.filename = ''
 
         # store a list of local media files,
         # along with dimensions if we calculate those
         # (could be other properties of the media to store)
+        #
+        # if there is more than one media file, media[0] is the default
+        #
+        # if there are multiple media files that comprise a single Content
+        # object, those might be better represented in self.segments
         self.media = []
 
 
@@ -298,39 +350,137 @@ class Content(object):
         self.people = []
         self.tags = []
 
-        #TODO:
-        #allow marks and segments to be saved and loaded with json:
         self.marks = []
         self.segments = []
 
+        #this will allow Content objects to be recursively used in segments
+        #consider: anything useful from a tree structure?
+        #maybe too much with trees... pretty simple here.
+        #
+        # should we store in seconds (float)?
+        # seconds should be flexible enough for most formats
+        # or should it be a mark?
+        # probably should be a Mark, converted to total_seconds
+        self.start = ''
+        self.end = ''
+
         # there are many different states that a piece of content could be in
         # depending on the process being used to parse 
-        self.complete = False
-        #TODO:
-        #instead of complete, use a more general status field
+        #instead of complete, using a more general status field
         #can be customized based on process used to add/update meta data
         self.status = 'new'
 
         self.remainder = {}
 
-        #TODO:
         #keep a log of when actions happened:
         #used to do this with Moment logs to track media plays
+        #not processing log (e.g. loading into a Journal)
         self.history = ""
 
-        #what was passed in for manual initialization:
-        #store this for subsequent call to load:
-        self.content = content
+
+        #these attributes are generated and assigned later
+        #no need to store them with a json file / dict
+
+        #these should be used for segements and sub-segments
+        #in order to load and save changes to segments
+        #that are located out of context from original Content root
+        self.parent = None
+        self.root = self
+
+
+
+        #deal with what was passed in now:
+        #i.e. autoload!
+
+        if content and source:
+            raise ValueError, "Cannot initialize Content object with both source and dictionary: %s, %s" % (source, content) 
+
+        elif content:
+            #what was passed in for manual initialization:
+            #store this for subsequent call to load:
+            self.content = content
+            self.load()
+
+        elif source:
+            # json file to save and load from
+            #this is the best way to initialize previous Content object:
+            #ok to include full path here...
+            self.json_source = find_json(source)
+            #make sure something was found:
+            if self.json_source:
+                self.load(self.json_source)
+
+            #now go back and update paths if any are incomplete,
+            #or check if what is stored in file is out of date
+            #based on json_source location ...
+
+            if self.json_source != source:
+                #must have been passed something besides a json path
+                #do some checks to see if there is anything we can use:
+                # - updated filename
+                new_name = os.path.basename(source)
+                if new_name and new_name != self.filename:
+                    print "Updating self.filename: %s with new name: %s" % (
+                        self.filename, new_name)
+                    self.filename = new_name
+
+            # - updated drive_dir ?
+            source_dir = os.path.dirname(self.json_source)
+
+            drive_dir_matches = False
+            if re.match(self.drive_dir, source_dir):
+                drive_dir_matches = True
+
+            if not re.search(self.base_dir, source_dir):
+                print "WARNING: could not find base_dir (%s) in source_dir (%s)" % (self.base_dir, source_dir)
+            else:
+                #must have self.base_dir in source_dir
+                if not drive_dir_matches:
+                    base_len = len(self.base_dir) * -1
+                    new_drive = source_dir[:base_len]
+                    print "Updating self.drive_dir from: %s to: %s" % (self.drive_dir, new_drive)
+                    self.drive_dir = new_drive
+
+
+        #what about playlists? way to generalize here?
+        #is it even necessary to link back to the containing list?
+        #can re-enable if there is a usecase
+        #self.collection = ''
+
+
+
+    def _get_path(self):
+        """
+        use self.drive_dir and self.base_dir to determine the current path
+        
+        this better way to quickly determine the current full path
+        this is useful for calls to __repr__ and __str__
+        
+        Content object might not always be part of a Collection 
+        or the Collection may not be loaded (e.g. in a Playlist)
+        all we really need in this case is the collection base
+        (the part of the path that changes due to storage shifts / mounts)
+        
+        previously, in Source objects, it was just .path
+        but this can be brittle when drive locations change (as they do)
+        """
+        return os.path.join(self.drive_dir, self.base_dir)
+
+    path = property(_get_path)
+    #def _set_path(self, name):
+    #    self.parse_name(name)
+    #path = property(_get_path, _set_path)
 
     def __str__(self):
         """
         when cast to a string, probably want the first media file path
         """
         #return self.as_moment().render()
-        if len(self.media):
-            return self.media[0]
-        else:
-            return ""
+        ## if len(self.media):
+        ##     return self.media[0]
+        ## else:
+        ##     return ""
+        return os.path.join(self.path, self.filename)
 
     def load(self, source=None, debug=False):
         """
@@ -339,7 +489,10 @@ class Content(object):
         """
         if source:
             #if it's a path, scan for json:
-            content = find_and_load_json(source)
+            #content = find_and_load_json(source)
+            self.json_source = find_json(source)
+            #json = find_json(source)
+            content = load_json(self.json_source)
         else:
             content = self.content
 
@@ -365,26 +518,9 @@ class Content(object):
             self.description = content['description']
             del content['description']
             
-        if content.has_key('content_base'):
-            self.root = content['content_base']
-            del content['content_base']
-
-        if content.has_key('media'):
-            self.media = content['media']
-            del content['media']
-
-        #no path here! filename only!
-        if content.has_key('filename'):
-            self.filename = content['filename']
-            del content['filename']
-
         if content.has_key('sites'):
             self.sites = content['sites']
             del content['sites']
-            
-        if content.has_key('site'):
-            self.sites.append(content['site'])
-            del content['site']
 
         if content.has_key('people'):
             for person in content['people']:
@@ -396,6 +532,71 @@ class Content(object):
                 self.tags.append(to_tag(tag))
             del content['tags']
 
+        if content.has_key('status'):
+            self.status = content['status']
+            del content['status']
+
+        if content.has_key('marks'):
+            ml = MarkList()
+            ml.from_tuples(content['marks'])
+            ## for mark in content['marks']:
+            ##     self.marks.append(to_mark(mark))
+            self.marks = ml
+            del content['marks']
+
+        if content.has_key('segments'):
+            segments = []
+            for seg in content['segments']:
+                sub_c = Content(content=seg)
+                sub_c.parent = self
+                sub_c.root = self.root
+                segments.append(sub_c)
+            self.segments = segments
+            del content['segments']
+
+        if content.has_key('start'):
+            mark = Mark()
+            mark.seconds = int(content['start'])
+            self.start = mark
+            del content['start']
+
+        if content.has_key('end'):
+            mark = Mark()
+            mark.seconds = int(content['end'])
+            self.end = mark
+            del content['end']
+
+        if content.has_key('history'):
+            self.history = content['history']
+            del content['history']
+
+
+
+
+        if content.has_key('content_base'):
+            self.base_dir = content['content_base']
+            del content['content_base']
+
+        if content.has_key('media'):
+            self.media = content['media']
+            del content['media']
+
+        #no path here! filename only!
+        if content.has_key('filename'):
+            self.filename = content['filename']
+            del content['filename']
+
+
+        #deprecated... use self.sites instead
+        #site is only loaded for legacy json files...
+        #loaded into self.sites
+        #not saved
+        if content.has_key('site'):
+            self.sites.append(content['site'])
+            del content['site']
+
+
+
         if debug:
             print "didn't convert the following keys for content: %s" % content.keys()
             print content
@@ -404,36 +605,68 @@ class Content(object):
         #keep everything left over so we have it later for storing
         self.remainder = content
 
-        if debug:
-            print "Could not process the following when loading Content:"
-            print self.remainder
+        ## if debug:
+        ##     print "Could not process the following when loading Content:"
+        ##     print self.remainder
 
 
     def to_dict(self):
         snapshot = copy.deepcopy(self.remainder)
-        snapshot['tags'] = self.tags
-        snapshot['people'] = self.people
-        snapshot['sites'] = self.sites
-        snapshot['description'] = self.description
-        snapshot['title'] = self.title
+        #check to make sure we have values...
+        #no need to clutter up json with empty values
+        if self.tags:
+            snapshot['tags'] = self.tags
+        if self.people:
+            snapshot['people'] = self.people
+        if self.sites:
+            snapshot['sites'] = self.sites
+        if self.description:
+            snapshot['description'] = self.description
+        if self.title:
+            snapshot['title'] = self.title
         if self.timestamp:
             snapshot['timestamp'] = self.timestamp.compact()
-            
+
+        if self.status:
+            snapshot['status'] = self.status
+
+        #marks = []
+        #for m in self.marks:
+        #    marks.append(m.total_seconds())
+        marks = self.marks.to_tuples()
+        if marks:
+            snapshot['marks'] = marks
+
+        segments = []
+        for segment in self.segments:
+            segments.append(segment.to_dict())
+        if segments:
+            snapshot['segments'] = segments
+
+        id self.start.total_seconds():
+            snapshot['start'] = self.start.total_seconds()
+
+        if self.end:
+            snapshot['end'] = self.end.total_seconds()
+
+        if self.history:
+            snapshot['history'] = self.history
+
         #root can sometimes be full path to a specific drive
         #here we use it as a relative path, so it's the same as base
         #snapshot['content_root'] = self.root
-        snapshot['content_base'] = self.root
-        snapshot['complete'] = self.complete
+        snapshot['content_base'] = self.base_dir
         snapshot['media'] = self.media
         snapshot['filename'] = self.filename
+
         return snapshot
 
     def save(self, destination=None):
         if not destination:
-            if self.json_file:
-                destination = self.json_file
+            if self.json_source:
+                destination = self.json_source
             else:
-                raise ValueError, "unknown destination: %s and unknown source: %s" % (destination, self.json_file)
+                raise ValueError, "unknown destination: %s and unknown source: %s" % (destination, self.json_source)
 
         d = self.to_dict()
 
@@ -449,7 +682,7 @@ class Content(object):
         only look for a specific type of content
         """
         if location is None:
-            location = self.root
+            location = self.path
 
         media_check = re.compile(search_for)
         options = []
@@ -471,14 +704,14 @@ class Content(object):
 
     def find_media(self, location=None, kind="Movie", ignores=[], limit_by_name=False, debug=False):
         """
-        ideally we just use self.root as the location to look in
+        ideally we just use self.path as the location to look in
         might be nice to pass it in though
 
         using moments.path.Path.type() here
         kind can be either "Movie", "Image", or "Sound"
         """
         if location is None:
-            location = self.root
+            location = self.path
         
         extensions = {}
 
@@ -641,63 +874,83 @@ class Content(object):
         return moment
 
 
-##     def find_media(self, location, search_for, ignores=[], debug=False):
-##         """
-##         search for should be a regular expression, like:
-##         '.*mp4$'
 
-##         ignores is a list of regular expressions to exclude
-##         """
-##         media_check = re.compile(search_for)
-##         alternate = re.compile('.*\.wmv')
-##         options = []
-##         alts = []
-##         if self.root:
-##             path = os.path.join(location, self.root)
-##             if os.path.isdir(path):
-##                 for root,dirs,files in os.walk(path):
-##                     for f in files:
-##                         ignore = False
-##                         for i in ignores:
-##                             if re.search(i, f):
-##                                 ignore = True
-##                         if not ignore:
-##                             media = os.path.join(root, f)
-##                             if media_check.search(f):
-##                                 options.append(media)
-##                             if alternate.search(f):
-##                                 alts.append(media)
+class MarkListSimple(list):
+    """
+    object for keeping track of a list of integers
+    representing seconds for a mark
+    
+    includes methods for comparing one list to anther for easier merging 
+    """
+    def __init__(self, comma='', items=[]):
+        #Items.__init__(self, items)
+        self.extend(items)
+        #we don't want to loop over jumps
+        self._position.loop = False
+        if comma:
+            self.from_comma(comma)
+        
+    def from_comma(self, source):
+        """
+        split a comma separated string into jumps
+        """
+        temps = source.split(',')
+        for j in temps:
+            try:
+                self.append(int(j))
+            except:
+                print "could not convert %s to int from: %s" % (j, source)
+        return self
+    
+    def to_comma(self):
+        """
+        combine self into a comma separated string
+        """
+        temp = []
+        for j in self:
+            if j not in temp:
+                temp.append(str(j))
+        jump_string = ','.join(temp)
+        return jump_string
 
-## # original version stopped here:
-## ##         if not len(options) and len(alts):
-## ##             return alts
-## ##         else:
-## ##             return options
+    def relate(self, compare):
+        """
+        take another list of items
+        see if we are a subset, superset, or how many items in common there are
+        returns a tuple:
+        (int(items_in_common), description_of_relationship)
+        where description is one of 3:
+        subset
+        superset
+        same
+        different
 
-##         if not len(options) and len(alts):
-##             checking = alts
-##         else:
-##             checking = options
+        requires that all items in both lists are useable in a python set
+        i.e. distinct hashable objects
+        (source objects themselves won't work)
 
-##         if debug:
-##             print "before looking at cache, found: %s items" % len(checking)
+        may want this to be part of general Items object
+        """
+        response = ''
+        local = set(self)
+        other = set(compare)
+ 
+        #check if either is a subset of the other
+        #cset = set(c[0][1])
+        #iset = set(i[0][1])
+        
+        common = local.intersection(other)
+        
+        if len(local.difference(other)) == 0:
+            #same set!
+            #could be the same item
+            response = 'same'
+        elif local.issubset(other):
+            response = 'subset'
+        elif other.issubset(local):
+            response = 'superset'
+        else:
+            response = 'different'
 
-##         matches = []
-##         for item in checking[:]:
-##             for m in self.media:
-##                 if item == m[0]:
-##                     matches.append(m)
-##                     checking.remove(item)
+        return (len(common), response)
 
-##         if debug:
-##             print "after looking at cache, matched: %s items" % len(matches)
-##             print "still need to find: %s new items" % len(checking)
-
-##         for item in checking:
-##             size = get_media_dimensions(item)
-##             matches.append( [item, size] )
-
-##         self.media = matches
-
-##         return self.media
-            

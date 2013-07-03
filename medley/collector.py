@@ -40,7 +40,7 @@ class Collection(list):
     this is done is often customized for the source.
     e.g. not everything *is* RSS based, so a custom scraper is required
 
-    Adding in tailored Content acuisition routines to the Collection would
+    Adding in tailored Content acquisition routines to the Collection would
     cause clutter.
 
     Subclassing doesn't make much sense either in this case. (???)
@@ -119,6 +119,17 @@ class Collection(list):
             #might want to create one from scratch.
             pass
         
+        #whether or not to update a content's source json file
+        #or just make the changes to the list locally
+        #
+        #generally with a playlist you don't want to update the content source
+        #e.g. subtractively limiting content segments to only favorites...
+        #     wouldn't want to remove those segments from the content source
+        #     just from the current playlist
+        #
+        #this should not matter if a content object is edited directly
+        self.sync_contents = True
+
     def load(self, source=None, debug=False):
         """
         load a collection from a previously generate json file
