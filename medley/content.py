@@ -1,8 +1,10 @@
 """
-what best describes this object?
-??? Content, Thing, Item, Medium, Source, 
+Content related objects.
 
-these are too specific:
+What best describes this object? Going with Content... other options were:
+Thing, Item, Medium, Source, 
+
+These are too specific:
 Song, Podcast, Album, Image, Book, Movie, Scene, 
 
 """
@@ -873,84 +875,4 @@ class Content(object):
 
         return moment
 
-
-
-class MarkListSimple(list):
-    """
-    object for keeping track of a list of integers
-    representing seconds for a mark
-    
-    includes methods for comparing one list to anther for easier merging 
-    """
-    def __init__(self, comma='', items=[]):
-        #Items.__init__(self, items)
-        self.extend(items)
-        #we don't want to loop over jumps
-        self._position.loop = False
-        if comma:
-            self.from_comma(comma)
-        
-    def from_comma(self, source):
-        """
-        split a comma separated string into jumps
-        """
-        temps = source.split(',')
-        for j in temps:
-            try:
-                self.append(int(j))
-            except:
-                print "could not convert %s to int from: %s" % (j, source)
-        return self
-    
-    def to_comma(self):
-        """
-        combine self into a comma separated string
-        """
-        temp = []
-        for j in self:
-            if j not in temp:
-                temp.append(str(j))
-        jump_string = ','.join(temp)
-        return jump_string
-
-    def relate(self, compare):
-        """
-        take another list of items
-        see if we are a subset, superset, or how many items in common there are
-        returns a tuple:
-        (int(items_in_common), description_of_relationship)
-        where description is one of 3:
-        subset
-        superset
-        same
-        different
-
-        requires that all items in both lists are useable in a python set
-        i.e. distinct hashable objects
-        (source objects themselves won't work)
-
-        may want this to be part of general Items object
-        """
-        response = ''
-        local = set(self)
-        other = set(compare)
- 
-        #check if either is a subset of the other
-        #cset = set(c[0][1])
-        #iset = set(i[0][1])
-        
-        common = local.intersection(other)
-        
-        if len(local.difference(other)) == 0:
-            #same set!
-            #could be the same item
-            response = 'same'
-        elif local.issubset(other):
-            response = 'subset'
-        elif other.issubset(local):
-            response = 'superset'
-        else:
-            response = 'different'
-
-        return (len(common), response)
 
