@@ -10,13 +10,11 @@ Song, Podcast, Album, Image, Book, Movie, Scene,
 """
 import os, re, copy
 
-#from helpers import find_and_load_json, save_json, get_media_dimensions
 from helpers import save_json, get_media_dimensions, find_json, load_json
 
 from moments.path import Path
 from moments.timestamp import Timestamp
 from moments.tag import to_tag
-
 
 
 class Mark(object):
@@ -26,7 +24,7 @@ class Mark(object):
     AKA:
     jump, bookmark, markpoint/MarkPoint
     """
-    def __init__(self, tag, position, source, length=None, created=None, bytes=None, title=""):
+    def __init__(self, tag='', position=0, source=None, length=None, created=None, bytes=None, title=""):
         #*2013.06.16 08:24:49 
         #not sure how tag and title differ... (see note below)
         #also what about 'name' or 'description' (better in a segment)
@@ -106,7 +104,6 @@ class Mark(object):
     def total_seconds(self):
         return int(self.position) / 1000
 
-
     def as_tuple(self):
         """
         the two main attributes of a Mark are:
@@ -149,12 +146,12 @@ class Mark(object):
 
 
 
-#I don't think position is necessary here...
-#that should be utilized via a playlist/segment level
+#I don't think a PositionList is necessary here...
+#that should be utilized at the playlist/segment level
 #class MarkList(PositionList):
-
 #class Jumps(PositionList):
-# aka Marks, or MarkPoints
+
+# aka Marks, Jumps, or MarkPoints
 class MarkList(list):
     """
     instead of a list of integers (as in MarkListSimple)
@@ -256,28 +253,6 @@ class MarkList(list):
         return (len(common), response)
 
 
-
-## #aka Section
-## class Segment(object):
-##     """
-##     use a start Mark and an end Mark
-##     to designate a distinct section of a piece of content
-
-##     Seems like it may be more appropriate
-##     to simply assign a start and an end point to a Content object
-##     (optional... None implies full length)
-##     """
-##     def __init__(self, start=None, end=None):
-##         self.start = start
-##         self.end = end
-
-##         #should use the same naming scheme as a Mark for this attribute:
-##         if self.start:
-##             self.title = start.title
-##         else:
-##             self.title = ''
-
-
 class Content(object):
     """
     Object to hold details of a particular piece of content (media)
@@ -352,8 +327,33 @@ class Content(object):
         self.people = []
         self.tags = []
 
-        self.marks = []
+        self.marks = MarkList()
+
         self.segments = []
+
+        #using a segment id (immutable)
+        #to help identify and reconnect an isolated segment
+        #with the correct main Content source file
+        #for subsequent updates
+        #
+        #e.g. a single sub-track segment in a podcast
+        #could be on another playlist
+        #and editing meta data on that segment in that playlist 
+        #will open + save changes to the original main Context json source file
+        #
+        #this is facilitated by a self.add_segment method
+        #
+        #ok for root Content object to have blank segment_id
+        #only needed if segments exist
+        #
+        #segments should list the full path of segment_ids from root to self
+        #e.g. 1_4_2_1 (5 layers deep)
+        self.segment_id = ''
+                
+        #starting at 1 here... not an index, just an id
+        self.next_segment_id = 1
+
+
 
         #this will allow Content objects to be recursively used in segments
         #consider: anything useful from a tree structure?
@@ -363,8 +363,8 @@ class Content(object):
         # seconds should be flexible enough for most formats
         # or should it be a mark?
         # probably should be a Mark, converted to total_seconds
-        self.start = ''
-        self.end = ''
+        self.start = Mark()
+        self.end = None
 
         # there are many different states that a piece of content could be in
         # depending on the process being used to parse 
@@ -430,7 +430,7 @@ class Content(object):
             source_dir = os.path.dirname(self.json_source)
 
             drive_dir_matches = False
-            if re.match(self.drive_dir, source_dir):
+            if self.drive_dir and re.match(self.drive_dir, source_dir):
                 drive_dir_matches = True
 
             if not re.search(self.base_dir, source_dir):
@@ -444,10 +444,10 @@ class Content(object):
                     self.drive_dir = new_drive
 
 
-        #what about playlists? way to generalize here?
-        #is it even necessary to link back to the containing list?
+        #is it even necessary to link back to the containing list/collection?
         #can re-enable if there is a usecase
         #self.collection = ''
+        #what about playlists? way to generalize here?
 
 
 
@@ -483,6 +483,29 @@ class Content(object):
         ## else:
         ##     return ""
         return os.path.join(self.path, self.filename)
+
+    def add_segment(self, segment):
+        """
+        segment should already be initialized,
+        everything except segments ids (unless previously generated)
+        and being added to our segments,
+        with parent and root updated accordingly
+        """
+        segment.parent = self
+        segment.root = self.root
+        
+        if not segment.segment_id:
+            #generate a new segment_id here
+            #based on self.segment_id
+            if not self.segment_id:
+                new_id = str(self.next_segment_id)
+            else:
+                new_id = "%s_%s" % (self.segment_id, self.next_segment_id)
+            self.next_segment_id += 1
+
+            segment.segment_id = new_id
+        
+        self.segments.append(segment)
 
     def load(self, source=None, debug=False):
         """
@@ -538,6 +561,14 @@ class Content(object):
             self.status = content['status']
             del content['status']
 
+        if content.has_key('segment_id'):
+            self.segment_id = content['segment_id']
+            del content['segment_id']
+
+        if content.has_key('next_segment_id'):
+            self.next_segment_id = content['next_segment_id']
+            del content['next_segment_id']
+
         if content.has_key('marks'):
             ml = MarkList()
             ml.from_tuples(content['marks'])
@@ -550,9 +581,12 @@ class Content(object):
             segments = []
             for seg in content['segments']:
                 sub_c = Content(content=seg)
-                sub_c.parent = self
-                sub_c.root = self.root
-                segments.append(sub_c)
+                self.add_segment(sub_c)
+
+                #these steps are handled by self.add_segment now:
+                #sub_c.parent = self
+                #sub_c.root = self.root
+                #segments.append(sub_c)
             self.segments = segments
             del content['segments']
 
@@ -573,8 +607,11 @@ class Content(object):
             del content['history']
 
 
-
-
+        #deprecated: root is ambiguous here
+        #will continue to load for older jsons
+        if content.has_key('root'):
+            self.base_dir = content['root']
+            del content['root']
         if content.has_key('content_base'):
             self.base_dir = content['content_base']
             del content['content_base']
@@ -613,6 +650,10 @@ class Content(object):
 
 
     def to_dict(self):
+        """
+        the order specified here is generally the order that gets printed(?)
+        (maybe not)
+        """
         snapshot = copy.deepcopy(self.remainder)
         #check to make sure we have values...
         #no need to clutter up json with empty values
@@ -632,6 +673,28 @@ class Content(object):
         if self.status:
             snapshot['status'] = self.status
 
+        #segments don't need content_base to be set if root has it:
+        if self.base_dir:
+            snapshot['content_base'] = self.base_dir
+        if self.media:
+            snapshot['media'] = self.media
+        if self.filename:
+            snapshot['filename'] = self.filename
+        if self.drive_dir:
+            snapshot['drive_dir'] = self.drive_dir
+
+        if self.start.total_seconds():
+            snapshot['start'] = self.start.total_seconds()
+
+        if self.end:
+            snapshot['end'] = self.end.total_seconds()
+
+        if self.segment_id:
+            snapshot['segment_id'] = self.segment_id
+
+        if self.next_segment_id != 1:
+            snapshot['next_segment_id'] = self.next_segment_id
+
         #marks = []
         #for m in self.marks:
         #    marks.append(m.total_seconds())
@@ -645,21 +708,12 @@ class Content(object):
         if segments:
             snapshot['segments'] = segments
 
-        id self.start.total_seconds():
-            snapshot['start'] = self.start.total_seconds()
-
-        if self.end:
-            snapshot['end'] = self.end.total_seconds()
-
         if self.history:
             snapshot['history'] = self.history
 
         #root can sometimes be full path to a specific drive
         #here we use it as a relative path, so it's the same as base
         #snapshot['content_root'] = self.root
-        snapshot['content_base'] = self.base_dir
-        snapshot['media'] = self.media
-        snapshot['filename'] = self.filename
 
         return snapshot
 
@@ -704,13 +758,17 @@ class Content(object):
                             options.append(media)
         return options
 
-    def find_media(self, location=None, kind="Movie", ignores=[], limit_by_name=False, debug=False):
+    def find_media(self, location=None, kind="Movie", relative=True,
+                   ignores=[], limit_by_name=False, debug=False):
         """
         ideally we just use self.path as the location to look in
         might be nice to pass it in though
 
         using moments.path.Path.type() here
         kind can be either "Movie", "Image", or "Sound"
+
+        relative will determine if self.drive_dir is included in prefix...
+        usually it's better not to include that
         """
         if location is None:
             location = self.path
@@ -799,6 +857,14 @@ class Content(object):
             if debug:
                 print "The following items match: %s" % accepted
             combined = accepted
+
+        shorts = []
+        if relative:
+            for item in combined:
+                path = Path(item)
+                shorts.append(path.to_relative(self.drive_dir))
+
+            combined = shorts
             
         #at this point, could store result
         #or could look for sizes

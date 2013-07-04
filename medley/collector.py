@@ -109,7 +109,7 @@ class Collection(list):
 
         if self.walk:
             #need to know where to walk
-            assert root, "NO ROOT SPECIFIED!"
+            assert self.root, "NO ROOT SPECIFIED!"
             self.rescan()
         elif self.source:
             if debug:
@@ -221,6 +221,7 @@ class Collection(list):
             for subdir in subdirs:
                 for root,dirs,files in os.walk(str(subdir)):
                     for f in files:
+
                         #if json_check.search(f) and not check_ignore(f, ignores):
                         if json_check.search(f):
                             json_file = os.path.join(root, f)
@@ -229,8 +230,11 @@ class Collection(list):
                             #get rid of leading slash
                             relative_root = relative_root[1:]
                             print "loading content from: %s" % json_file
-                            s = Content(json_file, root=relative_root)
-                            self.append(s)
+                            #c = Content(json_file, root=relative_root)
+                            c = Content(json_file)
+                            print "setting base_dir to: %s" % relative_root
+                            c.base_dir = relative_root
+                            self.append(c)
 
         print "Finished loading %s contents manually" % (len(self))
 
