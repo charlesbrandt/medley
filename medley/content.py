@@ -9,6 +9,7 @@ Song, Podcast, Album, Image, Book, Movie, Scene,
 
 """
 import os, re, copy
+import hashlib
 
 from helpers import save_json, get_media_dimensions, find_json, load_json
 
@@ -102,7 +103,8 @@ class Mark(object):
     seconds = property(_get_seconds, _set_seconds)
 
     def total_seconds(self):
-        return int(self.position) / 1000
+        #return int(self.position) / 100
+        return float(self.position) / 1000
 
     def as_tuple(self):
         """
@@ -115,7 +117,7 @@ class Mark(object):
         when storing these with a content item, we already know self.source
         """
         new_tag = self.tag.replace(',', '_')
-        return (self.total_seconds, new_tag)
+        return (self.total_seconds(), new_tag)
 
     # FORMAT SPECIFC CONVERTERS:
     
@@ -158,15 +160,22 @@ class MarkList(list):
     use acutal Mark objects
     this adds complexity, but also makes the object more powerful
     
-    includes methods for comparing one list to anther for easier merging 
+    includes methods for comparing one list to anther for easier merging
+
+    this is not format specific
+    for a related object, see: formats.MortplayerBookmarks
     """
-    def __init__(self, comma='', items=[]):
+    def __init__(self, items=[], comma=''):
         super(MarkList, self).__init__()
         
         #self.extend(items)
         for item in items:
-            assert isinstance(item, Mark)
-            self.append(item)
+            if isinstance(item, Mark):
+                self.append(item)
+            else:
+                #incase we get a list of lists:
+                mark = Mark(*item)
+                self.append(mark)
 
         if comma:
             self.from_comma(comma)
@@ -185,6 +194,139 @@ class MarkList(list):
             mark.tags = t[1]
             self.append(mark)
         
+    def group_by_tracks(self):
+        """
+        assumes all marks are from the same file
+        (typical, but not required)
+        """
+        groups = [ ]
+
+        in_talk = False
+
+        current_group = [ Mark("start", 0, key) ]
+        for next_mark in f_marks[key]:
+            if re.search('skip*', next_mark.tag) or re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag) or re.search('\+', next_mark.tag):
+                current_group.append( next_mark )
+                if re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag):
+                    in_talk = True
+
+                #can deal with plusses externally
+                #elif re.search('\+', next_mark.tag):
+                #    plusses.append(previous_track)
+                #    plusses.append(line)
+
+            elif in_talk:
+                #we want to skip the normal tag after an item...
+                #this usually ends the talking
+                #TODO:
+                #sometimes the end of talking
+                #and the start of the next track
+                #is the same
+                #would be nice to identify...
+                #might be one of the manual steps
+
+                current_group.append( next_mark )
+                in_talk = False
+
+            #this is the start of a new track / current_group
+            elif re.match(default_pattern, next_mark.tag):
+                #add previous track to groups
+                groups.append(current_group)
+                current_group = [ next_mark ]
+
+            else:
+                #probably just a description of some kind:
+                current_group.append( next_mark )
+                print "Unmatched tag: %s" % next_mark.tag
+
+        #don't forget last group found:
+        groups.append(current_group)
+        #new_f_marks[key] = groups
+        return groups
+
+    def make_segments(self, parent, default_pattern="bis"):
+        """
+        assumes all marks are from the same file
+        (typical, but not required)
+
+        rather than make groups of marks,
+        just make segments, as intended
+
+        parent is the main Content object that will hold all of these segments
+        """
+        groups = [ ]
+
+        in_talk = False
+
+        last_mark = None
+
+        #clear this out for subsequent calls
+        parent.segments = []
+
+        segment = Content()
+        segment.status = ''
+        start = Mark("start", 0)
+        segment.start = start
+        segment.marks.append(start)
+        
+        #current_group = [ Mark("start", 0, key) ]
+        #for next_mark in f_marks[key]:
+        for next_mark in self:
+            if re.search('skip*', next_mark.tag) or re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag) or re.search('\+', next_mark.tag):
+                segment.marks.append( next_mark )
+                if re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag):
+                    in_talk = True
+
+                #can deal with plusses externally
+                #elif re.search('\+', next_mark.tag):
+                #    plusses.append(previous_track)
+                #    plusses.append(line)
+
+            elif in_talk:
+                #we want to skip the normal tag after an item...
+                #this usually ends the talking
+                #
+                #sometimes the end of talking
+                #and the start of the next track
+                #is the same
+                #would be nice to identify...
+                #might be one of the manual steps
+                #
+                #this is up to the user to create 2 marks,
+                #one right after the other to signal these subsequent ends
+
+                segment.marks.append( next_mark )
+                in_talk = False
+
+            #this is the start of a new track / segment
+            #
+            #sometimes blank tags may indicate a new mark:
+            elif re.match(default_pattern, next_mark.tag) or not next_mark.tag:
+                #add previous track to groups
+                segment.end = next_mark
+                parent.add_segment(segment)
+                
+                segment = Content()
+                segment.status = ''
+                segment.start = next_mark
+                segment.marks.append(next_mark)
+
+            else:
+                #probably just a description of some kind:
+                segment.marks.append(next_mark)
+                print "Unmatched tag: %s" % next_mark.tag
+
+            #save the previous item for the next time around
+            #last_mark = next_mark
+
+        #last segment doesn't need an end mark...
+        #that should signal play to end
+        
+        #don't forget last group found:
+        parent.add_segment(segment)
+        ## #new_f_marks[key] = groups
+        ## return groups
+
     def from_comma(self, source):
         """
         split a comma separated string into jumps
@@ -302,6 +444,12 @@ class Content(object):
         #the default filename associated with the content
         self.filename = ''
 
+        #the md5 checksum hash for the main file
+        self.hash = ''
+        #this might help locate previously generated meta data
+        #without knowing anything else about the file
+        #similar to MuzicBrainz?
+
         # store a list of local media files,
         # along with dimensions if we calculate those
         # (could be other properties of the media to store)
@@ -404,6 +552,13 @@ class Content(object):
             self.load()
 
         elif source:
+            
+            #we might not have self.json_source yet,
+            #but we know we have source
+            #source_dir = os.path.dirname(self.json_source)
+            source_dir = os.path.dirname(source)
+
+
             # json file to save and load from
             #this is the best way to initialize previous Content object:
             #ok to include full path here...
@@ -411,9 +566,14 @@ class Content(object):
             #make sure something was found:
             if self.json_source:
                 self.load(self.json_source)
+            else:
+                #json_source does not exist yet
+                #set up some default destinations for json_source
+                spath = Path(source)
+                json_name = spath.name + ".json"
+                self.json_source = os.path.join(source_dir, json_name)
 
-            #now go back and update paths if any are incomplete,
-            #or check if what is stored in file is out of date
+            #check if what is stored in file is out of date
             #based on json_source location ...
 
             if self.json_source != source:
@@ -426,9 +586,8 @@ class Content(object):
                         self.filename, new_name)
                     self.filename = new_name
 
+            #update paths if any are incomplete:
             # - updated drive_dir ?
-            source_dir = os.path.dirname(self.json_source)
-
             drive_dir_matches = False
             if self.drive_dir and re.match(self.drive_dir, source_dir):
                 drive_dir_matches = True
@@ -438,10 +597,14 @@ class Content(object):
             else:
                 #must have self.base_dir in source_dir
                 if not drive_dir_matches:
-                    base_len = len(self.base_dir) * -1
-                    new_drive = source_dir[:base_len]
+                    if len(self.base_dir):
+                        base_len = len(self.base_dir) * -1
+                        new_drive = source_dir[:base_len]
+                    else:
+                        new_drive = source_dir
                     print "Updating self.drive_dir from: %s to: %s" % (self.drive_dir, new_drive)
                     self.drive_dir = new_drive
+
 
 
         #is it even necessary to link back to the containing list/collection?
@@ -466,7 +629,10 @@ class Content(object):
         previously, in Source objects, it was just .path
         but this can be brittle when drive locations change (as they do)
         """
-        return os.path.join(self.drive_dir, self.base_dir)
+        if not (self.drive_dir or self.base_dir):
+            return os.path.join(self.root.drive_dir, self.root.base_dir)
+        else:
+            return os.path.join(self.drive_dir, self.base_dir)
 
     path = property(_get_path)
     #def _set_path(self, name):
@@ -625,6 +791,10 @@ class Content(object):
             self.filename = content['filename']
             del content['filename']
 
+        if content.has_key('hash'):
+            self.hash = content['hash']
+            del content['hash']
+
 
         #deprecated... use self.sites instead
         #site is only loaded for legacy json files...
@@ -680,6 +850,8 @@ class Content(object):
             snapshot['media'] = self.media
         if self.filename:
             snapshot['filename'] = self.filename
+        if self.hash:
+            snapshot['hash'] = self.hash
         if self.drive_dir:
             snapshot['drive_dir'] = self.drive_dir
 
@@ -871,6 +1043,25 @@ class Content(object):
         #or could generate generic summary files based on what we do know
 
         return combined
+
+    def make_hash(self, filename=None):
+        """
+        via this excellent thread:
+        http://stackoverflow.com/questions/1131220/get-md5-hash-of-big-files-in-python        
+        """
+
+        if filename:
+            self.filename = filename
+
+        path = os.path.join(self.path, self.filename)
+        
+        md5 = hashlib.md5()
+        with open(path, 'rb') as f: 
+            for chunk in iter(lambda: f.read(8192), b''): 
+                 md5.update(chunk)
+
+        self.hash = md5.hexdigest()
+        return self.hash
 
     def update_dimensions(self, options, force=False, debug=False):
         """

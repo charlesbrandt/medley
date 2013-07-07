@@ -365,7 +365,7 @@ class MortplayerBookmarks(list):
 
     def group_marks_by_file(self, files=None, source=None):
         if not source is None:
-            self.from_mortplayer(source)
+            self.load(source)
 
         if not len(self):
             raise ValueError, "no marks to process: %s" % len(self)
@@ -394,7 +394,13 @@ class MortplayerBookmarks(list):
         what the application making bookmarks used when no tag/title supplied
         (can vary from application to application...
         e.g. filename, track title from ID3, etc)
+
         """
+        print "DEPRECATED: group_marks_by_tracks"
+        print "after self.group_by_file(),"
+        print "use: MarkList.group_by_tracks instead"
+
+
         if f_marks is None:
             f_marks = self.group_marks_by_file()
 
@@ -453,40 +459,6 @@ class MortplayerBookmarks(list):
 
 
 
-    #def find_pluses(files):
-    #def find_bookmarks(source):
-    def find_pluses(self, source):
-
-        log_check = re.compile('.*\.mpb$')    
-        if os.path.isdir(source):
-            f_marks = {}
-            for root,dirs,files in os.walk(source):
-                for f in files:
-                    current_file = os.path.join(root, f)
-                    if log_check.search(f):
-                        #marks = from_mortplayer(current_file)
-                        marks = Marks(current_file)
-                        marks.from_mortplayer()
-                        marks.group_marks_by_file(f_marks)
-
-                        print current_file
-
-            #pluses = find_pluses(f_marks)
-            files = f_marks
-
-            matched = []
-            for key in files.keys():
-                for mark in files[key]:
-                    if re.search('\+', mark.tag):
-                        matched.append(mark)
-
-            pluses = matched
-            to_mortplayer(pluses)
-            #print f_marks
-
-        #print matched
-        #return matched
-
     def update_locations(self, old_prefix, new_prefix):
         """
         only update locations for loaded marks
@@ -509,6 +481,44 @@ class MortplayerBookmarks(list):
     #haven't checked past here since converting to Marks object
 
 
+
+    #def find_pluses(files):
+    #def find_bookmarks(source):
+    def find_pluses(self, source):
+
+        log_check = re.compile('.*\.mpb$')    
+        if os.path.isdir(source):
+            f_marks = {}
+            for root,dirs,files in os.walk(source):
+                for f in files:
+                    current_file = os.path.join(root, f)
+                    if log_check.search(f):
+                        ## #marks = from_mortplayer(current_file)
+                        ## marks = Marks(current_file)
+                        ## marks.from_mortplayer()
+                        ## marks.group_marks_by_file(f_marks)
+
+                        marks = MortplayerBookmarks(current_file)
+                        marks.load()
+                        marks.group_marks_by_file(f_marks)
+
+                        print current_file
+
+            #pluses = find_pluses(f_marks)
+            files = f_marks
+
+            matched = []
+            for key in files.keys():
+                for mark in files[key]:
+                    if re.search('\+', mark.tag):
+                        matched.append(mark)
+
+            pluses = matched
+            to_mortplayer(pluses)
+            #print f_marks
+
+        #print matched
+        #return matched
 
     def update_locations_many_files(self, source):
         """
