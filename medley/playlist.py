@@ -309,7 +309,6 @@ class Playlist(PositionList):
     aka Playlist, Medialist
 
 
-    TODO:
     consider the best way to handle Segments in a Content object
     for Playlist use:
     Separate copies of Content in the Playlist for each Segment?
@@ -318,6 +317,11 @@ class Playlist(PositionList):
     Playlist reorders list of Segments associated with Content
       -- more difficult to split segments of one piece of content in between
          segments of another piece of content, within a list
+
+    also:
+    when editing a segment, save changes to main json parent Content
+
+
     """
     def __init__(self, items=[], log_path=None):
         PositionList.__init__(self, items)
@@ -336,6 +340,13 @@ class Playlist(PositionList):
         #
         #this should not matter if a content object is edited directly
         self.sync_contents = False
+
+    #save and load:
+    #use helpers
+    #save_json(destination, self[:])
+    #and
+    #Playlist(load_json(source)) #assuming json contains a list of Contents
+    #any other format should be used 
 
     def add_if_new(self, source):
         if not self.has_path(source.path):

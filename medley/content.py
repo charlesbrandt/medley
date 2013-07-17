@@ -700,6 +700,9 @@ class Content(object):
         if content.has_key('timestamp'):
             self.timestamp = Timestamp(content['timestamp'])
             del content['timestamp']
+        if content.has_key('date'):
+            self.timestamp = Timestamp(content['date'])
+            del content['date']
             
         if content.has_key('title'):
             self.title = content['title']
@@ -744,7 +747,7 @@ class Content(object):
             del content['marks']
 
         if content.has_key('segments'):
-            segments = []
+            #segments = []
             for seg in content['segments']:
                 sub_c = Content(content=seg)
                 self.add_segment(sub_c)
@@ -753,7 +756,7 @@ class Content(object):
                 #sub_c.parent = self
                 #sub_c.root = self.root
                 #segments.append(sub_c)
-            self.segments = segments
+            #self.segments = segments
             del content['segments']
 
         if content.has_key('start'):

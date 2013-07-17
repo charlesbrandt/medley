@@ -23,13 +23,15 @@ def save_json(destination, json_objects):
 
 def load_json(source_file, create=False):
     if not os.path.exists(source_file):
+        json_objects = {}
         if create:
             print "CREATING NEW JSON FILE: %s" % source_file
             json_file = codecs.open(source_file, 'w', encoding='utf-8', errors='ignore')
+            #make sure there is something there for subsequent loads
+            json_file.write(json.dumps(json_objects))
             json_file.close()
         else:
             raise ValueError, "JSON file does not exist: %s" % source_file
-        json_objects = {}
     else:
         json_file = codecs.open(source_file, 'r', encoding='utf-8', errors='ignore')
 
