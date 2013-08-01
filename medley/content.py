@@ -31,6 +31,7 @@ class Mark(object):
         #also what about 'name' or 'description' (better in a segment)
 
         #tag is a user specified tag or category ('work', 'chill', 'other')
+        #if included as part of a segment, should update the segment.tags too
         self.tag = tag
         
         #once we've determined the real title of the mark location:
