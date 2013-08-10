@@ -1,3 +1,22 @@
+*2013.08.09 15:36:26 
+/c/medley/instances.txt
+/c/medley/launch.sh
+/c/binaries-local/podcasts/beats_in_space/2013-list.json
+/c/alpha/pyside/pysideqplayer.py
+/c/medley/player/playlist_view.py
+/c/medley/player/playlists_view.py
+/c/medley/player/content_view.py
+/c/medley/player/player.py
+
+*2013.08.09 player
+/c/medley/player/instances.txt
+/c/binaries-local/podcasts/beats_in_space/2013-list.json
+/c/medley/player/launch.sh
+/c/alpha/pyside/pysideqplayer.py
+/c/medley/player/playlist_view.py
+/c/medley/player/playlists_view.py
+/c/medley/player/player.py
+
 *2013.06.12 10:33:58 code
 /c/medley/instances.txt
 /c/medley/medley/yapsy/PluginManager.py

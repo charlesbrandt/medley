@@ -417,7 +417,7 @@ class Content(object):
 
     this is a place to draw those together
     """
-    def __init__(self, source=None, content={}, debug=False):
+    def __init__(self, source=None, content={}, root=None, debug=False):
         """
         few different ways to initialize an item of content:
 
@@ -427,8 +427,8 @@ class Content(object):
           - can pass a raw dictionary representation of the content meta data
             (often loaded from a json file)
 
-          - can pass a root where a meta data file is located
-
+          - root top-most content item for nesting content objects (not a path)
+            (if it's not passed in here, child segments are not set correctly)
         """
         #the root location relative to collection base
         #self.root = root
@@ -443,7 +443,8 @@ class Content(object):
 
         
         #the default filename associated with the content
-        self.filename = ''
+        #moving this to a property (like path), to assist with searching
+        self._filename = ''
 
         #the md5 checksum hash for the main file
         self.hash = ''
@@ -536,7 +537,10 @@ class Content(object):
         #in order to load and save changes to segments
         #that are located out of context from original Content root
         self.parent = None
-        self.root = self
+        if root is None:
+            self.root = self
+        else:
+            self.root = root
 
 
 
@@ -614,12 +618,56 @@ class Content(object):
         #what about playlists? way to generalize here?
 
 
+    def _seek_path_up(self):
+        """
+        helper for _get_path...
+        only look for a path by going up
+        ok to return None if no path is ultimately found
+        """
+        #if not (self.drive_dir and self.base_dir):
+        if self.drive_dir:
+            return os.path.join(self.drive_dir, self.base_dir)
+        else:
+            #print self.root.title
+            #print "Couldn't find self.drive_dir: %s" % self.drive_dir
+            #print self.debug()
+            if not (self.parent is None):
+                return self.parent._seek_path_up()
+            elif not (self.root is None) and (self.root != self):
+                return self.root._seek_path_up()
+            else:
+                #might be root with no path data:
+                return ''
+            
+    def _seek_path_down(self, depth_first=True):
+        """
+        helper for _get_path...
+        only look for a path by searching down
+        ok to return None if no path is ultimately found
+        """
+        #if not (self.drive_dir and self.base_dir):
+        if not (self.drive_dir):
+            found_path = False
+            index = 0
+            while not found_path:
+                if index < len(self.segments):
+                    option = self.segments[index]._seek_path_down()
+                    if option:
+                        found_path = True
+                        return option
+                    index += 1
+                else:
+                    return ''
+
+        else:            
+            return os.path.join(self.drive_dir, self.base_dir)
+            
 
     def _get_path(self):
         """
         use self.drive_dir and self.base_dir to determine the current path
         
-        this better way to quickly determine the current full path
+        this is a better way to quickly determine the current full path
         this is useful for calls to __repr__ and __str__
         
         Content object might not always be part of a Collection 
@@ -628,10 +676,30 @@ class Content(object):
         (the part of the path that changes due to storage shifts / mounts)
         
         previously, in Source objects, it was just .path
-        but this can be brittle when drive locations change (as they do)
+        but this can be brittle when drive locations change (as they often do)
+
+
+        Segments (nested Content objects) complicate the issue some.
+        Two options:
+        - make sure all levels always have self.drive_dir and self.base_dir
+          might not be able to rely on creator to do this
+          and some levels may not have any media associated with it
+          in which case it doesn't make much sense
+          
+        - a way to scan the levels for the closest viable path
+          this is tricky since it might not be obvious which way to go
+          (trace up, or dig down)
+          and need to make sure no infinite recursion happens
         """
-        if not (self.drive_dir or self.base_dir):
-            return os.path.join(self.root.drive_dir, self.root.base_dir)
+        #if not (self.drive_dir and self.base_dir):
+        if not (self.drive_dir):
+            option = self._seek_path_up()
+            if not option:
+                option = self._seek_path_down()
+                if not option:
+                    raise ValueError, "Incomplete path parts: %s (drive_dir) and %s (base_dir).  Could not find path anywhere: %s" % (self.drive_dir, self.base_dir, self.root.to_dict())
+            #return os.path.join(self.root.drive_dir, self.root.base_dir)
+            return option
         else:
             return os.path.join(self.drive_dir, self.base_dir)
 
@@ -640,16 +708,85 @@ class Content(object):
     #    self.parse_name(name)
     #path = property(_get_path, _set_path)
 
-    def __str__(self):
+
+
+    #having trouble getting this:
+    #going back to ids for now
+    ## def __str__(self):
+    ##     """
+    ##     when cast to a string, probably want the first media file path
+    ##     """
+    ##     #return self.as_moment().render()
+    ##     ## if len(self.media):
+    ##     ##     return self.media[0]
+    ##     ## else:
+    ##     ##     return ""
+    ##     return os.path.join(self.path, self.filename)
+
+
+    def _seek_up(self, attribute='_filename'):
         """
-        when cast to a string, probably want the first media file path
+        only look for attribute by going up
+        ok to return None if no value is ultimately found
         """
-        #return self.as_moment().render()
-        ## if len(self.media):
-        ##     return self.media[0]
-        ## else:
-        ##     return ""
-        return os.path.join(self.path, self.filename)
+        if hasattr(self, attribute) and getattr(self, attribute):
+            return getattr(self, attribute)
+        else:
+            #print self.debug()
+            if not (self.parent is None):
+                return self.parent._seek_up(attribute)
+            elif not (self.root is None) and (self.root != self):
+                return self.root._seek_up(attribute)
+            else:
+                return None
+            
+    def _seek_down(self, attribute='_filename', depth_first=True):
+        """
+        only look for the specified attribute by searching down
+        ok to return None if no attribute is ultimately found
+        """
+
+        #if we don't have the attribute or
+        #if we have the attribute, but it doesn't have a value
+        if ( (not hasattr(self, attribute)) or
+             (hasattr(self, attribute) and (not getattr(self, attribute))) ):
+
+            #keep looking:
+            found_something = False
+            index = 0
+            while not found_something:
+                if index < len(self.segments):
+                    option = self.segments[index]._seek_down(attribute, depth_first)
+                    if option:
+                        found_something = True
+                        return option
+                    index += 1
+                else:
+                    return None
+        
+        elif hasattr(self, attribute):
+            return getattr(self, attribute)
+        else:
+            #shouldn't get here:
+            raise ValueError, "Unexpected condition"
+
+    def _get_filename(self):
+        #search here
+        if not (self._filename):
+            option = self._seek_up('_filename')
+            if not option:
+                option = self._seek_down('_filename')
+                if not option:
+                    raise ValueError, "Could not find filename anywhere: %s" % (self.debug())
+            return option
+        else:
+            return self._filename
+            
+    def _set_filename(self, name):
+        self._filename = name            
+
+    filename = property(_get_filename, _set_filename)
+
 
     def add_segment(self, segment):
         """
@@ -659,7 +796,9 @@ class Content(object):
         with parent and root updated accordingly
         """
         segment.parent = self
-        segment.root = self.root
+        #this should be set during Content.__init__
+        #otherwise it is not carried all the way down the chain
+        #segment.root = self.root
         
         if not segment.segment_id:
             #generate a new segment_id here
@@ -750,7 +889,7 @@ class Content(object):
         if content.has_key('segments'):
             #segments = []
             for seg in content['segments']:
-                sub_c = Content(content=seg)
+                sub_c = Content(content=seg, root=self.root)
                 self.add_segment(sub_c)
 
                 #these steps are handled by self.add_segment now:
@@ -785,6 +924,10 @@ class Content(object):
         if content.has_key('content_base'):
             self.base_dir = content['content_base']
             del content['content_base']
+
+        if content.has_key('drive_dir'):
+            self.drive_dir = content['drive_dir']
+            del content['drive_dir']
 
         if content.has_key('media'):
             self.media = content['media']
@@ -1136,4 +1279,80 @@ class Content(object):
 
         return moment
 
+    def debug(self, indent=0, recurse=True):
+        """
+        make a printable representation of self that is easy to read and debug
+        """
+        result = ""
+        
+
+        #these require that the string representation is working
+        result += ''.ljust(indent) + str(self) + '\n'
+        result += ''.ljust(indent) + 'parent: %s\n' % self.parent
+        result += ''.ljust(indent) + 'root: %s\n' % self.root
+
+        if self.base_dir:
+            result += ''.ljust(indent) + 'base_dir: %s\n' % self.base_dir
+        if self.drive_dir:
+            result += ''.ljust(indent) + 'drive_dir: %s\n' % self.drive_dir
+        if self.filename:
+            result += ''.ljust(indent) + 'filename: %s\n' % self.filename
+        if self.media:
+            result += ''.ljust(indent) + 'media: %s\n' % self.media
+            
+        if self.start:
+            result += ''.ljust(indent) + 'start: %s\n' % self.start.total_seconds()
+        else:
+            result += ''.ljust(indent) + 'start: %s\n' % self.start
+
+        if self.end:
+            result += ''.ljust(indent) + 'end: %s\n' % self.end.total_seconds()
+        else:
+            result += ''.ljust(indent) + 'end: %s\n' % self.end
+
+        if self.segment_id:
+            result += ''.ljust(indent) + 'segment_id: %s\n' % self.segment_id
+        if self.next_segment_id:
+            result += ''.ljust(indent) + 'next_segment_id: %s\n' % self.next_segment_id
+
+        if self.tags:
+            result += ''.ljust(indent) + 'tags: %s\n' % self.tags
+        if self.people:
+            result += ''.ljust(indent) + 'people: %s\n' % self.people
+        if self.sites:
+            result += ''.ljust(indent) + 'sites: %s\n' % self.sites
+        if self.description:
+            result += ''.ljust(indent) + 'description: %s\n' % self.description
+        if self.title:
+            result += ''.ljust(indent) + 'title: %s\n' % self.title
+
+        if self.timestamp:
+            result += ''.ljust(indent) + 'timestamp: %s\n' % self.timestamp.compact()
+        else:
+            result += ''.ljust(indent) + 'timestamp: %s\n' % self.timestamp
+
+        if self.status:
+            result += ''.ljust(indent) + 'status: %s\n' % self.status
+
+        if self.hash:
+            result += ''.ljust(indent) + 'hash: %s\n' % self.hash
+
+        if self.history:
+            result += ''.ljust(indent) + 'history: %s\n' % self.history
+
+        #marks = self.marks.to_tuples()
+        #if marks:
+        #    snapshot['marks'] = marks
+
+        result += ''.ljust(indent) + 'segments:\n'
+        if recurse:
+            for segment in self.segments:
+                result += segment.debug(indent+10)
+
+        result += '\n'
+
+        #snapshot = copy.deepcopy(self.remainder)
+
+        #print result
+        return result
 

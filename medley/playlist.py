@@ -20,13 +20,13 @@ class Position(object):
         self.loop = loop
 
     def __int__(self):
-        return self.index
+        return self.position
 
     def __str__(self):
-        return str(self.index)
+        return str(self.position)
 
     def __repr__(self):
-        return self.index
+        return self.position
 
     def _get_length(self):
         return self._length
@@ -38,7 +38,7 @@ class Position(object):
         return self._index
     def _set_index(self, p):
         self._index = self.check(p)
-    index = property(_get_index, _set_index)
+    position = property(_get_index, _set_index)
     
     def end(self):
         """
@@ -50,7 +50,7 @@ class Position(object):
         """
         return a boolean value for if our position is equal to the end
         """
-        return self.index == self.end()
+        return self.position == self.end()
 
     def change_length(self, length):
         """
@@ -85,23 +85,23 @@ class Position(object):
         gives the position for the next item
         but does not actually increment the index
         """
-        if self.index+value >= self.length:
+        if self.position+value >= self.length:
             if self.loop:
                 return 0
             else:
                 #staying at the end
-                #return self.index
+                #return self.position
                 #return self.length-1
                 return self.end()
         else:
-            return self.index+value
+            return self.position+value
     
     def previous(self, value=1):
         """
         gives the position for the next item
         but does not actually increment the index
         """
-        if self.index-value < 0:
+        if self.position-value < 0:
             if self.loop:
                 #return self.length-1
                 return self.end()
@@ -110,21 +110,31 @@ class Position(object):
                 #(should be 0 already)
                 return 0
         else:
-            return self.index-value
+            return self.position-value
 
     def increment(self, value=1):
         """
         changes the actual index variable
         """
-        self.index = self.next(value)
-        return self.index
+        self.position = self.next(value)
+        return self.position
 
     def decrement(self, value=1):
         """
         changes the actual index variable
         """
-        self.index = self.previous(value)
-        return self.index
+        self.position = self.previous(value)
+        return self.position
+
+    def debug(self):
+        """
+        return a string representation of current state
+        """
+        result = ''
+        result += "Position index: %s\n" % self._index
+        result += "Length: %s\n" % self._length
+        result += "Loop: %s\n" % self.loop
+        return result
 
 #previously: (too generic)
 #class Items(list):
@@ -176,7 +186,7 @@ class PositionList(list):
         get calls will not change our position
         """
         #make sure position's length is always current:
-        self.update()
+        self.update_length()
         
         #print "Received position: %s" % position
         #print "Current position: %s" % self._position
@@ -214,11 +224,13 @@ class PositionList(list):
         go calls will update the local position object
         """
         item = self.get(position)
-        if position is not None:
+        if not position is None:
             #whew!  this is a tricky line...
             #setting the position object's internal position:
             self._position.position = position
         #self.current = item
+        print self._position.debug()
+        print "passed position: %s" % position
         return item
 
     #changing the interface to be the same as it is with Position object:
@@ -347,6 +359,15 @@ class Playlist(PositionList):
     #and
     #Playlist(load_json(source)) #assuming json contains a list of Contents
     #any other format should be used 
+
+    def set_current(self, item):
+        """
+        if we have item
+        set the position to be that item
+        (useful when selecting next item externally)
+        """
+        self.go(self.index(item))
+        #no need to return anything... already have the item
 
     def add_if_new(self, source):
         if not self.has_path(source.path):
