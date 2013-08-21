@@ -7,18 +7,43 @@ from medley.playlist import Playlist
 from medley.content import Content
 
 
+## def load_playlist_old(fname):
+##     """
+##     this version works with a json structure populated with
+##     Content dictionary representation.
+##     This approach is deprecated... too much duplication of information...
+##     difficult to determine which one is authoritative...
+##     the one in the playlist or the one stored with the media data.
+
+##     trying to keep data in one place.
+##     """
+##     items = load_json(fname)
+##     contents = []
+##     for item in items:
+##         #print item
+##         #print ""
+##         content = Content(content=item)
+##         #content.load()
+##         #print content.to_dict()
+##         #print ""
+##         #print ""
+##         contents.append(content)
+##     return Playlist(contents)
+
 def load_playlist(fname):
     items = load_json(fname)
     contents = []
     for item in items:
         #print item
         #print ""
-        content = Content(content=item)
-        #content.load()
-        #print content.to_dict()
+        (json_source, segment_id) = item
+        content = Content(json_source)
+
+        segment = content.get_segment(segment_id)
+        #print segment.to_dict()
         #print ""
         #print ""
-        contents.append(content)
+        contents.append(segment)
     return Playlist(contents)
 
 class Node(object):
@@ -142,6 +167,8 @@ class Node(object):
             simple = item
         else:
             raise ValueError, "No data to load from_json: %s" % data
+
+        #print simple
         
         if simple.has_key('name'):
             self.setName(simple['name'])

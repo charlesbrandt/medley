@@ -16,7 +16,9 @@ from helpers import save_json, get_media_dimensions, find_json, load_json
 from moments.path import Path
 from moments.timestamp import Timestamp
 from moments.tag import to_tag
-
+#for history:
+from moments.journal import Journal
+from moments.log import Log
 
 class Mark(object):
     """
@@ -45,7 +47,10 @@ class Mark(object):
         #only used in mortplayer
         #assuming length should be ms?
         self.length = length
-        self.created = created
+        if created is None:
+            self.created = Timestamp()
+        else:
+            self.created = created
 
         #these are used in m3u lists
         self.bytes = bytes
@@ -60,6 +65,12 @@ class Mark(object):
         shortcut to print the position in time format
         """
         return "%02d:%02d:%02d" % self.as_hms()
+
+    def from_time(self, text):
+        parts = text.split(':')
+        assert len(parts) == 3
+
+        self.from_hms(int(parts[0]), int(parts[1]), int(parts[2]))
         
     #def from_milliseconds(self, milli_seconds=None):
     def as_hms(self, milli_seconds=None):
@@ -181,6 +192,14 @@ class MarkList(list):
         if comma:
             self.from_comma(comma)
 
+    #over-ride default sort...
+    #sort based on eacy mark position
+    def sort(self):
+        """
+        sorted() function is also available
+        """
+        super(MarkList, self).sort(key=lambda mark: mark.position)
+            
     def to_tuples(self):
 
         result = []
@@ -190,9 +209,10 @@ class MarkList(list):
 
     def from_tuples(self, tuples):
         for t in tuples:
+            #print "TUPLE: %s" % t
             mark = Mark()
             mark.seconds = t[0]
-            mark.tags = t[1]
+            mark.tag = t[1]
             self.append(mark)
         
     def group_by_tracks(self):
@@ -245,7 +265,7 @@ class MarkList(list):
         #new_f_marks[key] = groups
         return groups
 
-    def make_segments(self, parent, default_pattern="bis"):
+    def make_segments(self, parent, default_pattern="bis", titles=[]):
         """
         assumes all marks are from the same file
         (typical, but not required)
@@ -254,6 +274,11 @@ class MarkList(list):
         just make segments, as intended
 
         parent is the main Content object that will hold all of these segments
+
+        if titles are passed in here,
+        can use the distinction between sub_segment and segment
+        to only apply titles to segments
+        (can try to do this outside of method, but might be harder)
         """
         groups = [ ]
 
@@ -264,24 +289,41 @@ class MarkList(list):
         #clear this out for subsequent calls
         parent.segments = []
 
+        title_index = 0
+        segment_count = 0
+
+        #handle special cases when first segment is sub_segment:
+        first_segment = True
+        
         segment = Content()
         segment.status = ''
         start = Mark("start", 0)
         segment.start = start
         segment.marks.append(start)
+
+        #used for things like talk and caller segments
+        sub_segment = Content()
+        sub_segment.status = ''
         
         #current_group = [ Mark("start", 0, key) ]
         #for next_mark in f_marks[key]:
         for next_mark in self:
-            if re.search('skip*', next_mark.tag) or re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag) or re.search('\+', next_mark.tag):
+            if re.search('skip*', next_mark.tag) or re.search('\+', next_mark.tag):
                 segment.marks.append( next_mark )
-                if re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag):
+                segment.tags.extend(next_mark.tag.split(' '))
+
+            elif re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag) or re.search('call*', next_mark.tag) or re.search('Call*', next_mark.tag):
                     in_talk = True
 
-                #can deal with plusses externally
-                #elif re.search('\+', next_mark.tag):
-                #    plusses.append(previous_track)
-                #    plusses.append(line)
+                    if first_segment:
+                        sub_segment.start = start
+                        sub_segment.marks.append(start)
+
+                    else:
+                        sub_segment.start = next_mark
+                        
+                    sub_segment.marks.append( next_mark )
+                    sub_segment.title = next_mark.tag
 
             elif in_talk:
                 #we want to skip the normal tag after an item...
@@ -296,16 +338,50 @@ class MarkList(list):
                 #this is up to the user to create 2 marks,
                 #one right after the other to signal these subsequent ends
 
-                segment.marks.append( next_mark )
+                #segment.marks.append( next_mark )
+
+                sub_segment.end = next_mark
+                sub_segment.marks.append( next_mark )
+
+                parent.add_segment(sub_segment)
+                    
+                if first_segment:
+                    #get rid of initial (default) (first) segment start:
+                    segment.marks.pop()
+                        
+                    segment.start = next_mark
+                    segment.marks.append(next_mark)
+                    first_segment = False
+
+                #reset sub_segment
+                sub_segment = Content()
+                sub_segment.status = ''
+                
                 in_talk = False
 
             #this is the start of a new track / segment
             #
             #sometimes blank tags may indicate a new mark:
             elif re.match(default_pattern, next_mark.tag) or not next_mark.tag:
-                #add previous track to groups
                 segment.end = next_mark
+                segment_count += 1
+
+                #now that we have a full segment, apply the right title to it:
+                #(if titles are available)
+                if len(titles) and (len(titles) > title_index):
+                    segment.title = titles[title_index]
+                    title_index += 1
+                elif len(titles) and (len(titles) <= title_index):
+                    print "Not enough titles to apply to segments"
+                    print "extra segments: %s tracks, %s segments" % (len(titles), segment_count)
+                
+
+                
+                #add previous track to parent
                 parent.add_segment(segment)
+
+                if first_segment:
+                    first_segment = False
                 
                 segment = Content()
                 segment.status = ''
@@ -315,10 +391,14 @@ class MarkList(list):
             else:
                 #probably just a description of some kind:
                 segment.marks.append(next_mark)
+                segment.tags.extend(next_mark.tag.split(' '))
                 print "Unmatched tag: %s" % next_mark.tag
 
             #save the previous item for the next time around
             #last_mark = next_mark
+
+        if len(titles) > segment_count:
+            print "Extra titles available: %s titles, %s segments" % (len(titles), segment_count)
 
         #last segment doesn't need an end mark...
         #that should signal play to end
@@ -441,8 +521,10 @@ class Content(object):
         #relative path for other content
         self.base_dir = ''
 
+        #keep track of where this object's meta data is stored:
+        self._json_source = ''
         
-        #the default filename associated with the content
+        #the default content/media related filename associated with the content
         #moving this to a property (like path), to assist with searching
         self._filename = ''
 
@@ -527,8 +609,10 @@ class Content(object):
         #keep a log of when actions happened:
         #used to do this with Moment logs to track media plays
         #not processing log (e.g. loading into a Journal)
-        self.history = ""
-
+        #self.history = ""
+        #to make this easier, use a Journal to help with formatting:
+        self.history = Journal()
+        self.history.make("Created", ["created"])
 
         #these attributes are generated and assigned later
         #no need to store them with a json file / dict
@@ -587,28 +671,39 @@ class Content(object):
                 # - updated filename
                 new_name = os.path.basename(source)
                 if new_name and new_name != self.filename:
-                    print "Updating self.filename: %s with new name: %s" % (
-                        self.filename, new_name)
+                    print "Updating self.filename: ->%s<- (type: %s) with new name: ->%s<- (type: %s)" % (self.filename, type(self.filename), new_name, type(new_name))
                     self.filename = new_name
 
             #update paths if any are incomplete:
             # - updated drive_dir ?
-            drive_dir_matches = False
-            if self.drive_dir and re.match(self.drive_dir, source_dir):
-                drive_dir_matches = True
 
-            if not re.search(self.base_dir, source_dir):
-                print "WARNING: could not find base_dir (%s) in source_dir (%s)" % (self.base_dir, source_dir)
-            else:
+            #not sure what this check accomplishes...
+            #maybe it doesn't update drive_dir and base_dir if nothing
+            #has changed
+            #
+            #but sometimes drive_dir was not set correctly to begin with
+            #(includes base_dir)
+            #
+            #seems ok to always check
+            #drive_dir_matches = False
+            #if self.drive_dir and re.match(self.drive_dir, source_dir):
+            #    drive_dir_matches = True
+
+            #if not re.search(self.base_dir, source_dir):
+            #    print "WARNING: could not find base_dir (%s) in source_dir (%s)" % (self.base_dir, source_dir)
+            #else:
+            if re.search(self.base_dir, source_dir):
                 #must have self.base_dir in source_dir
-                if not drive_dir_matches:
-                    if len(self.base_dir):
-                        base_len = len(self.base_dir) * -1
-                        new_drive = source_dir[:base_len]
-                    else:
-                        new_drive = source_dir
-                    print "Updating self.drive_dir from: %s to: %s" % (self.drive_dir, new_drive)
-                    self.drive_dir = new_drive
+                #if not drive_dir_matches:
+                if len(self.base_dir):
+                    base_len = len(self.base_dir) * -1
+                    new_drive = source_dir[:base_len]
+                else:
+                    new_drive = source_dir
+
+                if self.drive_dir != new_drive:
+                    print "Updating self.drive_dir: ->%s<- (type: %s) with new name: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), new_drive, type(new_drive))
+                self.drive_dir = new_drive
 
 
 
@@ -616,98 +711,6 @@ class Content(object):
         #can re-enable if there is a usecase
         #self.collection = ''
         #what about playlists? way to generalize here?
-
-
-    def _seek_path_up(self):
-        """
-        helper for _get_path...
-        only look for a path by going up
-        ok to return None if no path is ultimately found
-        """
-        #if not (self.drive_dir and self.base_dir):
-        if self.drive_dir:
-            return os.path.join(self.drive_dir, self.base_dir)
-        else:
-            #print self.root.title
-            #print "Couldn't find self.drive_dir: %s" % self.drive_dir
-            #print self.debug()
-            if not (self.parent is None):
-                return self.parent._seek_path_up()
-            elif not (self.root is None) and (self.root != self):
-                return self.root._seek_path_up()
-            else:
-                #might be root with no path data:
-                return ''
-            
-    def _seek_path_down(self, depth_first=True):
-        """
-        helper for _get_path...
-        only look for a path by searching down
-        ok to return None if no path is ultimately found
-        """
-        #if not (self.drive_dir and self.base_dir):
-        if not (self.drive_dir):
-            found_path = False
-            index = 0
-            while not found_path:
-                if index < len(self.segments):
-                    option = self.segments[index]._seek_path_down()
-                    if option:
-                        found_path = True
-                        return option
-                    index += 1
-                else:
-                    return ''
-
-        else:            
-            return os.path.join(self.drive_dir, self.base_dir)
-            
-
-    def _get_path(self):
-        """
-        use self.drive_dir and self.base_dir to determine the current path
-        
-        this is a better way to quickly determine the current full path
-        this is useful for calls to __repr__ and __str__
-        
-        Content object might not always be part of a Collection 
-        or the Collection may not be loaded (e.g. in a Playlist)
-        all we really need in this case is the collection base
-        (the part of the path that changes due to storage shifts / mounts)
-        
-        previously, in Source objects, it was just .path
-        but this can be brittle when drive locations change (as they often do)
-
-
-        Segments (nested Content objects) complicate the issue some.
-        Two options:
-        - make sure all levels always have self.drive_dir and self.base_dir
-          might not be able to rely on creator to do this
-          and some levels may not have any media associated with it
-          in which case it doesn't make much sense
-          
-        - a way to scan the levels for the closest viable path
-          this is tricky since it might not be obvious which way to go
-          (trace up, or dig down)
-          and need to make sure no infinite recursion happens
-        """
-        #if not (self.drive_dir and self.base_dir):
-        if not (self.drive_dir):
-            option = self._seek_path_up()
-            if not option:
-                option = self._seek_path_down()
-                if not option:
-                    raise ValueError, "Incomplete path parts: %s (drive_dir) and %s (base_dir).  Could not find path anywhere: %s" % (self.drive_dir, self.base_dir, self.root.to_dict())
-            #return os.path.join(self.root.drive_dir, self.root.base_dir)
-            return option
-        else:
-            return os.path.join(self.drive_dir, self.base_dir)
-
-    path = property(_get_path)
-    #def _set_path(self, name):
-    #    self.parse_name(name)
-    #path = property(_get_path, _set_path)
-
 
 
     #having trouble getting this:
@@ -722,6 +725,71 @@ class Content(object):
     ##     ## else:
     ##     ##     return ""
     ##     return os.path.join(self.path, self.filename)
+
+
+    ## def _seek_path_up(self):
+    ##     """
+    ##     helper for _get_path...
+    ##     only look for a path by going up
+    ##     ok to return None if no path is ultimately found
+    ##     """
+    ##     #if not (self.drive_dir and self.base_dir):
+    ##     if self.drive_dir:
+    ##         return os.path.join(self.drive_dir, self.base_dir)
+    ##     else:
+    ##         #print self.root.title
+    ##         #print "Couldn't find self.drive_dir: %s" % self.drive_dir
+    ##         #print self.debug()
+    ##         if not (self.parent is None):
+    ##             return self.parent._seek_path_up()
+    ##         elif not (self.root is None) and (self.root != self):
+    ##             return self.root._seek_path_up()
+    ##         else:
+    ##             #might be root with no path data:
+    ##             return ''
+            
+    ## def _seek_path_down(self, depth_first=True):
+    ##     """
+    ##     helper for _get_path...
+    ##     only look for a path by searching down
+    ##     ok to return None if no path is ultimately found
+    ##     """
+    ##     #if not (self.drive_dir and self.base_dir):
+    ##     if not (self.drive_dir):
+    ##         found_path = False
+    ##         index = 0
+    ##         while not found_path:
+    ##             if index < len(self.segments):
+    ##                 option = self.segments[index]._seek_path_down()
+    ##                 if option:
+    ##                     found_path = True
+    ##                     return option
+    ##                 index += 1
+    ##             else:
+    ##                 return ''
+
+    ##     else:            
+    ##         return os.path.join(self.drive_dir, self.base_dir)
+            
+    ## def _get_path_orig(self):
+    ##     """
+    ##     original _get_path method
+    ##     that uses customized seek up and seek down helpers
+    ##     for finding path specific data
+
+    ##     see new _get_path that uses generalized _seek_up and _seek_down
+    ##     """
+    ##     #if not (self.drive_dir and self.base_dir):
+    ##     if not (self.drive_dir):
+    ##         option = self._seek_path_up()
+    ##         if not option:
+    ##             option = self._seek_path_down()
+    ##             if not option:
+    ##                 raise ValueError, "Incomplete path parts: %s (drive_dir) and %s (base_dir).  Could not find path anywhere: %s" % (self.drive_dir, self.base_dir, self.root.to_dict())
+    ##         #return os.path.join(self.root.drive_dir, self.root.base_dir)
+    ##         return option
+    ##     else:
+    ##         return os.path.join(self.drive_dir, self.base_dir)
 
 
     def _seek_up(self, attribute='_filename'):
@@ -777,7 +845,11 @@ class Content(object):
             if not option:
                 option = self._seek_down('_filename')
                 if not option:
-                    raise ValueError, "Could not find filename anywhere: %s" % (self.debug())
+                    print "Could not find filename anywhere"
+                    return ''
+                    #don't call self.debug() if raising an error!
+                    #raise ValueError, "Could not find filename anywhere"
+                
             return option
         else:
             return self._filename
@@ -787,6 +859,86 @@ class Content(object):
 
     filename = property(_get_filename, _set_filename)
 
+    def _get_json_source(self):
+        #search here
+        if not (self._json_source):
+            option = self._seek_up('_json_source')
+            if not option:
+                #doesn't seem like it makes sense to seek_down with json_source
+                #option = self._seek_down('_json_source')
+                #if not option:
+
+                print "Could not find json_source above"
+                return ''
+
+            else:
+                return option
+        else:
+            return self._json_source
+            
+    def _set_json_source(self, name):
+        self._json_source = name            
+
+    json_source = property(_get_json_source, _set_json_source)
+
+    def _get_path(self):
+        """
+        use self.drive_dir and self.base_dir to determine the current path
+        
+        this is a better way to quickly determine the current full path
+        this is useful for calls to __repr__ and __str__
+        
+        Content object might not always be part of a Collection 
+        or the Collection may not be loaded (e.g. in a Playlist)
+        all we really need in this case is the collection base
+        (the part of the path that changes due to storage shifts / mounts)
+        
+        previously, in Source objects, it was just .path
+        but this can be brittle when drive locations change (as they often do)
+
+
+        Segments (nested Content objects) complicate the issue some.
+        Two options:
+        - make sure all levels always have self.drive_dir and self.base_dir
+          might not be able to rely on creator to do this
+          and some levels may not have any media associated with it
+          in which case it doesn't make much sense
+          
+        - a way to scan the levels for the closest viable path
+          this is tricky since it might not be obvious which way to go
+          (trace up, or dig down)
+          and need to make sure no infinite recursion happens
+
+        this version uses more generalized _seek_up and _seek_down methods
+        """
+        #search here
+        if not (self.drive_dir):
+            dd_option = self._seek_up('drive_dir')
+            if not dd_option:
+                dd_option = self._seek_down('drive_dir')
+                if not dd_option:
+                    print "Incomplete drive_dir: %s (drive_dir).  Could not find drive_dir anywhere: %s" % (self.drive_dir, self.root.to_dict())
+                    return ''
+
+            if not (self.base_dir):
+                bd_option = self._seek_up('base_dir')
+                if not bd_option:
+                    bd_option = self._seek_down('base_dir')
+                    if not bd_option:
+                        print "Incomplete base_dir: %s (base_dir).  Could not find base_dir anywhere: %s" % (self.base_dir, self.root.to_dict())
+                        return ''
+            else:
+                bd_option = self.base_dir
+
+                
+            return os.path.join(dd_option, bd_option)
+        else:
+            return os.path.join(self.drive_dir, self.base_dir)
+            
+    path = property(_get_path)
+    #def _set_path(self, name):
+    #    self.parse_name(name)
+    #path = property(_get_path, _set_path)
 
     def add_segment(self, segment):
         """
@@ -813,6 +965,35 @@ class Content(object):
         
         self.segments.append(segment)
 
+    def get_segment(self, segment_id):
+        """
+        parse through our segments (and those segment's segments, etc)
+        to find the matching segement id
+        """
+        id_parts = segment_id.split('_')
+        path = []
+        cur_id = ''
+        cur_segment = self
+        for part in id_parts:
+            if not cur_id:
+                cur_id = part
+            else:
+                cur_id = '_'.join( [cur_id, part] )
+            path.append(cur_id)
+
+            next_segment = None
+            for segment in cur_segment.segments:
+                if segment.segment_id == cur_id:
+                    next_segment = segment
+
+            if next_segment is None:
+                raise "Could not find segment_id: %s, in: %s" % (segment_id, self.to_dict())
+            cur_segment = next_segment
+
+        #print "found the following ids for segment path: %s" % path
+
+        return cur_segment            
+
     def load(self, source=None, debug=False):
         """
         filename attribute should be unique
@@ -836,6 +1017,18 @@ class Content(object):
         if not isinstance(content, dict):
             #print "%s" % content
             raise ValueError, "Unknown type of content: %s" % type(content)
+
+        #start keeping track of ultimate source for this content
+        #if it ends up as part of another list, this is the way to get back
+        if content.has_key('json_source'):
+            option = content['json_source']
+            if self.json_source and self.json_source != option:
+                print "WARNING: over-writing old source."
+                print "keeping initial source: %s and skipping found source: %s" % (self.json_source, option)
+                print ""
+            else:
+                self.json_source = option
+            del content['json_source']
 
         if content.has_key('timestamp'):
             self.timestamp = Timestamp(content['timestamp'])
@@ -912,7 +1105,27 @@ class Content(object):
             del content['end']
 
         if content.has_key('history'):
-            self.history = content['history']
+            history = content['history']
+            l = Log()
+            l.from_string(history)
+
+            #shouldn't need to add any tags here
+            #entries = l.to_entries(add_tags)
+            entries = l.to_entries()
+            #print "%s entries loaded from file" % len(entries)
+            #print "%s entries in self before merging in entries" % len(self)
+            journal = Journal()
+            journal.update_many(entries)
+            #print "%s entries in self after merging in entries" % len(self)
+
+            #if l.has_entries:
+            #found_entries = len(entries)
+
+            l.close()
+
+            #return found_entries
+            self.history = journal
+            
             del content['history']
 
 
@@ -1002,6 +1215,9 @@ class Content(object):
         if self.drive_dir:
             snapshot['drive_dir'] = self.drive_dir
 
+        if self.json_source:
+            snapshot['json_source'] = self.json_source
+            
         if self.start.total_seconds():
             snapshot['start'] = self.start.total_seconds()
 
@@ -1028,7 +1244,12 @@ class Content(object):
             snapshot['segments'] = segments
 
         if self.history:
-            snapshot['history'] = self.history
+            l = Log()
+            l.from_entries(self.history.sort())
+            snapshot['history'] = l.to_string()
+            l.close()
+            
+            #snapshot['history'] = self.history
 
         #root can sometimes be full path to a specific drive
         #here we use it as a relative path, so it's the same as base
@@ -1037,15 +1258,33 @@ class Content(object):
         return snapshot
 
     def save(self, destination=None):
-        if not destination:
-            if self.json_source:
-                destination = self.json_source
-            else:
-                raise ValueError, "unknown destination: %s and unknown source: %s" % (destination, self.json_source)
+        """
+        now that self.json_source is a property
+        that automatically seeks up for the correct file name,
+        we need to make sure the a sub segment of a content
+        does not clobber the main content object data stored in the file
+        by only saving the segment data to json_source
 
-        d = self.to_dict()
+        should be *VERY* careful if a child segment is ever initialized
+        outside and independent of the main Content that contains it...
+        if no root is set, then it could over write parent Content data
+        """
+        if self.root != self:
+            self.root.save(destination)
+        else:
+            if not destination:
+                if self.json_source:
+                    destination = self.json_source
+                else:
+                    raise ValueError, "unknown destination: %s and unknown source: %s" % (destination, self.json_source)
 
-        save_json(destination, d)
+            d = self.to_dict()
+
+            if d.has_key('json_source') and d['json_source'] != destination:
+                print "UPDATING json_source from: %s to %s" % (d['json_source'], destination)
+                d['json_source'] = destination
+
+            save_json(destination, d)
 
     def find_extension(self, search_for, location=None, ignores=[], debug=False):
         """
@@ -1190,6 +1429,28 @@ class Content(object):
         #or could generate generic summary files based on what we do know
 
         return combined
+
+    def check_new(self):
+        """
+        look at our own status
+        and all status fields for any segments contained within
+        if all are new, return True
+        if any are not new, return False
+        """
+        all_new = True
+        if self.status != 'new':
+            all_new = False
+            return all_new
+        else:
+            for segment in self.segments:
+                all_new = segment.check_new()
+                if not all_new:
+                    return all_new
+                #otherwise keep looking
+                
+        #if we make it here, it should be new
+        assert all_new == True
+        return all_new        
 
     def make_hash(self, filename=None):
         """

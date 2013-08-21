@@ -103,6 +103,13 @@ class PlayerWidget(QtGui.QWidget):
         self.setLayout(layout)
         self.seek_bar.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
 
+        #available once Seekable state changes:
+        #http://srinikom.github.io/pyside-docs/PySide/phonon/Phonon.MediaObject.html
+        #self.player.hasVideoChanged[bool].connect(self.update_position)
+        #doesn't seem to call update_position for player
+        #self.player.seekableChanged[bool].connect(self.update_position)
+
+
         self.video_window = None
         self.check_video()
 
@@ -188,12 +195,12 @@ class PlayerWidget(QtGui.QWidget):
         self.play_state = "playing"
         self.play_button.setDown(True)
 
-        start = 0
+        self.start = 0
         self.end = None
         if not content is None:
             self.cur_content = content
             #need milliseconds:
-            start = content.start.total_seconds() * 1000
+            self.start = content.start.total_seconds() * 1000
             if content.end:
                 self.end = content.end.total_seconds() * 1000
 
@@ -233,13 +240,20 @@ class PlayerWidget(QtGui.QWidget):
 
             self.player.play()
 
-            if start:
-                print "Seeking to: %s" % start
-                self.player.seek(start)
-                #first time doesn't always get it...
-                #trying twice:
-                #makes it worse
-                #self.player.seek(start)
+            if self.start:
+                #keep trying to update position until it works:
+                start_text = 'a'
+                cur_text = 'b'
+                while start_text != cur_text:
+                    time = self.player.currentTime()
+                    cur_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
+                    cur_text = cur_time.toString('mm:ss')
+
+                    start_time = QtCore.QTime((self.start / 3600000), (self.start / 60000) % 60, (self.start / 1000) % 60)
+                    start_text = start_time.toString('mm:ss')
+
+                    #tried to trigger this
+                    self.update_position()
             
 
             print "Playing: %s" % path
@@ -250,6 +264,21 @@ class PlayerWidget(QtGui.QWidget):
         #this doesn't work after all
         #raise ValueError, "Raising error to prevent segfault. Ignore this one."
 
+
+    def update_position(self):
+
+        #might poll here for media to finish loading
+        #before attempting to seek
+        #print "Seekable?: %s" % self.player.isSeekable()
+
+        if self.start:
+            #print "Seeking to: %s" % self.start
+            self.player.seek(self.start)
+            #first time doesn't always get it...
+            #trying twice:
+            #makes it worse
+            #self.player.seek(self.start)
+        
             
     def pause(self):
         #pass it on
@@ -331,7 +360,15 @@ class PlayerWidget(QtGui.QWidget):
         if content:
             self.selected_content = content
 
+    def currentTime(self):
+        """
+        shortcut to self.player.currentTime()
 
+        PlayerWidget is often named player externally
+        so it seems like this should be possible
+        """
+        return self.player.currentTime()
+    
 class LeftNavWidget(QtGui.QWidget):
     """
     combine the tree view with a toolbar for different actions
