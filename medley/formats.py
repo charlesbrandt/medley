@@ -20,7 +20,7 @@ import logging
 from moments.timestamp import Timestamp
 from moments.path import Path
 
-from content import Mark, Content
+from content import Mark, Content, MarkList
 
 def usage():
     print __doc__
@@ -614,6 +614,118 @@ class MortplayerBookmarks(list):
                         group_marks_by_file(marks, f_marks)
 
         return f_marks
+
+
+class iPhoneBookmarks(list):
+    """
+    focusing this class specifically on the Bookmark (for iPhone) format
+    using MortplayerBookmarks as the API source
+
+    a simple list of Mark objects
+    """
+    def __init__(self, source=None):
+        self.source = source
+    
+    def load(self, source=None):
+        """
+        read in the source
+        update the "files" dictionary with marks
+        """
+        if source is None:
+            source = self.source
+
+        if source is None:
+            raise ValueError, "Need a source sooner or later: %s" % source
+        
+        print "opening: %s" % source
+        #for reading unicode
+        f = codecs.open(source, 'r', encoding='utf-8')
+
+        #place to store all lists found, key is track title:
+        groups = {}
+
+        found_track = False
+        cur_track = None
+        cur_list = MarkList()
+        cur_mark = None
+        for line in f.readlines():
+            #print line
+            if re.match("Track: ", line):
+                if cur_mark:
+                    cur_list.append(cur_mark)
+                    cur_mark = None
+                if len(cur_list):
+                    groups[cur_track] = cur_list
+                    
+                found_track = True
+                #cut off "Track: " prefix
+                cur_track = line[7:]
+                #start a fresh list for new title
+                cur_list = MarkList()
+
+            elif re.match("Bookmark: ", line):
+                if cur_mark:
+                    cur_list.append(cur_mark)
+                
+                cur_mark = Mark()
+                #TODO: convert date here
+                cur_mark.tag = line[10:].strip()
+                    
+            elif re.match("Start Time: ", line):
+                time = line[12:]
+                cur_mark.from_time(time)
+
+            elif re.match("Notes: ", line):
+                cur_mark.tag = line[7:].strip() + " " + cur_mark.tag
+
+            else:
+                #other lines that we don't need to worry about:
+                print "Skipping line: %s" % line
+                
+            ## (location, number, name, ms1, end, utime) = line.strip().split('\t')
+            ## if number == "1":
+            ##     created = Timestamp()
+            ##     created.from_epoch(float(utime) / 1000)
+            ##     #print "*%s %s" % (created, name)
+
+            ##     ## #print (location, number, name, ms1, end, utime)
+            ##     ## (hours, minutes, seconds) = convert_milliseconds(ms1)
+            ##     ## #print "%s:%02d:%02d" % (hours, minutes, seconds)
+
+            ##     end = None
+
+            ##     #name, position, source, length, created
+            ##     details = Mark(name, ms1, location, end, created)
+
+            ##     self.append(details)
+
+        f.close()
+
+        if cur_mark:
+            cur_list.append(cur_mark)
+            #cur_mark = Mark()
+        if len(cur_list):
+            groups[cur_track] = cur_list
+
+        #return self
+        print groups
+        if len(groups.items()) == 2:
+            return groups
+        else:
+            return groups
+        
+
+    def save(self, destination='temp.mpb'):
+        """
+        """
+        print "saving to: %s" % destination
+        #for writing unicode
+        f = codecs.open(destination, 'w', encoding='utf-8')
+
+        for mark in self:
+            f.write(mark.as_mortplayer())
+        f.close()
+
 
 
 class Converter(object):

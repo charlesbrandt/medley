@@ -41,7 +41,7 @@ class Mark(object):
         #this is better represented in a segment instead of a mark
         
         #in milliseconds
-        self.position = position
+        self.position = int(position)
         self.source = source
 
         #only used in mortplayer
@@ -68,9 +68,13 @@ class Mark(object):
 
     def from_time(self, text):
         parts = text.split(':')
-        assert len(parts) == 3
-
-        self.from_hms(int(parts[0]), int(parts[1]), int(parts[2]))
+        if len(parts) == 3:
+            self.from_hms(int(parts[0]), int(parts[1]), int(parts[2]))
+        elif len(parts) == 2:
+            self.from_hms(minutes=int(parts[0]), seconds=int(parts[1]))
+        else:
+            raise ValueError, "Unknown number of parts for time: %s (%s)" % (parts, len(parts))
+            
         
     #def from_milliseconds(self, milli_seconds=None):
     def as_hms(self, milli_seconds=None):
@@ -214,58 +218,98 @@ class MarkList(list):
             mark.seconds = t[0]
             mark.tag = t[1]
             self.append(mark)
-        
-    def group_by_tracks(self):
+
+    #deprecated... should use make_segments for more up to date version
+    ## def group_by_tracks(self):
+    ##     """
+    ##     assumes all marks are from the same file
+    ##     (typical, but not required)
+    ##     """
+    ##     groups = [ ]
+
+    ##     in_talk = False
+
+    ##     current_group = [ Mark("start", 0, key) ]
+    ##     for next_mark in f_marks[key]:
+    ##         if re.search('skip*', next_mark.tag) or re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag) or re.search('\+', next_mark.tag):
+    ##             current_group.append( next_mark )
+    ##             if re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag):
+    ##                 in_talk = True
+
+    ##             #can deal with plusses externally
+    ##             #elif re.search('\+', next_mark.tag):
+    ##             #    plusses.append(previous_track)
+    ##             #    plusses.append(line)
+
+    ##         elif in_talk:
+    ##             #we want to skip the normal tag after an item...
+    ##             #this usually ends the talking
+    ##             #TODO:
+    ##             #sometimes the end of talking
+    ##             #and the start of the next track
+    ##             #is the same
+    ##             #would be nice to identify...
+    ##             #might be one of the manual steps
+
+    ##             current_group.append( next_mark )
+    ##             in_talk = False
+
+    ##         #this is the start of a new track / current_group
+    ##         elif re.match(default_pattern, next_mark.tag):
+    ##             #add previous track to groups
+    ##             groups.append(current_group)
+    ##             current_group = [ next_mark ]
+
+    ##         else:
+    ##             #probably just a description of some kind:
+    ##             current_group.append( next_mark )
+    ##             print "Unmatched tag: %s" % next_mark.tag
+
+    ##     #don't forget last group found:
+    ##     groups.append(current_group)
+    ##     #new_f_marks[key] = groups
+    ##     return groups
+
+    def segment_helper(self, segment, new_segments, parent, titles, title_index):
         """
-        assumes all marks are from the same file
-        (typical, but not required)
+        need to do this step at the end of every segment
+        two separate places where this occurrs in make_segments, so abstracting
         """
-        groups = [ ]
+        #now that we have a full segment, apply the right title to it:
+        #(if titles are available)
+        cur_title = ''
+        if len(titles) and (len(titles) > title_index):
+            cur_title = titles[title_index]
+            title_index += 1
+        elif len(titles) and (len(titles) <= title_index):
+            print "Not enough titles to apply to segments"
+            #print "extra segments: %s tracks, %s segments" % (len(titles), segment_count)
 
-        in_talk = False
+        if len(new_segments):
+            #process all segments and add a suffix to title
+            new_segments.append(segment)
+            count = 1
+            for segment in new_segments:
+                if not segment.title:
+                    if segment.end:
+                        #print "Segment End: ->%s<-, Segment Start: ->%s<-" % (segment.end.position, segment.start.position)
+                        segment_len = (segment.end.position - segment.start.position) / 1000
+                        segment_len = int(segment_len)
+                    else:
+                        segment_len = '?'
+                    new_title = "%s - Part %s - %s seconds" % (cur_title, count, segment_len)
+                    segment.title = new_title
+                    count += 1
+                    
+                parent.add_segment(segment)
+        else:
+            segment.title = cur_title
+            #add previous track to parent
+            parent.add_segment(segment)
 
-        current_group = [ Mark("start", 0, key) ]
-        for next_mark in f_marks[key]:
-            if re.search('skip*', next_mark.tag) or re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag) or re.search('\+', next_mark.tag):
-                current_group.append( next_mark )
-                if re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag):
-                    in_talk = True
+        return title_index
 
-                #can deal with plusses externally
-                #elif re.search('\+', next_mark.tag):
-                #    plusses.append(previous_track)
-                #    plusses.append(line)
-
-            elif in_talk:
-                #we want to skip the normal tag after an item...
-                #this usually ends the talking
-                #TODO:
-                #sometimes the end of talking
-                #and the start of the next track
-                #is the same
-                #would be nice to identify...
-                #might be one of the manual steps
-
-                current_group.append( next_mark )
-                in_talk = False
-
-            #this is the start of a new track / current_group
-            elif re.match(default_pattern, next_mark.tag):
-                #add previous track to groups
-                groups.append(current_group)
-                current_group = [ next_mark ]
-
-            else:
-                #probably just a description of some kind:
-                current_group.append( next_mark )
-                print "Unmatched tag: %s" % next_mark.tag
-
-        #don't forget last group found:
-        groups.append(current_group)
-        #new_f_marks[key] = groups
-        return groups
-
-    def make_segments(self, parent, default_pattern="bis", titles=[]):
+    def make_segments(self, parent, default_pattern="", titles=[], reset_id=True):
         """
         assumes all marks are from the same file
         (typical, but not required)
@@ -282,6 +326,19 @@ class MarkList(list):
         """
         groups = [ ]
 
+        #reset segment ID
+        #doesn't make sense to keep track when re-merging everything
+        if reset_id:
+            parent.next_segment_id = 1
+
+        if not default_pattern:
+            #might still be none here, but that's ok...
+            #maybe just blank is enough
+            default_pattern = parent.track_prefix
+        else:
+            #want to keep track of the latest one passed in, if it is.
+            parent.track_prefix = default_pattern
+            
         in_talk = False
 
         last_mark = None
@@ -293,7 +350,9 @@ class MarkList(list):
         segment_count = 0
 
         #handle special cases when first segment is sub_segment:
-        first_segment = True
+        #not sure that this is what we want...
+        #first tag may be talk, but it may be late in the first song
+        #first_segment = True
         
         segment = Content()
         segment.status = ''
@@ -304,24 +363,37 @@ class MarkList(list):
         #used for things like talk and caller segments
         sub_segment = Content()
         sub_segment.status = ''
+
+        #buffer for holding segments that are not finished
+        #due to talk subsegments
+        new_segments = []
         
         #current_group = [ Mark("start", 0, key) ]
         #for next_mark in f_marks[key]:
         for next_mark in self:
             if re.search('skip*', next_mark.tag) or re.search('\+', next_mark.tag):
                 segment.marks.append( next_mark )
-                segment.tags.extend(next_mark.tag.split(' '))
+                tags = next_mark.tag.split(' ')
+                if '-' in tags:
+                    tags.remove('-')
+                segment.tags.extend(tags)
 
             elif re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag) or re.search('call*', next_mark.tag) or re.search('Call*', next_mark.tag):
                     in_talk = True
 
-                    if first_segment:
-                        sub_segment.start = start
-                        sub_segment.marks.append(start)
+                    #split the current track up into segments too
+                    segment.end = next_mark
+                    #add previous track to parent
+                    new_segments.append(segment)
 
-                    else:
-                        sub_segment.start = next_mark
-                        
+                    ## if first_segment:
+                    ##     sub_segment.start = start
+                    ##     sub_segment.marks.append(start)
+
+                    ## else:
+                    ##     sub_segment.start = next_mark
+
+                    sub_segment.start = next_mark
                     sub_segment.marks.append( next_mark )
                     sub_segment.title = next_mark.tag
 
@@ -343,45 +415,41 @@ class MarkList(list):
                 sub_segment.end = next_mark
                 sub_segment.marks.append( next_mark )
 
-                parent.add_segment(sub_segment)
+                new_segments.append(sub_segment)
+                #parent.add_segment(sub_segment)
                     
-                if first_segment:
-                    #get rid of initial (default) (first) segment start:
-                    segment.marks.pop()
+                ## if first_segment:
+                ##     #get rid of initial (default) (first) segment start:
+                ##     segment.marks.pop()
                         
-                    segment.start = next_mark
-                    segment.marks.append(next_mark)
-                    first_segment = False
+                ##     segment.start = next_mark
+                ##     segment.marks.append(next_mark)
+                ##     first_segment = False
 
                 #reset sub_segment
                 sub_segment = Content()
                 sub_segment.status = ''
+
+                segment = Content()
+                segment.status = ''
+                segment.start = next_mark
+                segment.marks.append(next_mark)
                 
                 in_talk = False
 
             #this is the start of a new track / segment
+            #aka self.track_prefix
             #
             #sometimes blank tags may indicate a new mark:
-            elif re.match(default_pattern, next_mark.tag) or not next_mark.tag:
+            elif ((default_pattern and re.match(default_pattern, next_mark.tag))
+                  or not next_mark.tag):
                 segment.end = next_mark
                 segment_count += 1
 
-                #now that we have a full segment, apply the right title to it:
-                #(if titles are available)
-                if len(titles) and (len(titles) > title_index):
-                    segment.title = titles[title_index]
-                    title_index += 1
-                elif len(titles) and (len(titles) <= title_index):
-                    print "Not enough titles to apply to segments"
-                    print "extra segments: %s tracks, %s segments" % (len(titles), segment_count)
-                
-
-                
-                #add previous track to parent
-                parent.add_segment(segment)
-
-                if first_segment:
-                    first_segment = False
+                title_index = self.segment_helper(segment, new_segments, parent,
+                                                  titles, title_index)
+                #clear these out
+                new_segments = []
                 
                 segment = Content()
                 segment.status = ''
@@ -404,7 +472,10 @@ class MarkList(list):
         #that should signal play to end
         
         #don't forget last group found:
-        parent.add_segment(segment)
+        #parent.add_segment(segment)
+        self.segment_helper(segment, new_segments, parent, titles, title_index)
+
+
         ## #new_f_marks[key] = groups
         ## return groups
 
@@ -585,6 +656,11 @@ class Content(object):
         #starting at 1 here... not an index, just an id
         self.next_segment_id = 1
 
+        #the regular expression used to determine a new track
+        #when calling make_segments
+        #(empty strings are also matched by default)
+        self._track_prefix = ''
+        
 
 
         #this will allow Content objects to be recursively used in segments
@@ -652,6 +728,7 @@ class Content(object):
             #this is the best way to initialize previous Content object:
             #ok to include full path here...
             self.json_source = find_json(source)
+            #print "FOUND SOURCE: %s" % self.json_source
             #make sure something was found:
             if self.json_source:
                 self.load(self.json_source)
@@ -838,6 +915,10 @@ class Content(object):
             #shouldn't get here:
             raise ValueError, "Unexpected condition"
 
+    #TODO:
+    #These are a bit like global variables for the Content tree structure
+    #not sure if there is a better way to implement them
+
     def _get_filename(self):
         #search here
         if not (self._filename):
@@ -880,6 +961,24 @@ class Content(object):
         self._json_source = name            
 
     json_source = property(_get_json_source, _set_json_source)
+
+    def _get_track_prefix(self):
+        if not (self._track_prefix):
+            option = self._seek_up('_track_prefix')
+            if not option:
+                option = self._seek_down('_track_prefix')
+                if not option:
+                    print "Could not find track_prefix anywhere"
+                    return ''
+                
+            return option
+        else:
+            return self._track_prefix
+            
+    def _set_track_prefix(self, name):
+        self._track_prefix = name            
+
+    track_prefix = property(_get_track_prefix, _set_track_prefix)
 
     def _get_path(self):
         """
@@ -987,7 +1086,7 @@ class Content(object):
                     next_segment = segment
 
             if next_segment is None:
-                raise "Could not find segment_id: %s, in: %s" % (segment_id, self.to_dict())
+                raise ValueError, "Could not find segment_id: %s, in: %s" % (segment_id, self.to_dict())
             cur_segment = next_segment
 
         #print "found the following ids for segment path: %s" % path
@@ -1070,6 +1169,10 @@ class Content(object):
         if content.has_key('next_segment_id'):
             self.next_segment_id = content['next_segment_id']
             del content['next_segment_id']
+
+        if content.has_key('track_prefix'):
+            self.track_prefix = content['track_prefix']
+            del content['track_prefix']
 
         if content.has_key('marks'):
             ml = MarkList()
@@ -1229,6 +1332,9 @@ class Content(object):
 
         if self.next_segment_id != 1:
             snapshot['next_segment_id'] = self.next_segment_id
+
+        if self.track_prefix:
+            snapshot['track_prefix'] = self.track_prefix
 
         #marks = []
         #for m in self.marks:
@@ -1575,6 +1681,8 @@ class Content(object):
             result += ''.ljust(indent) + 'segment_id: %s\n' % self.segment_id
         if self.next_segment_id:
             result += ''.ljust(indent) + 'next_segment_id: %s\n' % self.next_segment_id
+        if self.track_prefix:
+            result += ''.ljust(indent) + 'track_prefix: %s\n' % self.track_prefix
 
         if self.tags:
             result += ''.ljust(indent) + 'tags: %s\n' % self.tags

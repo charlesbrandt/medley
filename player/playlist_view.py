@@ -1,4 +1,4 @@
-import json
+import json, re
 from PySide import QtGui, QtCore
 
 from medley.content import Content, Mark
@@ -13,12 +13,15 @@ class PlaylistModel(QtCore.QAbstractTableModel):
 
     Shouldn't need a separate Playlist object beyond this.
     """
-    def __init__(self, playlist, parent=None):
+    def __init__(self, playlist, parent=None, key_order=None):
         super(PlaylistModel, self).__init__(parent)
         self.playlist = playlist
 
         #define the order that things are displayed
-        self.key_order = ['play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
+        if key_order is None:
+            self.key_order = ['play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
+        else:
+            self.key_order = key_order
         
     def index(self, row, column, parent):
         """
@@ -199,7 +202,14 @@ class PlaylistModel(QtCore.QAbstractTableModel):
 
                 elif key == 'tags' or key == 'people':
                     tags = value.split(',')
-                    content.tags = tags
+                    #this won't work for people
+                    #content.tags = tags
+                    setattr(content, key, tags)
+                    content.save()
+
+                elif key in ['title', 'status']:
+                    setattr(content, key, value)
+                    content.save()
                 
                 return True
 
@@ -377,11 +387,13 @@ class PlaylistView(QtGui.QTableView):
         order_index = self.model.key_order.index('order')
         title_index = self.model.key_order.index('title')
         status_index = self.model.key_order.index('status')
+        start_index = self.model.key_order.index('start')
         self.resizeColumnToContents(play_index)
         self.resizeColumnToContents(open_index)
         self.resizeColumnToContents(order_index)
         self.resizeColumnToContents(title_index)
         self.resizeColumnToContents(status_index)
+        self.resizeColumnToContents(start_index)
 
 
     def store_current_selection(self, newSelection, oldSelection):
@@ -442,6 +454,171 @@ class PlaylistView(QtGui.QTableView):
         self.content_view = ContentWindow(self.player, self)
         self.content_view.resize(1000, 400)
         self.content_view.show()
+
+
+class MarksWidget(QtGui.QWidget):
+    """
+    combine the list view with a toolbar for different actions
+
+    needs to be its own widget to be added to the splitter
+    """
+    def __init__(self, player, parent=None):
+        super(MarksWidget, self).__init__(parent)
+
+        self.player = player
+        #set externally after content changes
+        self.content = None
+
+        self.layout = QtGui.QVBoxLayout()
+        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setSpacing(0)
+
+        self.marks = QtGui.QListWidget(self)
+        #not sure that drag and drop is useful with marks...
+        #auto-indexing by timestamp is more appropriate
+        #self.marks.setDragDropMode(self.marks.InternalMove)
+        self.marks.itemChanged.connect(self.on_changed)
+        self.layout.addWidget(self.marks)
+
+        self.track_prefix = QtGui.QLineEdit()
+        self.layout.addWidget(self.track_prefix)
+
+        marks_toolbar = QtGui.QToolBar()
+        marks_toolbar.setIconSize(QtCore.QSize(16, 16))
+
+        addAction = QtGui.QAction(QtGui.QIcon('images/target.png'), 'Add', self)
+        #addAction.setShortcut('Ctrl+N')
+        addAction.triggered.connect(self.add_mark)
+        marks_toolbar.addAction(addAction)
+
+        removeAction = QtGui.QAction(QtGui.QIcon('images/minus.png'), 'Remove', self)
+        removeAction.triggered.connect(self.remove_mark)
+        marks_toolbar.addAction(removeAction)
+
+        openAction = QtGui.QAction(QtGui.QIcon('images/open.png'), 'Import from file', self)
+        openAction.triggered.connect(self.open_marks)
+        marks_toolbar.addAction(openAction)
+
+        saveAction = QtGui.QAction(QtGui.QIcon('images/save.png'), 'Export to file', self)
+        saveAction.triggered.connect(self.save_marks)
+        marks_toolbar.addAction(saveAction)
+
+        mergeAction = QtGui.QAction(QtGui.QIcon('images/merge.png'), 'Merge titles and marks', self)
+        mergeAction.triggered.connect(self.merge_titles)
+        marks_toolbar.addAction(mergeAction)
+
+        #SPACER HERE
+        #don't see any spacers for toolbars.
+        
+
+        self.layout.addWidget(marks_toolbar)
+
+        self.setLayout(self.layout)
+
+    ## def add_item(self, title='-'):
+    ##     item = QtGui.QListWidgetItem(title, self.titles)
+    ##     item.setFlags( QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDropEnabled | \
+    ##                    QtCore.Qt.ItemIsDragEnabled | \
+    ##                    QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable )
+    ##     #print item.flags()
+    ##     #self.titles.addItem(title)
+
+    def sync(self):
+        """
+        synchronize the contents of content.marks
+        with what is in QListWidget
+        """
+        #reorder list based on times
+        self.content.marks.sort()
+        self.marks.clear()
+        for mark in self.content.marks:
+            text = "%s - %s" % (mark.as_time(), mark.tag)
+            item = QtGui.QListWidgetItem(text, self.marks)
+            item.setFlags( QtCore.Qt.ItemIsEnabled | \
+                           QtCore.Qt.ItemIsDropEnabled | \
+                           QtCore.Qt.ItemIsDragEnabled | \
+                           QtCore.Qt.ItemIsSelectable | \
+                           QtCore.Qt.ItemIsEditable )
+            
+            #self.marks.addItem(text)
+
+        self.track_prefix.setText(self.content.track_prefix)
+        #can get the text with:
+        #self.track_prefix.text()
+
+
+
+    def add_mark(self, mark=''):
+        #get current position from player (00:00 is ok)
+        if self.player:
+            time = self.player.currentTime()
+            #display_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
+            #hours = time / 3600000
+            mark = Mark(mark, time)
+            self.content.marks.append(mark)
+            self.sync()
+            #mark = "%s - %s" % (display_time.toString('h:mm:ss'), mark)
+            #self.marks.addItem(mark)
+        else:
+            print "NO player object assigned to self: %s" % self.player
+            #self.marks.addItem(mark)
+            mark = Mark(mark, 0)
+            self.content.marks.append(mark)
+            self.sync()
+
+    def remove_mark(self, row=None):
+        if row is None:
+            row = self.marks.currentRow()
+
+        self.marks.takeItem(row)
+        self.content.marks.pop(row)    
+
+    def on_changed(self, item):
+        row = self.marks.row(item)
+        mark = self.content.marks[row]
+        text = "%s - %s" % (mark.as_time(), mark.tag)
+        if text != item.text():
+            parts = item.text().split(' - ', 1)
+            #print "PARTS: %s" % parts
+            ts, tag = parts
+            mark.from_time(ts)
+            mark.tag = tag
+            self.content.marks[row] = mark
+            #print "Marks.on_change called: %s, %s" % (item.text(), text)
+            self.sync()
+        
+    def open_marks(self):
+        pass
+
+    def save_marks(self):
+        pass
+
+    def merge_titles(self):
+        new_prefix = self.track_prefix.text()
+        self.content.track_prefix = new_prefix
+
+        tracks = self.content.remainder['tracks']
+        self.content.history.make("Merging titles with marks", ["merge"])
+        self.content.marks.make_segments(self.content, titles=tracks)
+        self.content.save()
+
+        #matching titles/tracks should happen in make_segments() now:
+        ## count = 0
+        ## tracks = self.content.remainder['tracks']
+        ## #tracks = self.content.tracks
+        ## for cur_track in tracks:
+        ##     if count < len(self.content.segments):
+        ##         self.content.segments[count].title = cur_track
+        ##     else:
+        ##         print "%s tracks, %s segments" % (len(tracks), len(self.content.segments))
+        ##         print "EXTRA track title: %s" % cur_track
+        ##     count += 1
+
+        ## if len(self.content.segments) > len(tracks):
+        ##     print "WARNING: extra segments: %s tracks, %s segments" % (len(tracks), len(self.content.segments))
+
+        #refresh ContentWindow with latest changes
+        self.parent().parent().update_view(self.content)
 
 
 class TitleList(QtGui.QListWidget):
@@ -525,9 +702,9 @@ class TitlesWidget(QtGui.QWidget):
         saveAction.triggered.connect(self.save_titles)
         titles_toolbar.addAction(saveAction)
 
-        mergeAction = QtGui.QAction(QtGui.QIcon('images/merge.png'), 'Merge titles and marks', self)
-        mergeAction.triggered.connect(self.merge_titles)
-        titles_toolbar.addAction(mergeAction)
+        detailsAction = QtGui.QAction(QtGui.QIcon('images/details.png'), 'Show details in console', self)
+        detailsAction.triggered.connect(self.content_details)
+        titles_toolbar.addAction(detailsAction)
 
         self.layout.addWidget(titles_toolbar)
 
@@ -542,11 +719,15 @@ class TitlesWidget(QtGui.QWidget):
                 #title = self.content.titles[row]
                 if title != item.text():
                     tracks[row] = item.text()
-                    print "Titles.on_change called: %s, %s" % (item.text(), title)
+                    #print "Titles.on_change called: %s, %s" % (item.text(), title)
+                    #be careful where sync is called...
+                    #easy to get into an infinite loop with this
                     self.sync()
             else:
                 #must have a new item... just append it:
                 tracks.append(item.text())
+                self.sync()
+
         
     def add_title(self, title='-'):
         item = QtGui.QListWidgetItem(title, self.titles)
@@ -566,7 +747,32 @@ class TitlesWidget(QtGui.QWidget):
         #self.titles.addItems(content.remainder['titles'])
         if self.content.remainder.has_key('tracks'):
             #self.content.remainder['tracks'].sort()
-            for title in self.content.remainder['tracks']:
+            re1='(\\d+)(\.)'	# Integer Number 1
+            rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
+
+            tracks = self.content.remainder['tracks']
+            #print "TRACKS: %s" % tracks
+
+            sorting = []
+            for title in tracks:
+                m = rg.search(title)
+                if m:
+                    int1 = m.group(1)
+                    #print "("+int1+")"+"\n"
+                    sorting.append( (int(int1), title) )
+                else:
+                    sorting.append( (1000000, title) )
+            sorting.sort()
+            #print "SORTING: %s" % sorting
+            
+            updated = []
+            for item in sorting:
+                updated.append(item[1])
+            #print "UPDATED: %s" % updated
+
+            self.content.remainder['tracks'] = updated
+            
+            for title in updated:
                 self.add_title(title)
             #self.titles.addItems(content.remainder['tracks'])
 
@@ -585,164 +791,6 @@ class TitlesWidget(QtGui.QWidget):
     def save_titles(self):
         pass
 
-    def merge_titles(self):
-        #TODO:
-        #text field for default_pattern here:
-
-        #then pass default_patern into make_segments:
-
-        
-        tracks = self.content.remainder['tracks']
-        self.content.history.make("Merging titles with marks", ["merge"])
-        self.content.marks.make_segments(self.content, titles=tracks)
-        self.content.save()
-
-        #matching titles/tracks should happen in make_segments() now:
-        ## count = 0
-        ## tracks = self.content.remainder['tracks']
-        ## #tracks = self.content.tracks
-        ## for cur_track in tracks:
-        ##     if count < len(self.content.segments):
-        ##         self.content.segments[count].title = cur_track
-        ##     else:
-        ##         print "%s tracks, %s segments" % (len(tracks), len(self.content.segments))
-        ##         print "EXTRA track title: %s" % cur_track
-        ##     count += 1
-
-        ## if len(self.content.segments) > len(tracks):
-        ##     print "WARNING: extra segments: %s tracks, %s segments" % (len(tracks), len(self.content.segments))
-
-        #refresh ContentWindow with latest changes
-        self.parent().parent().update_view(self.content)
-
-
-class MarksWidget(QtGui.QWidget):
-    """
-    combine the list view with a toolbar for different actions
-
-    needs to be its own widget to be added to the splitter
-    """
-    def __init__(self, player, parent=None):
-        super(MarksWidget, self).__init__(parent)
-
-        self.player = player
-        #set externally after content changes
-        self.content = None
-
-        self.layout = QtGui.QVBoxLayout()
-        self.layout.setContentsMargins(0,0,0,0)
-        self.layout.setSpacing(0)
-
-        self.marks = QtGui.QListWidget(self)
-        #not sure that drag and drop is useful with marks...
-        #auto-indexing by timestamp is more appropriate
-        #self.marks.setDragDropMode(self.marks.InternalMove)
-        self.marks.itemChanged.connect(self.on_changed)
-        self.layout.addWidget(self.marks)
-
-        marks_toolbar = QtGui.QToolBar()
-        marks_toolbar.setIconSize(QtCore.QSize(16, 16))
-
-        addAction = QtGui.QAction(QtGui.QIcon('images/target.png'), 'Add', self)
-        #addAction.setShortcut('Ctrl+N')
-        addAction.triggered.connect(self.add_mark)
-        marks_toolbar.addAction(addAction)
-
-        removeAction = QtGui.QAction(QtGui.QIcon('images/minus.png'), 'Remove', self)
-        removeAction.triggered.connect(self.remove_mark)
-        marks_toolbar.addAction(removeAction)
-
-        openAction = QtGui.QAction(QtGui.QIcon('images/open.png'), 'Import from file', self)
-        openAction.triggered.connect(self.open_marks)
-        marks_toolbar.addAction(openAction)
-
-        saveAction = QtGui.QAction(QtGui.QIcon('images/save.png'), 'Export to file', self)
-        saveAction.triggered.connect(self.save_marks)
-        marks_toolbar.addAction(saveAction)
-
-        #SPACER HERE
-        #don't see any spacers for toolbars.
-        
-        detailsAction = QtGui.QAction(QtGui.QIcon('images/details.png'), 'Show details in console', self)
-        detailsAction.triggered.connect(self.content_details)
-        marks_toolbar.addAction(detailsAction)
-
-        self.layout.addWidget(marks_toolbar)
-
-        self.setLayout(self.layout)
-
-    ## def add_item(self, title='-'):
-    ##     item = QtGui.QListWidgetItem(title, self.titles)
-    ##     item.setFlags( QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDropEnabled | \
-    ##                    QtCore.Qt.ItemIsDragEnabled | \
-    ##                    QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable )
-    ##     #print item.flags()
-    ##     #self.titles.addItem(title)
-
-    def sync(self):
-        """
-        synchronize the contents of content.marks
-        with what is in QListWidget
-        """
-        #reorder list based on times
-        self.content.marks.sort()
-        self.marks.clear()
-        for mark in self.content.marks:
-            text = "%s - %s" % (mark.as_time(), mark.tag)
-            item = QtGui.QListWidgetItem(text, self.marks)
-            item.setFlags( QtCore.Qt.ItemIsEnabled | \
-                           QtCore.Qt.ItemIsDropEnabled | \
-                           QtCore.Qt.ItemIsDragEnabled | \
-                           QtCore.Qt.ItemIsSelectable | \
-                           QtCore.Qt.ItemIsEditable )
-            
-            #self.marks.addItem(text)
-
-    def add_mark(self, mark=''):
-        #get current position from player (00:00 is ok)
-        if self.player:
-            time = self.player.currentTime()
-            #display_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
-            #hours = time / 3600000
-            mark = Mark(mark, time)
-            self.content.marks.append(mark)
-            self.sync()
-            #mark = "%s - %s" % (display_time.toString('h:mm:ss'), mark)
-            #self.marks.addItem(mark)
-        else:
-            print "NO player object assigned to self: %s" % self.player
-            #self.marks.addItem(mark)
-            mark = Mark(mark, 0)
-            self.content.marks.append(mark)
-            self.sync()
-
-    def remove_mark(self, row=None):
-        if row is None:
-            row = self.marks.currentRow()
-
-        self.marks.takeItem(row)
-        self.content.marks.pop(row)    
-
-    def on_changed(self, item):
-        row = self.marks.row(item)
-        mark = self.content.marks[row]
-        text = "%s - %s" % (mark.as_time(), mark.tag)
-        if text != item.text():
-            parts = item.text().split(' - ', 1)
-            #print "PARTS: %s" % parts
-            ts, tag = parts
-            mark.from_time(ts)
-            mark.tag = tag
-            self.content.marks[row] = mark
-            #print "Marks.on_change called: %s, %s" % (item.text(), text)
-            self.sync()
-        
-    def open_marks(self):
-        pass
-
-    def save_marks(self):
-        pass
-
     def content_details(self):
         """
         look in parent for currently selected content item
@@ -754,6 +802,7 @@ class MarksWidget(QtGui.QWidget):
             print self.content.debug()
         else:
             print "NO CONTENT assigned to self: %s" % self.content
+
 
 class ContentWindow(QtGui.QMainWindow):
     def __init__(self, player, parent=None):
@@ -769,13 +818,13 @@ class ContentWindow(QtGui.QMainWindow):
         self.table = PlaylistView(self)
         self.splitter.addWidget(self.table)
 
-        self.titles_col = TitlesWidget(self)
-        #self.splitter.addWidget(self.titles)
-        self.splitter.addWidget(self.titles_col)
-
         self.marks_col = MarksWidget(player, self)
         #self.splitter.addWidget(self.marks)
         self.splitter.addWidget(self.marks_col)
+
+        self.titles_col = TitlesWidget(self)
+        #self.splitter.addWidget(self.titles)
+        self.splitter.addWidget(self.titles_col)
 
         #self.marks = QtGui.QListWidget(self)
         #self.splitter.addWidget(self.marks)
@@ -795,7 +844,10 @@ class ContentWindow(QtGui.QMainWindow):
 
         self.setWindowTitle(content.title)
         playlist = Playlist(self.content.segments)
-        subtree = PlaylistModel(playlist)
+
+        key_order = ['play', 'open', 'order', 'start', 'tags', 'title', 'status', 'timestamp', 'people', 'segments', 'marks', 'end', ]
+
+        subtree = PlaylistModel(playlist, key_order=key_order)
 
         self.table.setModel(subtree)
 

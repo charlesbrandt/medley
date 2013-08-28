@@ -70,7 +70,7 @@ def find_json(item, debug=False):
     if more than one json file found, print a warning
     return the last json file
         """
-    if re.search('.*\.json', item):
+    if re.search('.*\.json$', item):
         if debug:
             #print "find_and_load_json: item is a json string: %s" % item
             logging.debug("find_json: item is a json string: %s" % item)
@@ -89,7 +89,7 @@ def find_json(item, debug=False):
             
         matches = []
         for j in d.files:
-            if re.search('.*\.json', str(j)):
+            if re.search('.*\.json$', str(j)):
                 match = os.path.join(str(parent), str(j))
                 matches.append(match)
 
