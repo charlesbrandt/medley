@@ -476,9 +476,19 @@ class PlaylistsTreeView(QtGui.QTreeView):
         else:
             self.last_folder = '/'
 
+        previous = False
         if self.configs.has_key('previously'):
             if self.configs['previously']:
-                self.load_lists(self.configs['previously'])
+                if os.path.exists(self.configs['previously']):
+                    try:
+                        self.load_lists(self.configs['previously'])
+                        previous = True
+                    except:
+                        print "Error loading previous configuration: %s" % self.configs['previously']
+
+        if not previous:
+            print "Could not find a valid previous setup... starting blank"
+                        
 
         #initialize data here:
         self.setModel(self.playlists)
