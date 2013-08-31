@@ -783,7 +783,7 @@ class TitlesWidget(QtGui.QWidget):
             row = self.titles.currentRow()
 
         self.titles.takeItem(row)
-        self.content.titles.pop(row)    
+        self.content.remainder['tracks'].pop(row)    
 
     def open_titles(self):
         pass
