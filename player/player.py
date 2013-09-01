@@ -592,7 +592,7 @@ class AppWindow(QtGui.QMainWindow):
         
 def main():
     app = QtGui.QApplication(sys.argv)
-    #this is needed for Phonon on Linux:
+    #this is needed for Phonon on Linux (DBUS):
     app.setApplicationName("Medley")
     window = AppWindow()
     window.resize(800, 600)
