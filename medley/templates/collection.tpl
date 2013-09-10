@@ -9,7 +9,7 @@
 
   %for group in cluster:
      %for item in group:
-       {{ item }}
+       <a href="/collection/{{ str(summary) }}/person/{{ item }}">{{ item }}</a>
      %end
      <br>
   %end

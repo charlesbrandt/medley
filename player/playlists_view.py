@@ -63,7 +63,7 @@ class Node(object):
         self.children = []
 
         self.source = ''
-        self.content = ''
+        self.content = Playlist()
 
         if parent is not None:
             parent.addChild(self)
@@ -488,6 +488,7 @@ class PlaylistsTreeView(QtGui.QTreeView):
 
         if not previous:
             print "Could not find a valid previous setup... starting blank"
+            #self.playlists.root.from_json(item={})
                         
 
         #initialize data here:
@@ -512,6 +513,16 @@ class PlaylistsTreeView(QtGui.QTreeView):
         #self.tree_view.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
 
 
+    def load_lists(self, fname):
+        """
+        for internal calls to load
+        """
+        items = load_json(fname)
+        self.playlists.root.from_json(item=items)
+        #for item in items:
+        #    print type(item)
+
+
     def setModel(self, model):
         super(PlaylistsTreeView, self).setModel(model)
         self.model = model
@@ -524,7 +535,17 @@ class PlaylistsTreeView(QtGui.QTreeView):
         #this seems to perform the same function:
         #keeping both versions around, since legacy code uses SIGNAL
         #this is a good reminder/guide on how to convert them
-        self.selectionModel().selectionChanged.connect(self.change_selection)
+        #
+        #also [2013.09.10 10:55:31]
+        #both versions cause a segfault on linux with the following:
+        #Python 2.7.4, Pyside 1.1.2, Qt 4.8.4
+        #
+        #this happens if nothing was loaded from a previous session
+        #and will cause a "Segmentation fault (core dumped)"
+        #
+        #this one happens sooner since it is called immediately
+        #
+        #self.selectionModel().selectionChanged.connect(self.change_selection)
 
     def change_selection(self, newSelection, oldSelection):
         #print "changed"
@@ -549,20 +570,22 @@ class PlaylistsTreeView(QtGui.QTreeView):
         ## assert self.cur_item == self.model
         ## print ""
         
-        #these are equivalent:
-        #print newSelection.indexes()[0].data()
-        #and
-        self.cur_index = newSelection.indexes()[0]
-        #print self.cur_item.data(self.cur_index, QtCore.Qt.DisplayRole)
+        #make sure we have something before trying to change:
+        if newSelection and len(newSelection.indexes()):
+            #these are equivalent:
+            #print newSelection.indexes()[0].data()
+            #and
+            self.cur_index = newSelection.indexes()[0]
+            #print self.cur_item.data(self.cur_index, QtCore.Qt.DisplayRole)
         
-        #print dir(self.cur_index)
-        #print type(self.cur_index)
-        #print "cur_index"
-        #print ""
+            #print dir(self.cur_index)
+            #print type(self.cur_index)
+            #print "cur_index"
+            #print ""
 
-        self.cur_node = self.cur_index.internalPointer()
+            self.cur_node = self.cur_index.internalPointer()
 
-        self.parent().change_selection(self.cur_node)
+            self.parent().change_selection(self.cur_node)
 
     def open_list(self):
         """
@@ -649,16 +672,6 @@ class PlaylistsTreeView(QtGui.QTreeView):
         """
         save_json(self.config_source, self.configs)
         
-
-    def load_lists(self, fname):
-        """
-        for internal calls to load
-        """
-        items = load_json(fname)
-        self.playlists.root.from_json(item=items)
-        #for item in items:
-        #    print type(item)
-
 
     def open_lists(self):
         """

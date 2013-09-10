@@ -511,9 +511,11 @@ class CollectionSummary(object):
         collection = None
         if json_file is None:
             meta = self.latest_meta()
-            if meta:
+            print "self.latest_meta() results: %s" % meta
+            if self.meta_root:
                 #Collection will set root accordingly if meta has full path
-                meta = os.path.join(self.root, meta)
+                meta = os.path.join(self.meta_root, meta)
+                print "after join: %s" % meta
                 collection = Collection(meta)
             else:
                 collection = Collection(root=self.root, walk=True)

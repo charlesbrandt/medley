@@ -26,7 +26,7 @@ python /c/mindstream/mindstream/launch.py -c /c/trees todo
 
 
 """
-import logging
+import logging, re
 
 from bottle import static_file
 from bottle import get, post, request
@@ -100,42 +100,6 @@ def images_static(filename):
 #to force a download, use the following:
 #    return static_file(filename, root='/path/to/static/files', download=filename)
 
-
-@route('/sort')
-def sortable():
-    """
-    this is an example of using jqueryui to sort a list of items
-    """
-
-    return template('sortable', body='Stuff and Things')
-
-@route('/javascript')
-def javascript(relative=''):
-    body = ''
-    body += "<h1>Standard</h1>"
-    return template('javascript_tester', body=body)
-
-
-#@route('/login')
-#equivalent to:
-@get('/login')
-def login_form():
-    return '''<form method="POST">
-                <input name="name"     type="text" />
-                <input name="password" type="password" />
-              </from>'''
-
-#@route('/login', method='POST')
-#equivalent to:
-@post('/login')
-def login_submit():
-    name     = request.forms.get('name')
-    password = request.forms.get('password')
-    if check_login(name, password): 
-        return "<p>Your login was correct</p>"
-    else:
-        return "<p>Login failed</p>"
-
 @route('/help')
 def help():
     return template('help')
@@ -159,6 +123,7 @@ def get_summary(collection_name):
     
 def get_collection(collection_name):
     collection_summary = get_summary(collection_name)
+    print "COLLECTION SUMMARY ROOT: %s, META: %s" % (collection_summary.root, collection_summary.meta_root)
     collection = collection_summary.load_collection()
     return collection
 
@@ -172,6 +137,43 @@ def rescan(collection_name=None):
     collection.reparse()
     
     return template('rescan', collection=collection)
+
+
+@route('/collection/:collection_name/person/:person_name')
+def person(collection_name=None, person_name=None):
+    if collection_name:
+        summary = get_summary(collection_name)
+        #print summary
+        #needed for current podcasts rendering approach:
+        #summary.load_scraper()
+
+        collection = get_collection(collection_name)
+        #print collection
+
+        drive_root = os.path.dirname(os.path.dirname(summary.available[0]))
+        print drive_root
+        results = []
+        for content in collection:
+            if person_name in content.people:
+                #print "MATCH!"
+                #print content
+                results.append(content)
+                if len(summary.available):
+                    content.cur_path = os.path.join(drive_root, content.base_dir)
+                    content.options = os.listdir(content.cur_path)
+                    content.image = ''
+                    for option in content.options:
+                        if re.search("sample.jpg", option):
+                            content.image = os.path.join(content.cur_path, option)
+                        
+    else:
+        summary = None
+        results = []
+        collection = None
+
+    return template('person', name=person_name, summary=summary, c=collection, results=results)
+        
+
         
 @route('/collection/:collection_name')
 def collection(collection_name=None):
