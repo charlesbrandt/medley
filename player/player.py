@@ -226,7 +226,9 @@ class PlayerWidget(QtGui.QWidget):
         #look for cur_content: source file, start position, end position
         #print "PlayerWidget.play() called!"
         if self.cur_content:
+            print "making path"
             path = os.path.join(self.cur_content.path, self.cur_content.filename)
+            print "Playing: %s" % path
 
             player_path = self.player.currentSource().fileName()
             if path != player_path:
@@ -376,6 +378,7 @@ class LeftNavWidget(QtGui.QWidget):
     def __init__(self, parent=None, table=None):
         super(LeftNavWidget, self).__init__(parent)
 
+        
         self.layout = QtGui.QGridLayout()
         #don't need a margin here:
         self.layout.setContentsMargins(0,0,0,0)
@@ -392,6 +395,10 @@ class LeftNavWidget(QtGui.QWidget):
         self.layout.addWidget(self.tree_view)
 
         self.file_edit = QtGui.QLineEdit()
+        #self.file_edit.textChanged.connect(self.tree_view.update_location)
+        #self.file_edit.textEdited.connect(self.tree_view.update_location)
+        #self.file_edit.editingFinished.connect( self.tree_view.update_location(self.file_edit.text()) )
+        self.file_edit.editingFinished.connect( self.update_location )
         self.layout.addWidget(self.file_edit)
 
 
@@ -437,7 +444,9 @@ class LeftNavWidget(QtGui.QWidget):
         self.table = table
         if not self.table is None:
             self.table.player = self.player
-        
+
+    def update_location(self):
+        self.tree_view.update_location(self.file_edit.text())        
 
     def change_selection(self, node):
         """
@@ -504,11 +513,32 @@ class AppWindow(QtGui.QMainWindow):
 
         fileMenu = self.menuBar().addMenu("&File")
 
-        openAction = QtGui.QAction('Open', self)
+        openAction = QtGui.QAction('Open State', self)
         openAction.setShortcut('Ctrl+O')
         openAction.setStatusTip('Open playlist structure')        
         openAction.triggered.connect(self.widget.left_nav.tree_view.open_lists)
         fileMenu.addAction(openAction)
+
+        saveAction = QtGui.QAction('Save State', self)
+        saveAction.setShortcut('Ctrl+S')
+        saveAction.setStatusTip('Save playlist structure')        
+        saveAction.triggered.connect(self.widget.left_nav.tree_view.save_lists)
+        fileMenu.addAction(saveAction)
+
+        fileMenu.addSeparator()
+
+        openMediaAction = QtGui.QAction('Open Media', self)
+        #openMediaAction.setShortcut('Ctrl+O')
+        openMediaAction.setStatusTip('Add media to current playlist')        
+        openMediaAction.triggered.connect(self.widget.table.add_content)
+        fileMenu.addAction(openMediaAction)
+
+        openFolderAction = QtGui.QAction('Open Folder', self)
+        #openFolderAction.setShortcut('Ctrl+O')
+        openFolderAction.setStatusTip('Add folder to current playlist')        
+        openFolderAction.triggered.connect(self.widget.table.add_content)
+        fileMenu.addAction(openFolderAction)
+
 
 
         playbackMenu = self.menuBar().addMenu("&Playback")
@@ -556,12 +586,6 @@ class AppWindow(QtGui.QMainWindow):
         prevAction.triggered.connect(self.widget.left_nav.player.previous)
         playbackMenu.addAction(prevAction)
 
-
-        saveAction = QtGui.QAction('Save', self)
-        saveAction.setShortcut('Ctrl+S')
-        saveAction.setStatusTip('Save playlist structure')        
-        saveAction.triggered.connect(self.widget.left_nav.tree_view.save_lists)
-        fileMenu.addAction(saveAction)
 
         aboutMenu = self.menuBar().addMenu("&About")
 

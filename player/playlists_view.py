@@ -1,4 +1,4 @@
-import os
+import os, json
 
 from PySide import QtGui, QtCore
 
@@ -6,38 +6,28 @@ from medley.helpers import load_json, save_json
 from medley.playlist import Playlist
 from medley.content import Content
 
-
-## def load_playlist_old(fname):
-##     """
-##     this version works with a json structure populated with
-##     Content dictionary representation.
-##     This approach is deprecated... too much duplication of information...
-##     difficult to determine which one is authoritative...
-##     the one in the playlist or the one stored with the media data.
-
-##     trying to keep data in one place.
-##     """
-##     items = load_json(fname)
-##     contents = []
-##     for item in items:
-##         #print item
-##         #print ""
-##         content = Content(content=item)
-##         #content.load()
-##         #print content.to_dict()
-##         #print ""
-##         #print ""
-##         contents.append(content)
-##     return Playlist(contents)
+from shared import all_contents
 
 def load_playlist(fname):
+    """
+    expects the playlist to hold:
+       - the content source path
+       - the segment id
+
+    then loads the content from the source, and selects the correct segment
+    """
     items = load_json(fname)
     contents = []
     for item in items:
         #print item
         #print ""
         (json_source, segment_id) = item
-        content = Content(json_source)
+        if all_contents.has_key(json_source):
+            #print "Matched existing Content object with path: %s" % json_source
+            content = all_contents[json_source]
+        else:
+            content = Content(json_source)
+            all_contents[json_source] = content
 
         segment = content.get_segment(segment_id)
         #print segment.to_dict()
@@ -110,7 +100,11 @@ class Node(object):
         self._name = name
 
     def child(self, row):
-        return self.children[row]
+        if row < len(self.children):
+            return self.children[row]
+        else:
+            print "No child at row: %s" % row
+            return None
     
     def childCount(self):
         return len(self.children)
@@ -152,6 +146,27 @@ class Node(object):
         """
 	return json.dumps(self.as_dict())
 
+    def save_all(self):
+        """
+        recursively call save for all nodes
+        """
+        self.save()
+        for child in self.children:
+            child.save_all()
+
+    def save(self):
+        """
+        save the current playlist
+
+        different than to_json, which creates the whole structure,
+        including children
+        """
+        if self.source:
+            #content is really a Playlist object here
+            #TODO:
+            #refactor this to be less confusing.
+            self.content.save(self.source)
+        
     def from_json(self, data='', item={}):
         """
         load a previously serialized Node structure
@@ -452,7 +467,10 @@ class PlaylistsTreeView(QtGui.QTreeView):
     http://stackoverflow.com/questions/4160111/pyqt-qtreeview-trying-to-connect-to-the-selectionchanged-signal
     """
     def __init__(self, parent=None):
+        """
+        """
         super(PlaylistsTreeView, self).__init__(parent)
+        
         self.model = None
         self.cur_item = None
         self.cur_index = QtCore.QModelIndex()
@@ -489,6 +507,7 @@ class PlaylistsTreeView(QtGui.QTreeView):
         if not previous:
             print "Could not find a valid previous setup... starting blank"
             #self.playlists.root.from_json(item={})
+            self.load_lists("blank.json")
                         
 
         #initialize data here:
@@ -545,7 +564,7 @@ class PlaylistsTreeView(QtGui.QTreeView):
         #
         #this one happens sooner since it is called immediately
         #
-        #self.selectionModel().selectionChanged.connect(self.change_selection)
+        self.selectionModel().selectionChanged.connect(self.change_selection)
 
     def change_selection(self, newSelection, oldSelection):
         #print "changed"
@@ -586,6 +605,11 @@ class PlaylistsTreeView(QtGui.QTreeView):
             self.cur_node = self.cur_index.internalPointer()
 
             self.parent().change_selection(self.cur_node)
+
+    def update_location(self, destination):
+        print "UPDATE LOCATION CALLED: %s" % destination
+        self.cur_node.source = destination
+        self.cur_node.save()
 
     def open_list(self):
         """
@@ -723,12 +747,14 @@ class PlaylistsTreeView(QtGui.QTreeView):
 
         fname = dlg.selectedFiles()[0]
         if fname:
-            #print "SAVE LISTS CALLED: %s" % fname
+            print "SAVE LISTS CALLED: %s" % fname
 
             self.last_folder = os.path.dirname(fname)
 
             tree = self.playlists.root.as_dict()
             save_json(fname, tree)
+
+            self.playlists.root.save_all()
 
             self.configs['previously'] = fname
             self.save_configs()

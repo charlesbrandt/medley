@@ -804,70 +804,6 @@ class Content(object):
     ##     return os.path.join(self.path, self.filename)
 
 
-    ## def _seek_path_up(self):
-    ##     """
-    ##     helper for _get_path...
-    ##     only look for a path by going up
-    ##     ok to return None if no path is ultimately found
-    ##     """
-    ##     #if not (self.drive_dir and self.base_dir):
-    ##     if self.drive_dir:
-    ##         return os.path.join(self.drive_dir, self.base_dir)
-    ##     else:
-    ##         #print self.root.title
-    ##         #print "Couldn't find self.drive_dir: %s" % self.drive_dir
-    ##         #print self.debug()
-    ##         if not (self.parent is None):
-    ##             return self.parent._seek_path_up()
-    ##         elif not (self.root is None) and (self.root != self):
-    ##             return self.root._seek_path_up()
-    ##         else:
-    ##             #might be root with no path data:
-    ##             return ''
-            
-    ## def _seek_path_down(self, depth_first=True):
-    ##     """
-    ##     helper for _get_path...
-    ##     only look for a path by searching down
-    ##     ok to return None if no path is ultimately found
-    ##     """
-    ##     #if not (self.drive_dir and self.base_dir):
-    ##     if not (self.drive_dir):
-    ##         found_path = False
-    ##         index = 0
-    ##         while not found_path:
-    ##             if index < len(self.segments):
-    ##                 option = self.segments[index]._seek_path_down()
-    ##                 if option:
-    ##                     found_path = True
-    ##                     return option
-    ##                 index += 1
-    ##             else:
-    ##                 return ''
-
-    ##     else:            
-    ##         return os.path.join(self.drive_dir, self.base_dir)
-            
-    ## def _get_path_orig(self):
-    ##     """
-    ##     original _get_path method
-    ##     that uses customized seek up and seek down helpers
-    ##     for finding path specific data
-
-    ##     see new _get_path that uses generalized _seek_up and _seek_down
-    ##     """
-    ##     #if not (self.drive_dir and self.base_dir):
-    ##     if not (self.drive_dir):
-    ##         option = self._seek_path_up()
-    ##         if not option:
-    ##             option = self._seek_path_down()
-    ##             if not option:
-    ##                 raise ValueError, "Incomplete path parts: %s (drive_dir) and %s (base_dir).  Could not find path anywhere: %s" % (self.drive_dir, self.base_dir, self.root.to_dict())
-    ##         #return os.path.join(self.root.drive_dir, self.root.base_dir)
-    ##         return option
-    ##     else:
-    ##         return os.path.join(self.drive_dir, self.base_dir)
-
 
     def _seek_up(self, attribute='_filename'):
         """
@@ -1016,16 +952,24 @@ class Content(object):
             if not dd_option:
                 dd_option = self._seek_down('drive_dir')
                 if not dd_option:
-                    print "Incomplete drive_dir: %s (drive_dir).  Could not find drive_dir anywhere: %s" % (self.drive_dir, self.root.to_dict())
-                    return ''
+                    #print "Incomplete drive_dir: %s (drive_dir).  Could not find drive_dir anywhere: %s" % (self.drive_dir, self.root.to_dict())
+                    #return ''
+
+                    #seems like if you're asking for a path
+                    #and the parts aren't there, that's an error
+                    raise ValueError, "Incomplete drive_dir: %s (drive_dir).  Could not find drive_dir anywhere: %s" % (self.drive_dir, self.root.to_dict())
 
             if not (self.base_dir):
                 bd_option = self._seek_up('base_dir')
                 if not bd_option:
                     bd_option = self._seek_down('base_dir')
                     if not bd_option:
-                        print "Incomplete base_dir: %s (base_dir).  Could not find base_dir anywhere: %s" % (self.base_dir, self.root.to_dict())
-                        return ''
+                        #print "Incomplete base_dir: %s (base_dir).  Could not find base_dir anywhere: %s" % (self.base_dir, self.root.to_dict())
+                        #return ''
+
+                        #seems like if you're asking for a path
+                        #and the parts aren't there, that's an error
+                        raise ValueError, "Incomplete base_dir: %s (base_dir).  Could not find base_dir anywhere: %s" % (self.base_dir, self.root.to_dict())
             else:
                 bd_option = self.base_dir
 

@@ -1,5 +1,7 @@
-import json, re
+import json, re, os
 from PySide import QtGui, QtCore
+
+from shared import all_contents
 
 from medley.content import Content, Mark
 from medley.playlist import Playlist
@@ -281,7 +283,8 @@ class PlaylistModel(QtCore.QAbstractTableModel):
             if not index.row() in row_nums:
                 row_nums.append(index.row())
                 content = index.internalPointer()
-                items.append(content.to_dict())
+                json_path = os.path.join(content.path, content.json_source)
+                items.append( [json_path, content.segment_id] )
             else:
                 pass
                 #print "duplicate row: %s" % index.row()                
@@ -289,9 +292,10 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         #item = self.getNode( indices[0] )
 
         #mimedata.setData('text/xml', item)
-        #print json.dumps(item)
+        print json.dumps(items)
 
-        everything = {'row_nums':row_nums, 'items':items}
+        #everything = {'row_nums':row_nums, 'items':items}
+        everything = {'items':items}
         
         #mimedata.setData('json/content', json.dumps(items))
         mimedata.setData('json/content', json.dumps(everything))
@@ -306,16 +310,37 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         #print 'parent row: %s, column: %s' % (parent.row(), parent.column())
         
         everything = json.loads( str(mimedata.data('json/content')) )
-        row_nums = everything['row_nums']
+        #row_nums = everything['row_nums']
         items = everything['items']
         
         if action == QtCore.Qt.DropAction.MoveAction:
-            #remove old row_nums first:
-            row_nums.sort()
-            row_nums.reverse()
-            print "removing rows first: %s" % row_nums
-            for row in row_nums:
-                self.removeRows(row)
+            # old way using row numbers:
+            #
+            ## #remove old row_nums first:
+            ## row_nums.sort()
+            ## row_nums.reverse()
+            ## print "removing rows first: %s" % row_nums
+            ## for row in row_nums:
+            ##     self.removeRows(row)
+
+
+            #try to remove the sent items from self,
+            #but if items are from a different PlaylistView, they won't exist...
+            #removing from source is a trickier task...
+            
+            for item in items:
+                (path, segment_id) = item
+                #it really should, unless it is a locally created Content obj
+                if all_contents.has_key(path):
+                    content = all_contents[path]
+                    segment = content.get_segment(segment_id)
+                    if segment in self.playlist:
+                        row = self.playlist.index(segment)
+                        
+                        self.beginRemoveRows( QtCore.QModelIndex(), row, row )
+                        self.playlist.remove(segment)
+                        self.endRemoveRows()
+
 
         start_pos = parent.row()
 
@@ -325,9 +350,16 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         print "starting at row: %s" % start_pos
         position = start_pos
         for item in items:
-            content = Content(content=item)
-            self.playlist.insert(position, content)
-            position += 1
+            (path, segment_id) = item
+            #it really should, unless it is a locally created Content obj
+            if all_contents.has_key(path):
+                content = all_contents[path]
+                segment = content.get_segment(segment_id)
+                #content = Content(content=item)
+                self.playlist.insert(position, segment)
+                position += 1
+            else:
+                print "COULDN'T FIND CONTENT: %s, %s" % (path, segment_id)
 
         print "len pre-insert: %s" % len(self.playlist)
         self.endInsertRows()
@@ -400,8 +432,9 @@ class PlaylistView(QtGui.QTableView):
         """
         update the currently selected Content item
         """
-        self.cur_index = newSelection.indexes()[0]
-        self.cur_content = self.cur_index.internalPointer()
+        if len(newSelection.indexes()):
+            self.cur_index = newSelection.indexes()[0]
+            self.cur_content = self.cur_index.internalPointer()
         
     def check_click(self, index):
         """
@@ -455,6 +488,47 @@ class PlaylistView(QtGui.QTableView):
         self.content_view.resize(1000, 400)
         self.content_view.show()
 
+    def add_content(self):
+        """
+        open a open dialog to select the json source of a Content object
+        load the Content object
+        then append it to self.model.playlist
+        """
+        #can implement this later if it would be helpful:
+        self.last_folder = None
+        
+        if self.last_folder:
+            fname, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open Content',
+                                                         self.last_folder)
+        else:
+            fname, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open Content')
+
+        content = Content(fname)
+
+        ## parent = self.model.getNode(self.cur_index)
+        ## child_count = parent.childCount()
+
+        #how many to insert:
+        count = 1
+        total_rows = self.model.rowCount(None)
+
+        self.model.beginInsertRows( self.cur_index, total_rows, total_rows+count-1 )
+
+        for i in range(count):
+            self.model.playlist.append(content)
+            ## name_only = os.path.basename(fname)
+            ## child = Node(name_only)
+            ## child.source = fname
+
+            ## #open fname here and assign Playlist object as child.content
+            ## playlist = load_playlist(fname)
+            ## child.content = playlist
+            ## #add Node to tree of playlists:
+            ## success = parent.insertChild(child_count, child)
+            
+        self.model.endInsertRows()
+        #print self.model.playlist
+        return "success"
 
 class MarksWidget(QtGui.QWidget):
     """

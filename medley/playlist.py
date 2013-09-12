@@ -1,4 +1,5 @@
 import os, codecs, re
+from helpers import save_json
 
 class Position(object):
     """
@@ -390,6 +391,14 @@ class Playlist(PositionList):
                 break
 
         return found
+
+    def save(self, destination):
+        items = []
+        for content in self:
+            json_path = os.path.join(content.path, content.json_source)
+            items.append( [json_path, content.segment_id] )
+
+        save_json(destination, items)
 
     def sort_path(self):
         #self.sort(key=lambda source: str(source.path))
