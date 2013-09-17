@@ -31,7 +31,8 @@ from medley.helpers import load_json, save_json
 
 #from content_view import ContentWindow
 from playlists_view import PlaylistsTreeView, Node, TreeModel
-from playlist_view import PlaylistView, PlaylistModel
+#from playlist_view import PlaylistView, PlaylistModel
+from playlist_view import PlaylistWidget, PlaylistModel
 
 __version__ = '0.0.1'
 
@@ -327,6 +328,9 @@ class PlayerWidget(QtGui.QWidget):
         #print "Jump Backward"
 
     def tick(self, time):
+        if self.cur_content and self.cur_content.end and time > self.cur_content.end.position:
+            print "AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
+            self.next()
         display_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
         hours = time / 3600000
         if hours:
@@ -484,7 +488,8 @@ class MainWidget(QtGui.QSplitter):
         self.addWidget(self.left_nav)
 
         #self.table = QtGui.QTableView()
-        self.table = PlaylistView()
+        #self.table = PlaylistView()
+        self.table = PlaylistWidget()
         self.addWidget(self.table)
 
         #http://srinikom.github.io/pyside-docs/PySide/QtGui/QSplitter.html#PySide.QtGui.PySide.QtGui.QSplitter.setSizes
@@ -494,7 +499,7 @@ class MainWidget(QtGui.QSplitter):
         #pass self.table reference into self.left_nav.tree
         #for update after selection        
         #self.left_nav.table = self.table
-        self.left_nav.set_table_view(self.table)
+        self.left_nav.set_table_view(self.table.playlist)
         #could also pass that in
 
         #self.layout.setColumnStretch(1, 1)
@@ -530,13 +535,13 @@ class AppWindow(QtGui.QMainWindow):
         openMediaAction = QtGui.QAction('Open Media', self)
         #openMediaAction.setShortcut('Ctrl+O')
         openMediaAction.setStatusTip('Add media to current playlist')        
-        openMediaAction.triggered.connect(self.widget.table.add_content)
+        openMediaAction.triggered.connect(self.widget.table.playlist.add_content)
         fileMenu.addAction(openMediaAction)
 
         openFolderAction = QtGui.QAction('Open Folder', self)
         #openFolderAction.setShortcut('Ctrl+O')
         openFolderAction.setStatusTip('Add folder to current playlist')        
-        openFolderAction.triggered.connect(self.widget.table.add_content)
+        openFolderAction.triggered.connect(self.widget.table.playlist.add_content)
         fileMenu.addAction(openFolderAction)
 
 
@@ -619,7 +624,7 @@ def main():
     #this is needed for Phonon on Linux (DBUS):
     app.setApplicationName("Medley")
     window = AppWindow()
-    window.resize(800, 600)
+    window.resize(900, 600)
     window.show()
     app.exec_()
 

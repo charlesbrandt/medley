@@ -568,7 +568,7 @@ class Content(object):
 
     this is a place to draw those together
     """
-    def __init__(self, source=None, content={}, root=None, debug=False):
+    def __init__(self, source=None, content={}, root=None, base_dir='', debug=False):
         """
         few different ways to initialize an item of content:
 
@@ -581,7 +581,10 @@ class Content(object):
           - root top-most content item for nesting content objects (not a path)
             (if it's not passed in here, child segments are not set correctly)
         """
-        #the root location relative to collection base
+        #root is no longer used for this purpose:
+        #"the root location relative to collection base"
+        #now it is a reference to the top most Content object in which
+        #this Content object is contained.
         #self.root = root
 
         #everything leading up to the base_dir 
@@ -590,7 +593,9 @@ class Content(object):
 
         #aka path from collection root
         #relative path for other content
-        self.base_dir = ''
+        #might want to pass this in if creating a new Content object
+        #so that drive_dir will get initialized correctly too
+        self.base_dir = base_dir
 
         #keep track of where this object's meta data is stored:
         self._json_source = ''
@@ -769,6 +774,8 @@ class Content(object):
             #if not re.search(self.base_dir, source_dir):
             #    print "WARNING: could not find base_dir (%s) in source_dir (%s)" % (self.base_dir, source_dir)
             #else:
+
+            #base_dir will only be set if it already exists in the loaded json
             if re.search(self.base_dir, source_dir):
                 #must have self.base_dir in source_dir
                 #if not drive_dir_matches:

@@ -21,7 +21,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
 
         #define the order that things are displayed
         if key_order is None:
-            self.key_order = ['play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
+            self.key_order = ['up', 'play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
         else:
             self.key_order = key_order
         
@@ -107,7 +107,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
                     return str(ts)
                 else:
                     return ''
-            elif key == 'play' or key == 'open':
+            elif key == 'play' or key == 'open' or key == 'up':
                 #TODO: check main playing status to see
                 #if this is currently playing item
                 #display play icon if so
@@ -162,6 +162,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
 
         #disable editing for title column
         elif ((self.key_order[index.column()] == 'open') or
+              (self.key_order[index.column()] == 'up') or
               (self.key_order[index.column()] == 'marks') or
               (self.key_order[index.column()] == 'play') or
               (self.key_order[index.column()] == 'segments')):
@@ -368,6 +369,48 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         return True        
 
 
+class PlaylistWidget(QtGui.QWidget):
+    """
+    combine PlaylistView with a toolbar to facilitate deleting and adding items
+    """
+    def __init__(self, parent=None, table=None):
+        super(PlaylistWidget, self).__init__(parent)
+        
+        #should work the same:
+        #self.layout = QtGui.QGridLayout()
+        self.layout = QtGui.QVBoxLayout()
+        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setSpacing(0)
+
+        self.playlist = PlaylistView(self)
+        self.layout.addWidget(self.playlist)
+
+        playlist_toolbar = QtGui.QToolBar()
+        playlist_toolbar.setIconSize(QtCore.QSize(16, 16))
+
+        addAction = QtGui.QAction(QtGui.QIcon('images/plus.png'), 'Add', self)
+        #addAction.setShortcut('Ctrl+N')
+        addAction.triggered.connect(self.add_item)
+        playlist_toolbar.addAction(addAction)
+
+        removeAction = QtGui.QAction(QtGui.QIcon('images/minus.png'), 'Remove', self)
+        removeAction.triggered.connect(self.remove_item)
+        playlist_toolbar.addAction(removeAction)
+
+        self.layout.addWidget(playlist_toolbar)
+
+        self.setLayout(self.layout)
+
+
+    def add_item(self, name=''):
+        print "ADD ITEM from PlaylistWidget"
+        
+    def remove_item(self, row=None):
+        if row is None:
+            row = self.playlist.cur_index.row()
+
+        self.playlist.model.removeRows(row)
+
 
 class PlaylistView(QtGui.QTableView):
     """
@@ -416,12 +459,14 @@ class PlaylistView(QtGui.QTableView):
 
         play_index = self.model.key_order.index('play')
         open_index = self.model.key_order.index('open')
+        up_index = self.model.key_order.index('up')
         order_index = self.model.key_order.index('order')
         title_index = self.model.key_order.index('title')
         status_index = self.model.key_order.index('status')
         start_index = self.model.key_order.index('start')
         self.resizeColumnToContents(play_index)
         self.resizeColumnToContents(open_index)
+        self.resizeColumnToContents(up_index)
         self.resizeColumnToContents(order_index)
         self.resizeColumnToContents(title_index)
         self.resizeColumnToContents(status_index)
@@ -443,7 +488,7 @@ class PlaylistView(QtGui.QTableView):
         """
         #print "DOUBLE CLICK: %s %s" % (index.row(), index.column())
 
-        if self.model.key_order[index.column()] == 'open':
+        if self.model.key_order[index.column()] == 'open' or self.model.key_order[index.column()] == 'up':
             if self.content_view is None:
                 self.open_window()
 
@@ -466,11 +511,18 @@ class PlaylistView(QtGui.QTableView):
                 ## print self.content_view
                 ## print dir(self.content_view)
 
-            #update current content with selected content
-            #do this if the window is new or old:
-            self.content_view.update_view(self.cur_content)
+            if self.model.key_order[index.column()] == 'up':
+                #TODO:
+                #find parent content of self.cur_content
+                #set self.cur_content to that
+                self.content_view.update_view(self.cur_content.parent)
+            else:
+                #update current content with selected content
+                #do this if the window is new or old:
+                self.content_view.update_view(self.cur_content)
             self.content_view.activateWindow()
             self.content_view.raise_() # just to be sure it's on top
+
 
         if self.model.key_order[index.column()] == 'play':
             #print "Play: %s" % self.cur_content.title
@@ -889,7 +941,8 @@ class ContentWindow(QtGui.QMainWindow):
         self.splitter.setChildrenCollapsible(False)
         self.splitter.setHandleWidth(1)
 
-        self.table = PlaylistView(self)
+        #self.table = PlaylistView(self)
+        self.table = PlaylistWidget(self)
         self.splitter.addWidget(self.table)
 
         self.marks_col = MarksWidget(player, self)
@@ -919,7 +972,7 @@ class ContentWindow(QtGui.QMainWindow):
         self.setWindowTitle(content.title)
         playlist = Playlist(self.content.segments)
 
-        key_order = ['play', 'open', 'order', 'start', 'tags', 'title', 'status', 'timestamp', 'people', 'segments', 'marks', 'end', ]
+        key_order = ['play', 'open', 'order', 'start', 'tags', 'title', 'status', 'timestamp', 'people', 'segments', 'marks', 'end', 'up', ]
 
         subtree = PlaylistModel(playlist, key_order=key_order)
 
