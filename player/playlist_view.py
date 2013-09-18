@@ -6,8 +6,6 @@ from shared import all_contents
 from medley.content import Content, Mark
 from medley.playlist import Playlist
 
-#from content_view import ContentWindow
-
 class PlaylistModel(QtCore.QAbstractTableModel):
     """
     wrap a medley.playlist.Playlist object
@@ -382,8 +380,8 @@ class PlaylistWidget(QtGui.QWidget):
         self.layout.setContentsMargins(0,0,0,0)
         self.layout.setSpacing(0)
 
-        self.playlist = PlaylistView(self)
-        self.layout.addWidget(self.playlist)
+        self.playlist_view = PlaylistView(self)
+        self.layout.addWidget(self.playlist_view)
 
         playlist_toolbar = QtGui.QToolBar()
         playlist_toolbar.setIconSize(QtCore.QSize(16, 16))
@@ -407,9 +405,9 @@ class PlaylistWidget(QtGui.QWidget):
         
     def remove_item(self, row=None):
         if row is None:
-            row = self.playlist.cur_index.row()
+            row = self.playlist_view.cur_index.row()
 
-        self.playlist.model.removeRows(row)
+        self.playlist_view.model().removeRows(row)
 
 
 class PlaylistView(QtGui.QTableView):
@@ -442,10 +440,14 @@ class PlaylistView(QtGui.QTableView):
 
         #this will get set once the PlaylistView has been assigned:
         self.player = None
+
+        #until something else gets set:
+        blank_list = PlaylistModel(Playlist())
+        self.setModel(blank_list)
         
     def setModel(self, model):
         super(PlaylistView, self).setModel(model)
-        self.model = model
+        #self.model = model
 
         #checking to see if the shortcut (following line) works instead of this:
         ## self.connect(self.selectionModel(),  
@@ -455,15 +457,21 @@ class PlaylistView(QtGui.QTableView):
         #this seems to perform the same function:
         #keeping both versions around, since legacy code uses SIGNAL
         #this is a good reminder/guide on how to convert them
-        self.selectionModel().selectionChanged.connect(self.store_current_selection)
+        #self.selectionModel().selectionChanged.connect(self.store_current_selection)
 
-        play_index = self.model.key_order.index('play')
-        open_index = self.model.key_order.index('open')
-        up_index = self.model.key_order.index('up')
-        order_index = self.model.key_order.index('order')
-        title_index = self.model.key_order.index('title')
-        status_index = self.model.key_order.index('status')
-        start_index = self.model.key_order.index('start')
+        sm = self.selectionModel()
+        #this is needed to avoid SegFaults on Linux:
+        #http://srinikom.github.io/pyside-bz-archive/1041.htlm
+        sm.setParent(None)
+        sm.selectionChanged.connect(self.store_current_selection)
+
+        play_index = self.model().key_order.index('play')
+        open_index = self.model().key_order.index('open')
+        up_index = self.model().key_order.index('up')
+        order_index = self.model().key_order.index('order')
+        title_index = self.model().key_order.index('title')
+        status_index = self.model().key_order.index('status')
+        start_index = self.model().key_order.index('start')
         self.resizeColumnToContents(play_index)
         self.resizeColumnToContents(open_index)
         self.resizeColumnToContents(up_index)
@@ -488,7 +496,7 @@ class PlaylistView(QtGui.QTableView):
         """
         #print "DOUBLE CLICK: %s %s" % (index.row(), index.column())
 
-        if self.model.key_order[index.column()] == 'open' or self.model.key_order[index.column()] == 'up':
+        if self.model().key_order[index.column()] == 'open' or self.model().key_order[index.column()] == 'up':
             if self.content_view is None:
                 self.open_window()
 
@@ -511,7 +519,7 @@ class PlaylistView(QtGui.QTableView):
                 ## print self.content_view
                 ## print dir(self.content_view)
 
-            if self.model.key_order[index.column()] == 'up':
+            if self.model().key_order[index.column()] == 'up':
                 #TODO:
                 #find parent content of self.cur_content
                 #set self.cur_content to that
@@ -524,11 +532,12 @@ class PlaylistView(QtGui.QTableView):
             self.content_view.raise_() # just to be sure it's on top
 
 
-        if self.model.key_order[index.column()] == 'play':
+        if self.model().key_order[index.column()] == 'play':
             #print "Play: %s" % self.cur_content.title
-            #maybe it is better to pass self.model.playlist?
-            self.model.playlist.set_current(self.cur_content)
-            self.player.play(self.cur_content, self.model.playlist)
+            #maybe it is better to pass self.model().playlist?
+            print self.cur_content.to_dict()
+            self.model().playlist.set_current(self.cur_content)
+            self.player.play(self.cur_content, self.model().playlist)
 
     
     def open_window(self):
@@ -544,7 +553,7 @@ class PlaylistView(QtGui.QTableView):
         """
         open a open dialog to select the json source of a Content object
         load the Content object
-        then append it to self.model.playlist
+        then append it to self.model().playlist
         """
         #can implement this later if it would be helpful:
         self.last_folder = None
@@ -557,17 +566,17 @@ class PlaylistView(QtGui.QTableView):
 
         content = Content(fname)
 
-        ## parent = self.model.getNode(self.cur_index)
+        ## parent = self.model().getNode(self.cur_index)
         ## child_count = parent.childCount()
 
         #how many to insert:
         count = 1
-        total_rows = self.model.rowCount(None)
+        total_rows = self.model().rowCount(None)
 
-        self.model.beginInsertRows( self.cur_index, total_rows, total_rows+count-1 )
+        self.model().beginInsertRows( self.cur_index, total_rows, total_rows+count-1 )
 
         for i in range(count):
-            self.model.playlist.append(content)
+            self.model().playlist.append(content)
             ## name_only = os.path.basename(fname)
             ## child = Node(name_only)
             ## child.source = fname
@@ -578,8 +587,8 @@ class PlaylistView(QtGui.QTableView):
             ## #add Node to tree of playlists:
             ## success = parent.insertChild(child_count, child)
             
-        self.model.endInsertRows()
-        #print self.model.playlist
+        self.model().endInsertRows()
+        #print self.model().playlist
         return "success"
 
 class MarksWidget(QtGui.QWidget):
@@ -964,7 +973,7 @@ class ContentWindow(QtGui.QMainWindow):
         self.setCentralWidget(self.splitter)
 
         self.content = None
-        self.table.playlist.player = player
+        self.table.playlist_view.player = player
 
     def update_view(self, content):
         self.content = content
@@ -976,7 +985,7 @@ class ContentWindow(QtGui.QMainWindow):
 
         subtree = PlaylistModel(playlist, key_order=key_order)
 
-        self.table.playlist.setModel(subtree)
+        self.table.playlist_view.setModel(subtree)
 
         self.titles_col.content = content
         self.titles_col.titles.content = content

@@ -20,7 +20,54 @@ from moments.journal import Journal
 
 from medley.yapsy.PluginManager import PluginManager
 
-class Collection(list):
+class CollectionSimple(list):
+    """
+    Collection is getting a bit too smart
+    which makes it complicated...
+    generally just want a source (and root) so we know where things come from
+    Content is much more important
+    """
+    def __init__(self, source='', root='', contents=[], walk=False, as_dict=False, debug=False):
+        """
+        source should be the full path to source
+        
+        walk will force a walk, regardless of if a source is available
+        """
+        #this is a json representation of the whole Collection:
+        self.source = source
+
+        #can be useful to look back at how the object was loaded.
+        self.walk = walk
+        
+        #if we were passed a list of contents, apply them
+        if len(contents):
+            for s in contents:
+                if not s in self:
+                    self.append(s)
+
+        if source:
+            self.root = os.path.dirname(source)
+        else:
+            self.root = root
+
+        if not root:
+            #print "Warning, no root"
+            self.summary = None
+
+    def save(self, destination=None):
+        if not destination:
+            #maybe destination should default to source???
+            destination = os.path.join(self.root, "contents-saved.json")
+
+        all_contents = []
+        for content in self:
+            d = content.to_dict()
+            all_contents.append(d)
+
+        save_json(destination, all_contents)
+
+
+class Collection(CollectionSimple):
     """
     object to hold the complete meta data for a collection of content...
     there are many different ways a collection of content can be represented
@@ -80,8 +127,12 @@ class Collection(list):
         else:
             #load CollectionSummary:
             #cs = self.load_collection_summary()
-            self.summary = CollectionSummary(self.root)
 
+            #do we always need this???
+            print "LOADING COLLECTION SUMMARY AT: %s" % self.root
+            self.summary = CollectionSummary(self.root)
+            #pass
+        
             #TODO:
             #*2012.11.09 12:15:37 
             #this should be optional or configurable
@@ -172,18 +223,6 @@ class Collection(list):
                 print "WARNING: couldn't find contents json path: %s" % self.source
         else:
             raise ValueError, "No source file specified: %s" % self.source
-
-    def save(self, destination=None):
-        if not destination:
-            #maybe destination should default to source???
-            destination = os.path.join(self.root, "contents-saved.json")
-
-        all_contents = []
-        for content in self:
-            d = content.to_dict()
-            all_contents.append(d)
-
-        save_json(destination, all_contents)
 
     def rescan(self):
         """
@@ -679,6 +718,9 @@ class CollectionSummary(object):
         make sure any previously found ones still exist
         add new ones        
         """
+        if not os.path.exists(self.meta_root):
+            os.makedirs(self.meta_root)
+
         options = os.listdir(self.meta_root)
         print "scan_metas in %s, %s options found" % (self.meta_root, len(options))
         if self.file in options:

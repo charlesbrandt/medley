@@ -132,10 +132,17 @@ class PlayerWidget(QtGui.QWidget):
         self.video_window = QtGui.QMainWindow(self)
         #self.video_window = ContentWindow(self)
 
+        #self.widget = MainWidget(self)
+
+        #self.setLayout(self.layout)
+
+
         self.video = Phonon.VideoWidget(self.video_window)
         Phonon.createPath(self.player, self.video)
 
-        self.video_window.resize(800, 400)
+        self.video_window.setCentralWidget(self.video)
+
+        self.video_window.resize(840, 525)
         self.video_window.show()
 
     def check_video(self):
@@ -500,7 +507,7 @@ class MainWidget(QtGui.QSplitter):
         #pass self.table reference into self.left_nav.tree
         #for update after selection        
         #self.left_nav.table = self.table
-        self.left_nav.set_table_view(self.table.playlist)
+        self.left_nav.set_table_view(self.table.playlist_view)
         #could also pass that in
 
         #self.layout.setColumnStretch(1, 1)
@@ -536,13 +543,13 @@ class AppWindow(QtGui.QMainWindow):
         openMediaAction = QtGui.QAction('Open Media', self)
         #openMediaAction.setShortcut('Ctrl+O')
         openMediaAction.setStatusTip('Add media to current playlist')        
-        openMediaAction.triggered.connect(self.widget.table.playlist.add_content)
+        openMediaAction.triggered.connect(self.widget.table.playlist_view.add_content)
         fileMenu.addAction(openMediaAction)
 
         openFolderAction = QtGui.QAction('Open Folder', self)
         #openFolderAction.setShortcut('Ctrl+O')
         openFolderAction.setStatusTip('Add folder to current playlist')        
-        openFolderAction.triggered.connect(self.widget.table.playlist.add_content)
+        openFolderAction.triggered.connect(self.widget.table.playlist_view.add_content)
         fileMenu.addAction(openFolderAction)
 
 

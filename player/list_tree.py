@@ -17,10 +17,11 @@ def load_playlist(fname):
     then loads the content from the source, and selects the correct segment
     """
     items = load_json(fname)
+    print items
     contents = []
     for item in items:
-        #print item
-        #print ""
+        print item
+        print ""
         (json_source, segment_id) = item
         if all_contents.has_key(json_source):
             #print "Matched existing Content object with path: %s" % json_source
@@ -564,7 +565,13 @@ class PlaylistsTreeView(QtGui.QTreeView):
         #
         #this one happens sooner since it is called immediately
         #
-        self.selectionModel().selectionChanged.connect(self.change_selection)
+        #self.selectionModel().selectionChanged.connect(self.change_selection)
+        
+        sm = self.selectionModel()
+        #this is needed to avoid SegFaults on Linux:
+        #http://srinikom.github.io/pyside-bz-archive/1041.htlm
+        sm.setParent(None)
+        sm.selectionChanged.connect(self.change_selection)
 
     def change_selection(self, newSelection, oldSelection):
         #print "changed"

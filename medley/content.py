@@ -1020,29 +1020,32 @@ class Content(object):
         parse through our segments (and those segment's segments, etc)
         to find the matching segement id
         """
-        id_parts = segment_id.split('_')
-        path = []
-        cur_id = ''
-        cur_segment = self
-        for part in id_parts:
-            if not cur_id:
-                cur_id = part
-            else:
-                cur_id = '_'.join( [cur_id, part] )
-            path.append(cur_id)
+        if not segment_id:
+            return self
+        else:
+            id_parts = segment_id.split('_')
+            path = []
+            cur_id = ''
+            cur_segment = self
+            for part in id_parts:
+                if not cur_id:
+                    cur_id = part
+                else:
+                    cur_id = '_'.join( [cur_id, part] )
+                path.append(cur_id)
 
-            next_segment = None
-            for segment in cur_segment.segments:
-                if segment.segment_id == cur_id:
-                    next_segment = segment
+                next_segment = None
+                for segment in cur_segment.segments:
+                    if segment.segment_id == cur_id:
+                        next_segment = segment
 
-            if next_segment is None:
-                raise ValueError, "Could not find segment_id: %s, in: %s" % (segment_id, self.to_dict())
-            cur_segment = next_segment
+                if next_segment is None:
+                    raise ValueError, "Could not find segment_id: %s, in: %s" % (segment_id, self.to_dict())
+                cur_segment = next_segment
 
-        #print "found the following ids for segment path: %s" % path
+            #print "found the following ids for segment path: %s" % path
 
-        return cur_segment            
+            return cur_segment            
 
     def load(self, source=None, debug=False):
         """
@@ -1423,8 +1426,8 @@ class Content(object):
                             ##     print "Skipping %s: %s" % (mpath.type(), f)
                             pass
 
-        if debug:
-            print "found the following:"
+        #if debug:
+        #    print "found the following:"
 
         if len(extensions.keys()) > 1:
             #more than one extension...
