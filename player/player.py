@@ -1,5 +1,5 @@
 """
-adapted from:
+originally adapted from:
 http://stackoverflow.com/questions/4163740/qtreeview-with-drag-and-drop-support-in-pyqt?rq=1
 
 and:
@@ -30,7 +30,8 @@ from PySide.phonon import Phonon
 from medley.helpers import load_json, save_json
 
 #from content_view import ContentWindow
-from playlists_view import PlaylistsTreeView, Node, TreeModel
+#from playlists_view import PlaylistsTreeView, Node, TreeModel
+from list_tree import PlaylistsTreeView, Node, TreeModel
 #from playlist_view import PlaylistView, PlaylistModel
 from playlist_view import PlaylistWidget, PlaylistModel
 

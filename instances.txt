@@ -1,3 +1,10 @@
+*2013.09.18 09:01:28 player
+/c/medley/instances.txt
+/c/medley/player/launch.sh
+/c/medley/player/playlist_view.py
+/c/medley/player/list_tree.py
+/c/medley/player/player.py
+
 *2013.08.09 15:36:26 
 /c/medley/instances.txt
 /c/medley/launch.sh
