@@ -964,7 +964,7 @@ class ContentWindow(QtGui.QMainWindow):
         self.setCentralWidget(self.splitter)
 
         self.content = None
-        self.table.player = player
+        self.table.playlist.player = player
 
     def update_view(self, content):
         self.content = content
@@ -976,7 +976,7 @@ class ContentWindow(QtGui.QMainWindow):
 
         subtree = PlaylistModel(playlist, key_order=key_order)
 
-        self.table.setModel(subtree)
+        self.table.playlist.setModel(subtree)
 
         self.titles_col.content = content
         self.titles_col.titles.content = content
