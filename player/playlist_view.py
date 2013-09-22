@@ -20,6 +20,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         #define the order that things are displayed
         if key_order is None:
             self.key_order = ['up', 'play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
+            self.key_order = ['up', 'play', 'open', 'order', 'people', 'filename', 'tags', 'status', 'timestamp', 'title', 'segments', 'marks', 'start', 'end', ]
         else:
             self.key_order = key_order
         
@@ -395,7 +396,16 @@ class PlaylistWidget(QtGui.QWidget):
         removeAction.triggered.connect(self.remove_item)
         playlist_toolbar.addAction(removeAction)
 
-        self.layout.addWidget(playlist_toolbar)
+
+        self.row = QtGui.QHBoxLayout()
+        self.row.addWidget(playlist_toolbar)
+        #will probably have trouble with this now since player is added later
+        ## self.row.addWidget(player.time_passed)
+        ## self.row.addWidget(player.time_remain)
+        ## self.row.insertStretch(2, 50)
+
+        #self.layout.addWidget(playlist_toolbar)
+        self.layout.addLayout(self.row)
 
         self.setLayout(self.layout)
 
@@ -546,7 +556,7 @@ class PlaylistView(QtGui.QTableView):
         """
         #self.content_view = QtGui.QMainWindow(self)
         self.content_view = ContentWindow(self.player, self)
-        self.content_view.resize(1000, 400)
+        self.content_view.resize(840, 400)
         self.content_view.show()
 
     def add_content(self):
@@ -732,6 +742,8 @@ class MarksWidget(QtGui.QWidget):
         new_prefix = self.track_prefix.text()
         self.content.track_prefix = new_prefix
 
+        if not self.content.remainder.has_key("tracks"):
+            self.content.remainder['tracks'] = []
         tracks = self.content.remainder['tracks']
         self.content.history.make("Merging titles with marks", ["merge"])
         self.content.marks.make_segments(self.content, titles=tracks)
@@ -865,6 +877,30 @@ class TitlesWidget(QtGui.QWidget):
 
         
     def add_title(self, title='-'):
+        if title == '-' and self.content.remainder.has_key('tracks'):
+            #passed the default...
+            #try to find the next number to add automatically
+
+            #self.content.remainder['tracks'].sort()
+            re1='(\\d+)(\.)'	# Integer Number 1
+            rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
+
+            tracks = self.content.remainder['tracks']
+            #print "TRACKS: %s" % tracks
+
+            sorting = []
+            for title in tracks:
+                m = rg.search(title)
+                if m:
+                    int1 = m.group(1)
+                    #print "("+int1+")"+"\n"
+                    sorting.append( (int(int1), title) )
+            sorting.sort()
+            if len(sorting):
+                number = sorting[-1][0]
+                plus = number + 1
+                title = "%s. " % plus
+                             
         item = QtGui.QListWidgetItem(title, self.titles)
         item.setFlags( QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDropEnabled | \
                        QtCore.Qt.ItemIsDragEnabled | \
@@ -972,8 +1008,44 @@ class ContentWindow(QtGui.QMainWindow):
         #self.setCentralWidget(self.table)
         self.setCentralWidget(self.splitter)
 
+        make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+M'),
+                                    self, self.marks_col.add_mark)
+
+        make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
+                                    self, self.titles_col.add_title)
+
+
+        plays = QtGui.QShortcut(QtGui.QKeySequence(" "), self,
+                                player.toggle_play)
+
+        scanfs = QtGui.QShortcut(QtGui.QKeySequence('Alt+Right'),
+                                self, player.forward)
+
+        scanbs = QtGui.QShortcut(QtGui.QKeySequence('Alt+Left'),
+                                self, player.back)
+
+        jumpfs = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Right'),
+                                self, player.jumpf)
+
+        jumpbs = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Left'),
+                                self, player.jumpb)
+
+        nexts = QtGui.QShortcut(QtGui.QKeySequence('Alt+Down'),
+                                self, player.next)
+        nexts = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Down'),
+                                self, player.next)
+
+        prevs = QtGui.QShortcut(QtGui.QKeySequence('Alt+Up'),
+                                self, player.previous)
+        prevs2 = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Up'),
+                                self, player.previous)
+
         self.content = None
         self.table.playlist_view.player = player
+
+        self.table.row.addWidget(player.time_passed)
+        self.table.row.addWidget(player.time_remain)
+        self.table.row.insertStretch(2, 50)
 
     def update_view(self, content):
         self.content = content

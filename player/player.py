@@ -137,6 +137,88 @@ class PlayerWidget(QtGui.QWidget):
         #self.setLayout(self.layout)
 
 
+        #playbackMenu = self.video_window.menuBar().addMenu("&Playback")
+
+        ## playAction = QtGui.QAction('Play', self.video_window)
+        ## playAction.setShortcut(' ')
+        ## playAction.setStatusTip('Toggle Play / Pause of Player')        
+        ## playAction.triggered.connect(self.toggle_play)
+        ## playAction.setIconVisibleInMenu(False)
+        ## #playbackMenu.addAction(playAction)
+
+        plays = QtGui.QShortcut(QtGui.QKeySequence(" "), self.video_window,
+                               self.toggle_play)
+
+        ## scanfAction = QtGui.QAction('Scan Forward', self.video_window)
+        ## scanfAction.setShortcut('Alt+Right')
+        ## scanfAction.setStatusTip('Seek Forward')        
+        ## scanfAction.triggered.connect(self.forward)
+        ## scanfAction.setIconVisibleInMenu(False)
+        ## #playbackMenu.addAction(scanfAction)
+
+        scanfs = QtGui.QShortcut(QtGui.QKeySequence('Alt+Right'),
+                                self.video_window, self.forward)
+
+
+        ## scanbAction = QtGui.QAction('Scan Back', self.video_window)
+        ## scanbAction.setShortcut('Alt+Left')
+        ## scanbAction.setStatusTip('Seek Back')        
+        ## scanbAction.triggered.connect(self.back)
+        ## scanbAction.setIconVisibleInMenu(False)
+        ## #playbackMenu.addAction(scanbAction)
+
+        scanbs = QtGui.QShortcut(QtGui.QKeySequence('Alt+Left'),
+                                self.video_window, self.back)
+
+
+        ## #Meta seems to be equivalent to Ctrl on Mac
+        ## jumpfAction = QtGui.QAction('Jump Forward', self.video_window)
+        ## jumpfAction.setShortcut('Ctrl+Right')
+        ## jumpfAction.setStatusTip('Jump Forward')        
+        ## jumpfAction.triggered.connect(self.jumpf)
+        ## jumpfAction.setIconVisibleInMenu(False)
+        ## #playbackMenu.addAction(jumpfAction)
+
+        jumpfs = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Right'),
+                                self.video_window, self.jumpf)
+
+        ## jumpbAction = QtGui.QAction('Jump Back', self.video_window)
+        ## jumpbAction.setShortcut('Ctrl+Left')
+        ## jumpbAction.setStatusTip('Jump Back')        
+        ## jumpbAction.triggered.connect(self.jumpb)
+        ## jumpbAction.setIconVisibleInMenu(False)
+        ## #playbackMenu.addAction(jumpbAction)
+
+        jumpbs = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Left'),
+                                self.video_window, self.jumpb)
+
+        ## nextAction = QtGui.QAction('Next', self.video_window)
+        ## nextAction.setShortcut('Alt+Down')
+        ## nextAction.setStatusTip('Next Track')        
+        ## nextAction.triggered.connect(self.next)
+        ## nextAction.setIconVisibleInMenu(False)
+        ## #playbackMenu.addAction(nextAction)
+
+        nexts = QtGui.QShortcut(QtGui.QKeySequence('Alt+Down'),
+                                self.video_window, self.next)
+        nexts = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Down'),
+                                self.video_window, self.next)
+
+        ## prevAction = QtGui.QAction('Previous', self.video_window)
+        ## prevAction.setShortcut('Alt+Up')
+        ## prevAction.setStatusTip('Previous Track')        
+        ## prevAction.triggered.connect(self.previous)
+        ## prevAction.setIconVisibleInMenu(False)
+        ## #playbackMenu.addAction(prevAction)
+
+        prevs = QtGui.QShortcut(QtGui.QKeySequence('Alt+Up'),
+                                self.video_window, self.previous)
+
+        prevs2 = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Up'),
+                                self.video_window, self.previous)
+
+
+
         self.video = Phonon.VideoWidget(self.video_window)
         Phonon.createPath(self.player, self.video)
 
@@ -349,11 +431,16 @@ class PlayerWidget(QtGui.QWidget):
         time = self.player.remainingTime()
         remain_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
         hours = time / 3600000
+        remain_string = ''
         if hours:
-            self.time_remain.setText("-%s" % remain_time.toString('h:mm:ss'))
+            remain_string = remain_time.toString('h:mm:ss')
         else:
-            self.time_remain.setText("-%s" % remain_time.toString('mm:ss'))
-            
+            remain_string = remain_time.toString('mm:ss')
+        self.time_remain.setText("-%s" % remain_string)
+
+        if remain_string == "00:01" or remain_string == "00:00":
+            print "END OF TRACK: AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
+            self.next()
 
 
     def change_selection(self, playlist, content=None):
