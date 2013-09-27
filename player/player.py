@@ -438,7 +438,7 @@ class PlayerWidget(QtGui.QWidget):
             remain_string = remain_time.toString('mm:ss')
         self.time_remain.setText("-%s" % remain_string)
 
-        if remain_string == "00:01" or remain_string == "00:00":
+        if remain_string == "00:01" or remain_string == "00:00" and self.cur_content:
             print "END OF TRACK: AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
             self.next()
 

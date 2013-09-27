@@ -17,11 +17,11 @@ def load_playlist(fname):
     then loads the content from the source, and selects the correct segment
     """
     items = load_json(fname)
-    print items
+    #print items
     contents = []
     for item in items:
-        print item
-        print ""
+        #print item
+        #print ""
         (json_source, segment_id) = item
         if all_contents.has_key(json_source):
             #print "Matched existing Content object with path: %s" % json_source
@@ -30,6 +30,7 @@ def load_playlist(fname):
             content = Content(json_source)
             all_contents[json_source] = content
 
+        print json_source
         segment = content.get_segment(segment_id)
         #print segment.to_dict()
         #print ""
@@ -195,6 +196,7 @@ class Node(object):
 
         if simple.has_key('source'):
             self.source = simple['source']
+            print "loading playlist: %s" % self.source
             if self.source:
                 #load self.source into self.content here
                 playlist = load_playlist(self.source)
@@ -499,11 +501,11 @@ class PlaylistsTreeView(QtGui.QTreeView):
         if self.configs.has_key('previously'):
             if self.configs['previously']:
                 if os.path.exists(self.configs['previously']):
-                    try:
-                        self.load_lists(self.configs['previously'])
-                        previous = True
-                    except:
-                        print "Error loading previous configuration: %s" % self.configs['previously']
+                    #try:
+                    self.load_lists(self.configs['previously'])
+                    previous = True
+                    #except:
+                    #    print "Error loading previous configuration: %s" % self.configs['previously']
 
         if not previous:
             print "Could not find a valid previous setup... starting blank"
@@ -570,7 +572,7 @@ class PlaylistsTreeView(QtGui.QTreeView):
         sm = self.selectionModel()
         #this is needed to avoid SegFaults on Linux:
         #http://srinikom.github.io/pyside-bz-archive/1041.htlm
-        sm.setParent(None)
+        #sm.setParent(None)
         sm.selectionChanged.connect(self.change_selection)
 
     def change_selection(self, newSelection, oldSelection):

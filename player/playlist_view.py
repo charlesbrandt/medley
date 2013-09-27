@@ -472,7 +472,7 @@ class PlaylistView(QtGui.QTableView):
         sm = self.selectionModel()
         #this is needed to avoid SegFaults on Linux:
         #http://srinikom.github.io/pyside-bz-archive/1041.htlm
-        sm.setParent(None)
+        #sm.setParent(None)
         sm.selectionChanged.connect(self.store_current_selection)
 
         play_index = self.model().key_order.index('play')
