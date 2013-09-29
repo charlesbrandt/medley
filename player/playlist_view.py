@@ -834,7 +834,8 @@ class TitlesWidget(QtGui.QWidget):
 
         addAction = QtGui.QAction(QtGui.QIcon('images/plus.png'), 'Add', self)
         #addAction.setShortcut('Ctrl+N')
-        addAction.triggered.connect(self.add_title)
+        #addAction.triggered.connect(self.add_title)
+        addAction.triggered.connect(self.new_title)
         titles_toolbar.addAction(addAction)
 
         removeAction = QtGui.QAction(QtGui.QIcon('images/minus.png'), 'Remove', self)
@@ -875,8 +876,8 @@ class TitlesWidget(QtGui.QWidget):
                 tracks.append(item.text())
                 self.sync()
 
-        
-    def add_title(self, title='-'):
+
+    def new_title(self, title='-'):        
         if title == '-' and self.content.remainder.has_key('tracks'):
             #passed the default...
             #try to find the next number to add automatically
@@ -900,14 +901,35 @@ class TitlesWidget(QtGui.QWidget):
                 number = sorting[-1][0]
                 plus = number + 1
                 title = "%s. " % plus
-                             
-        item = QtGui.QListWidgetItem(title, self.titles)
-        item.setFlags( QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDropEnabled | \
-                       QtCore.Qt.ItemIsDragEnabled | \
-                       QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable )
+
+        item = self.add_title(title)
+
+        #on_changed will recreate the list, so item will not be the same
+        #get the row, then we can get the new item by row
+        row = self.titles.row(item)
+        
+        #sync back up with model:
+        self.on_changed(item)
+
+        item = self.titles.item(row)
+        self.titles.editItem(item)
+        
         #print item.flags()
         #self.titles.addItem(title)
 
+    def add_title(self, title):
+
+        #don't insert to list right away... we want to keep a reference around
+        #item = QtGui.QListWidgetItem(title, self.titles)
+        item = QtGui.QListWidgetItem(title)
+        item.setFlags( QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDropEnabled | \
+                       QtCore.Qt.ItemIsDragEnabled | \
+                       QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable )
+        #self.titles.insertItem(-1, item)
+        self.titles.addItem(item)
+
+        return item
+    
     def sync(self):
         """
         synchronize the contents of content.titles
@@ -954,6 +976,8 @@ class TitlesWidget(QtGui.QWidget):
             row = self.titles.currentRow()
 
         self.titles.takeItem(row)
+        #this might be unnecessary after self.titles runs sync
+        #seems very necessary
         self.content.remainder['tracks'].pop(row)    
 
     def open_titles(self):
@@ -1012,7 +1036,7 @@ class ContentWindow(QtGui.QMainWindow):
                                     self, self.marks_col.add_mark)
 
         make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
-                                    self, self.titles_col.add_title)
+                                    self, self.titles_col.new_title)
 
 
         plays = QtGui.QShortcut(QtGui.QKeySequence(" "), self,
@@ -1043,9 +1067,12 @@ class ContentWindow(QtGui.QMainWindow):
         self.content = None
         self.table.playlist_view.player = player
 
-        self.table.row.addWidget(player.time_passed)
-        self.table.row.addWidget(player.time_remain)
-        self.table.row.insertStretch(2, 50)
+        #this removes the time widgets from the main player
+        #then when window is closed, they get deleted.
+        #that makes things unhappy.
+        #self.table.row.addWidget(player.time_passed)
+        #self.table.row.addWidget(player.time_remain)
+        #self.table.row.insertStretch(2, 50)
 
     def update_view(self, content):
         self.content = content
