@@ -2,6 +2,7 @@ import json, re, os
 from PySide import QtGui, QtCore
 
 from shared import all_contents
+#from shared import main_player
 
 from medley.content import Content, Mark
 from medley.playlist import Playlist
@@ -372,7 +373,7 @@ class PlaylistWidget(QtGui.QWidget):
     """
     combine PlaylistView with a toolbar to facilitate deleting and adding items
     """
-    def __init__(self, parent=None, table=None):
+    def __init__(self, parent=None, table=None, marks_col=None, titles_col=None):
         super(PlaylistWidget, self).__init__(parent)
         
         #should work the same:
@@ -381,7 +382,7 @@ class PlaylistWidget(QtGui.QWidget):
         self.layout.setContentsMargins(0,0,0,0)
         self.layout.setSpacing(0)
 
-        self.playlist_view = PlaylistView(self)
+        self.playlist_view = PlaylistView(self, marks_col=marks_col, titles_col=titles_col)
         self.layout.addWidget(self.playlist_view)
 
         playlist_toolbar = QtGui.QToolBar()
@@ -399,9 +400,9 @@ class PlaylistWidget(QtGui.QWidget):
 
         self.row = QtGui.QHBoxLayout()
         self.row.addWidget(playlist_toolbar)
-        #will probably have trouble with this now since player is added later
-        ## self.row.addWidget(player.time_passed)
-        ## self.row.addWidget(player.time_remain)
+
+        ## self.row.addWidget(self.player.time_passed)
+        ## self.row.addWidget(self.player.time_remain)
         ## self.row.insertStretch(2, 50)
 
         #self.layout.addWidget(playlist_toolbar)
@@ -425,10 +426,13 @@ class PlaylistView(QtGui.QTableView):
     customizing TableView to handle drag and drop correctly:
     http://stackoverflow.com/questions/10264040/how-to-drag-and-drop-into-a-qtablewidget-pyqt
     """
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, marks_col=None, titles_col=None):
         super(PlaylistView, self).__init__(parent)
         ## self.model = None
         ## self.last_folder = None
+
+        self.marks_col = marks_col
+        self.titles_col = titles_col
 
         #self.setDragDropMode(QtGui.QAbstractItemView.InternalMove)
         self.setAcceptDrops(True)
@@ -472,7 +476,7 @@ class PlaylistView(QtGui.QTableView):
         sm = self.selectionModel()
         #this is needed to avoid SegFaults on Linux:
         #http://srinikom.github.io/pyside-bz-archive/1041.htlm
-        #sm.setParent(None)
+        sm.setParent(None)
         sm.selectionChanged.connect(self.store_current_selection)
 
         play_index = self.model().key_order.index('play')
@@ -547,7 +551,9 @@ class PlaylistView(QtGui.QTableView):
             #maybe it is better to pass self.model().playlist?
             print self.cur_content.to_dict()
             self.model().playlist.set_current(self.cur_content)
-            self.player.play(self.cur_content, self.model().playlist)
+            self.player.play(self.cur_content, self.model().playlist, self.marks_col, self.titles_col)
+            #print main_player
+            #main_player.play(self.cur_content, self.model().playlist, self.marks_col, self.titles_col)
 
     
     def open_window(self):
@@ -556,7 +562,9 @@ class PlaylistView(QtGui.QTableView):
         """
         #self.content_view = QtGui.QMainWindow(self)
         self.content_view = ContentWindow(self.player, self)
-        self.content_view.resize(840, 400)
+        #self.content_view = ContentWindow(self)
+        #self.content_view.resize(840, 400)
+        self.content_view.resize(640, 250)
         self.content_view.show()
 
     def add_content(self):
@@ -608,6 +616,7 @@ class MarksWidget(QtGui.QWidget):
     needs to be its own widget to be added to the splitter
     """
     def __init__(self, player, parent=None):
+    #def __init__(self, parent=None):
         super(MarksWidget, self).__init__(parent)
 
         self.player = player
@@ -640,13 +649,13 @@ class MarksWidget(QtGui.QWidget):
         removeAction.triggered.connect(self.remove_mark)
         marks_toolbar.addAction(removeAction)
 
-        openAction = QtGui.QAction(QtGui.QIcon('images/open.png'), 'Import from file', self)
-        openAction.triggered.connect(self.open_marks)
-        marks_toolbar.addAction(openAction)
+        ## openAction = QtGui.QAction(QtGui.QIcon('images/open.png'), 'Import from file', self)
+        ## openAction.triggered.connect(self.open_marks)
+        ## marks_toolbar.addAction(openAction)
 
-        saveAction = QtGui.QAction(QtGui.QIcon('images/save.png'), 'Export to file', self)
-        saveAction.triggered.connect(self.save_marks)
-        marks_toolbar.addAction(saveAction)
+        ## saveAction = QtGui.QAction(QtGui.QIcon('images/save.png'), 'Export to file', self)
+        ## saveAction.triggered.connect(self.save_marks)
+        ## marks_toolbar.addAction(saveAction)
 
         mergeAction = QtGui.QAction(QtGui.QIcon('images/merge.png'), 'Merge titles and marks', self)
         mergeAction.triggered.connect(self.merge_titles)
@@ -696,7 +705,10 @@ class MarksWidget(QtGui.QWidget):
     def add_mark(self, mark=''):
         #get current position from player (00:00 is ok)
         if self.player:
+        #if main_player:
             time = self.player.currentTime()
+            #time = main_player.currentTime()
+            
             #display_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
             #hours = time / 3600000
             mark = Mark(mark, time)
@@ -706,6 +718,7 @@ class MarksWidget(QtGui.QWidget):
             #self.marks.addItem(mark)
         else:
             print "NO player object assigned to self: %s" % self.player
+            #print "NO shared player object available: %s" % main_player
             #self.marks.addItem(mark)
             mark = Mark(mark, 0)
             self.content.marks.append(mark)
@@ -842,13 +855,13 @@ class TitlesWidget(QtGui.QWidget):
         removeAction.triggered.connect(self.remove_title)
         titles_toolbar.addAction(removeAction)
 
-        openAction = QtGui.QAction(QtGui.QIcon('images/open.png'), 'Import from file', self)
-        openAction.triggered.connect(self.open_titles)
-        titles_toolbar.addAction(openAction)
+        ## openAction = QtGui.QAction(QtGui.QIcon('images/open.png'), 'Import from file', self)
+        ## openAction.triggered.connect(self.open_titles)
+        ## titles_toolbar.addAction(openAction)
 
-        saveAction = QtGui.QAction(QtGui.QIcon('images/save.png'), 'Export to file', self)
-        saveAction.triggered.connect(self.save_titles)
-        titles_toolbar.addAction(saveAction)
+        ## saveAction = QtGui.QAction(QtGui.QIcon('images/save.png'), 'Export to file', self)
+        ## saveAction.triggered.connect(self.save_titles)
+        ## titles_toolbar.addAction(saveAction)
 
         detailsAction = QtGui.QAction(QtGui.QIcon('images/details.png'), 'Show details in console', self)
         detailsAction.triggered.connect(self.content_details)
@@ -1001,6 +1014,7 @@ class TitlesWidget(QtGui.QWidget):
 
 class ContentWindow(QtGui.QMainWindow):
     def __init__(self, player, parent=None):
+    #def __init__(self, parent=None):
         super(ContentWindow, self).__init__(parent)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -1010,16 +1024,19 @@ class ContentWindow(QtGui.QMainWindow):
         self.splitter.setChildrenCollapsible(False)
         self.splitter.setHandleWidth(1)
 
-        #self.table = PlaylistView(self)
-        self.table = PlaylistWidget(self)
-        self.splitter.addWidget(self.table)
-
         self.marks_col = MarksWidget(player, self)
-        #self.splitter.addWidget(self.marks)
-        self.splitter.addWidget(self.marks_col)
+        #self.marks_col = MarksWidget(self)
 
         self.titles_col = TitlesWidget(self)
         #self.splitter.addWidget(self.titles)
+
+        #self.table = PlaylistView(self)
+        self.table = PlaylistWidget(self, marks_col=self.marks_col, titles_col=self.titles_col)
+        self.splitter.addWidget(self.table)
+
+        #self.splitter.addWidget(self.marks)
+        self.splitter.addWidget(self.marks_col)
+
         self.splitter.addWidget(self.titles_col)
 
         #self.marks = QtGui.QListWidget(self)
@@ -1035,7 +1052,7 @@ class ContentWindow(QtGui.QMainWindow):
         make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+M'),
                                     self, self.marks_col.add_mark)
 
-        make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
+        make_title = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
                                     self, self.titles_col.new_title)
 
 
@@ -1065,7 +1082,7 @@ class ContentWindow(QtGui.QMainWindow):
                                 self, player.previous)
 
         self.content = None
-        self.table.playlist_view.player = player
+        #self.table.playlist_view.player = player
 
         #this removes the time widgets from the main player
         #then when window is closed, they get deleted.
@@ -1077,10 +1094,11 @@ class ContentWindow(QtGui.QMainWindow):
     def update_view(self, content):
         self.content = content
 
-        self.setWindowTitle(content.title)
+        #self.setWindowTitle(content.title)
+        self.setWindowTitle(content.filename)
         playlist = Playlist(self.content.segments)
 
-        key_order = ['play', 'open', 'order', 'start', 'tags', 'title', 'status', 'timestamp', 'people', 'segments', 'marks', 'end', 'up', ]
+        key_order = ['open', 'order', 'tags', 'start', 'play', 'title', 'status', 'timestamp', 'people', 'segments', 'marks', 'end', 'up', ]
 
         subtree = PlaylistModel(playlist, key_order=key_order)
 

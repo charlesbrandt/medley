@@ -35,8 +35,14 @@ from list_tree import PlaylistsTreeView, Node, TreeModel
 #from playlist_view import PlaylistView, PlaylistModel
 from playlist_view import PlaylistWidget, PlaylistModel
 
+#from shared import main_player
+
 __version__ = '0.0.1'
 
+
+#main window global:
+main_window = None
+main_player = None
 
 class PlayerWidget(QtGui.QWidget):
     def __init__(self, parent):
@@ -224,7 +230,8 @@ class PlayerWidget(QtGui.QWidget):
 
         self.video_window.setCentralWidget(self.video)
 
-        self.video_window.resize(840, 525)
+        #self.video_window.resize(840, 525)
+        self.video_window.resize(960, 540)
         self.video_window.show()
 
     def check_video(self):
@@ -279,7 +286,23 @@ class PlayerWidget(QtGui.QWidget):
             self.play_state = "paused"
 
 
-    def play(self, content=None, playlist=None):
+    def play(self, content=None, playlist=None, marks_col=None, titles_col=None):
+        global main_window
+        main_window.setWindowTitle(content.filename)
+
+            
+        self.check_video()
+        self.video_window.setWindowTitle(content.filename)
+
+        if marks_col:
+            make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+M'),
+                                        self.video_window, marks_col.add_mark)
+        if titles_col:
+            make_title = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
+                                         self.video_window, titles_col.new_title)
+
+
+
         #incase it was disabled:
         self.play_button.setEnabled(True)
         #incase play was not called by self.play_toggle()
@@ -469,6 +492,7 @@ class PlayerWidget(QtGui.QWidget):
         so it seems like this should be possible
         """
         return self.player.currentTime()
+
     
 class LeftNavWidget(QtGui.QWidget):
     """
@@ -476,13 +500,17 @@ class LeftNavWidget(QtGui.QWidget):
     """
     def __init__(self, parent=None, table=None):
         super(LeftNavWidget, self).__init__(parent)
-
         
         self.layout = QtGui.QGridLayout()
         #don't need a margin here:
         self.layout.setContentsMargins(0,0,0,0)
         self.layout.setSpacing(0)
 
+        ## print main_player
+        ## global main_player
+        ## main_player = PlayerWidget(self)
+        #self.layout.addWidget(main_player)
+        #print main_player
         self.player = PlayerWidget(self)
         self.layout.addWidget(self.player)
 
@@ -541,6 +569,8 @@ class LeftNavWidget(QtGui.QWidget):
         #this must be passed in externally
         #either at time of initialization, or set manually after init
         self.table = table
+
+        #this should not be necessary with global main_player in use
         if not self.table is None:
             self.table.player = self.player
 
@@ -566,6 +596,7 @@ class LeftNavWidget(QtGui.QWidget):
 
         #node.content is a playlist in this case:
         self.player.change_selection(node.content)
+        #main_player.change_selection(node.content)
 
 #class MainWidget(QtGui.QWidget):
 class MainWidget(QtGui.QSplitter):
@@ -647,18 +678,21 @@ class AppWindow(QtGui.QMainWindow):
         playAction.setShortcut(' ')
         playAction.setStatusTip('Toggle Play / Pause of Player')        
         playAction.triggered.connect(self.widget.left_nav.player.toggle_play)
+        #playAction.triggered.connect(main_player.toggle_play)
         playbackMenu.addAction(playAction)
 
         scanfAction = QtGui.QAction('Scan Forward', self)
         scanfAction.setShortcut('Alt+Right')
         scanfAction.setStatusTip('Seek Forward')        
         scanfAction.triggered.connect(self.widget.left_nav.player.forward)
+        #scanfAction.triggered.connect(main_player.forward)
         playbackMenu.addAction(scanfAction)
 
         scanbAction = QtGui.QAction('Scan Back', self)
         scanbAction.setShortcut('Alt+Left')
         scanbAction.setStatusTip('Seek Back')        
         scanbAction.triggered.connect(self.widget.left_nav.player.back)
+        #scanbAction.triggered.connect(main_player.back)
         playbackMenu.addAction(scanbAction)
 
         #Meta seems to be equivalent to Ctrl on Mac
@@ -666,24 +700,28 @@ class AppWindow(QtGui.QMainWindow):
         jumpfAction.setShortcut('Ctrl+Right')
         jumpfAction.setStatusTip('Jump Forward')        
         jumpfAction.triggered.connect(self.widget.left_nav.player.jumpf)
+        #jumpfAction.triggered.connect(main_player.jumpf)
         playbackMenu.addAction(jumpfAction)
 
         jumpbAction = QtGui.QAction('Jump Back', self)
         jumpbAction.setShortcut('Ctrl+Left')
         jumpbAction.setStatusTip('Jump Back')        
         jumpbAction.triggered.connect(self.widget.left_nav.player.jumpb)
+        #jumpbAction.triggered.connect(main_player.jumpb)
         playbackMenu.addAction(jumpbAction)
 
         nextAction = QtGui.QAction('Next', self)
         nextAction.setShortcut('Alt+Down')
         nextAction.setStatusTip('Next Track')        
         nextAction.triggered.connect(self.widget.left_nav.player.next)
+        #nextAction.triggered.connect(main_player.next)
         playbackMenu.addAction(nextAction)
 
         prevAction = QtGui.QAction('Previous', self)
         prevAction.setShortcut('Alt+Up')
         prevAction.setStatusTip('Previous Track')        
         prevAction.triggered.connect(self.widget.left_nav.player.previous)
+        #prevAction.triggered.connect(main_player.previous)
         playbackMenu.addAction(prevAction)
 
 
@@ -715,12 +753,14 @@ class AppWindow(QtGui.QMainWindow):
     
         
 def main():
+    global main_window
     app = QtGui.QApplication(sys.argv)
     #this is needed for Phonon on Linux (DBUS):
     app.setApplicationName("Medley")
-    window = AppWindow()
-    window.resize(900, 600)
-    window.show()
+    main_window = AppWindow()
+    #main_window.resize(900, 600)
+    main_window.resize(640, 350)
+    main_window.show()
     app.exec_()
 
 if __name__ == '__main__':

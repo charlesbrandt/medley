@@ -26,3 +26,11 @@
 # simple place to keep track of all loaded content objects
 
 all_contents = {}
+
+
+# rather than pass this in everywhere, allow it to be imported
+#since this is a widget, it probably needs to created like before
+#main_player = None
+#main_player = PlayerWidget(self)
+#main_player = PlayerWidget(None)
+

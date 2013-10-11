@@ -572,7 +572,7 @@ class PlaylistsTreeView(QtGui.QTreeView):
         sm = self.selectionModel()
         #this is needed to avoid SegFaults on Linux:
         #http://srinikom.github.io/pyside-bz-archive/1041.htlm
-        #sm.setParent(None)
+        sm.setParent(None)
         sm.selectionChanged.connect(self.change_selection)
 
     def change_selection(self, newSelection, oldSelection):
