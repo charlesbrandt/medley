@@ -1082,7 +1082,7 @@ class ContentWindow(QtGui.QMainWindow):
                                 self, player.previous)
 
         self.content = None
-        #self.table.playlist_view.player = player
+        self.table.playlist_view.player = player
 
         #this removes the time widgets from the main player
         #then when window is closed, they get deleted.

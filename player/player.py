@@ -48,6 +48,10 @@ class PlayerWidget(QtGui.QWidget):
     def __init__(self, parent):
         super(PlayerWidget, self).__init__(parent)
 
+        #a place to keep track of fullscreen status
+        #should not start out in full
+        self.fullscreen = False
+
         self.audio = Phonon.AudioOutput(Phonon.MusicCategory, self)
         self.player = Phonon.MediaObject(self)
         Phonon.createPath(self.player, self.audio)
@@ -98,10 +102,13 @@ class PlayerWidget(QtGui.QWidget):
         self.time_passed = QtGui.QLabel("00:00", self)
         self.time_remain = QtGui.QLabel("-00:00", self)
 
+        self.volume_slider = Phonon.VolumeSlider(self.audio, self)
+
         row3 = QtGui.QHBoxLayout()
         row3.addWidget(self.time_passed)
+        row3.addWidget(self.volume_slider)
         row3.addWidget(self.time_remain)
-        row3.insertStretch(1, 50)
+        #row3.insertStretch(1, 50)
 
         layout = QtGui.QVBoxLayout()
         layout.addLayout(row1)
@@ -210,6 +217,10 @@ class PlayerWidget(QtGui.QWidget):
         nexts = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Down'),
                                 self.video_window, self.next)
 
+        fullscreen = QtGui.QShortcut(QtGui.QKeySequence('F'),
+                                     self.video_window, self.toggle_full)
+
+
         ## prevAction = QtGui.QAction('Previous', self.video_window)
         ## prevAction.setShortcut('Alt+Up')
         ## prevAction.setStatusTip('Previous Track')        
@@ -233,6 +244,17 @@ class PlayerWidget(QtGui.QWidget):
         #self.video_window.resize(840, 525)
         self.video_window.resize(960, 540)
         self.video_window.show()
+
+    def toggle_full(self):
+        if not self.fullscreen:
+            #self.video_window.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+            self.video_window.showFullScreen()
+            self.fullscreen = True
+        else:
+            self.video_window.showNormal()
+            self.fullscreen = False
+            
+        
 
     def check_video(self):
         """
@@ -263,45 +285,46 @@ class PlayerWidget(QtGui.QWidget):
         """
         #source = self.sender()
 
-        if pressed is None:
-            if self.play_state == "playing":
-                self.pause()
-                self.play_state = "paused"
-                self.play_button.setDown(False)
-            else:
-                self.play()
-                #self.play_state = "playing"
-                #self.play_button.setDown(True)
-                
-        elif pressed:
-            #source.setText("Pause")
-            self.play_button.setIcon(QtGui.QIcon("images/pause.png"))
-            self.play()
-            #self.play_state = "playing"
-
-        else:
-            #source.setText("Play")
-            self.play_button.setIcon(QtGui.QIcon("images/play.png"))
+        if self.play_state == "playing":
             self.pause()
             self.play_state = "paused"
+            self.play_button.setDown(False)
+
+            #if pressed:
+            self.play_button.setIcon(QtGui.QIcon("images/play.png"))
+        else:
+            self.play()
+            #if pressed:
+            #    #source.setText("Pause")
+            self.play_button.setIcon(QtGui.QIcon("images/pause.png"))
+
+            #self.play_state = "playing"
+            #self.play_button.setDown(True)
+
+
+        ## if pressed is None:
+                
+        ## elif pressed:
+        ##     #source.setText("Pause")
+        ##     self.play_button.setIcon(QtGui.QIcon("images/pause.png"))
+        ##     self.play()
+        ##     #self.play_state = "playing"
+
+        ## else:
+        ##     #source.setText("Play")
+        ##     self.play_button.setIcon(QtGui.QIcon("images/play.png"))
+        ##     self.pause()
+        ##     self.play_state = "paused"
 
 
     def play(self, content=None, playlist=None, marks_col=None, titles_col=None):
-        global main_window
-        main_window.setWindowTitle(content.filename)
-
-            
-        self.check_video()
-        self.video_window.setWindowTitle(content.filename)
-
-        if marks_col:
-            make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+M'),
-                                        self.video_window, marks_col.add_mark)
-        if titles_col:
-            make_title = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
-                                         self.video_window, titles_col.new_title)
-
-
+        #usually this will not be set if just playing from main window:
+        ## if marks_col:
+        ##     make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+M'),
+        ##                                 self.video_window, marks_col.add_mark)
+        ## if titles_col:
+        ##     make_title = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
+        ##                                  self.video_window, titles_col.new_title)
 
         #incase it was disabled:
         self.play_button.setEnabled(True)
@@ -340,6 +363,16 @@ class PlayerWidget(QtGui.QWidget):
         #look for cur_content: source file, start position, end position
         #print "PlayerWidget.play() called!"
         if self.cur_content:
+
+            global main_window
+            main_window.setWindowTitle(self.cur_content.filename)
+
+
+            self.check_video()
+            self.video_window.setWindowTitle(self.cur_content.filename)
+
+
+
             print "making path"
             path = os.path.join(self.cur_content.path, self.cur_content.filename)
             print "Playing: %s" % path
