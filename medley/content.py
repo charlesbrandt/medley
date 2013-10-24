@@ -218,58 +218,7 @@ class MarkList(list):
             mark.seconds = t[0]
             mark.tag = t[1]
             self.append(mark)
-
-    #deprecated... should use make_segments for more up to date version
-    ## def group_by_tracks(self):
-    ##     """
-    ##     assumes all marks are from the same file
-    ##     (typical, but not required)
-    ##     """
-    ##     groups = [ ]
-
-    ##     in_talk = False
-
-    ##     current_group = [ Mark("start", 0, key) ]
-    ##     for next_mark in f_marks[key]:
-    ##         if re.search('skip*', next_mark.tag) or re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag) or re.search('\+', next_mark.tag):
-    ##             current_group.append( next_mark )
-    ##             if re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag):
-    ##                 in_talk = True
-
-    ##             #can deal with plusses externally
-    ##             #elif re.search('\+', next_mark.tag):
-    ##             #    plusses.append(previous_track)
-    ##             #    plusses.append(line)
-
-    ##         elif in_talk:
-    ##             #we want to skip the normal tag after an item...
-    ##             #this usually ends the talking
-    ##             #TODO:
-    ##             #sometimes the end of talking
-    ##             #and the start of the next track
-    ##             #is the same
-    ##             #would be nice to identify...
-    ##             #might be one of the manual steps
-
-    ##             current_group.append( next_mark )
-    ##             in_talk = False
-
-    ##         #this is the start of a new track / current_group
-    ##         elif re.match(default_pattern, next_mark.tag):
-    ##             #add previous track to groups
-    ##             groups.append(current_group)
-    ##             current_group = [ next_mark ]
-
-    ##         else:
-    ##             #probably just a description of some kind:
-    ##             current_group.append( next_mark )
-    ##             print "Unmatched tag: %s" % next_mark.tag
-
-    ##     #don't forget last group found:
-    ##     groups.append(current_group)
-    ##     #new_f_marks[key] = groups
-    ##     return groups
-
+            
     def segment_helper(self, segment, new_segments, parent, titles, title_index):
         """
         need to do this step at the end of every segment
@@ -371,6 +320,9 @@ class MarkList(list):
         #current_group = [ Mark("start", 0, key) ]
         #for next_mark in f_marks[key]:
         for next_mark in self:
+            #print
+            #print default_pattern
+            #print next_mark.tag
             if re.search('skip*', next_mark.tag) or re.search('\+', next_mark.tag):
                 segment.marks.append( next_mark )
                 tags = next_mark.tag.split(' ')
@@ -478,6 +430,83 @@ class MarkList(list):
 
         ## #new_f_marks[key] = groups
         ## return groups
+
+    def make_segments_simple(self, parent, titles=[], reset_id=True):
+        """
+        a simpler version of make_segments
+
+        this version assumes all marks indicate a new segment
+        instead of searching for only matching expressions
+        
+        parent is still the main Content object that will hold all of these segments
+        """
+        groups = [ ]
+        #reset segment ID
+        #doesn't make sense to keep track when re-merging everything
+        if reset_id:
+            parent.next_segment_id = 1
+
+        last_mark = None
+
+        #clear this out for subsequent calls
+        parent.segments = []
+
+        title_index = 0
+        segment_count = 0
+
+        segment = Content()
+        segment.status = ''
+        start = Mark("start", 0)
+        segment.start = start
+        segment.marks.append(start)
+
+        for next_mark in self:
+            print
+            print next_mark.tag
+            segment.end = next_mark
+            segment_count += 1
+
+            #title_index = self.segment_helper(segment, new_segments, parent,
+            #                                  titles, title_index)
+            
+            #add previous track to parent
+            parent.add_segment(segment)
+
+            segment = Content()
+            segment.status = ''
+            segment.start = next_mark
+            segment.marks.append(next_mark)
+            segment.title = next_mark.tag
+
+        #get last one:
+        parent.add_segment(segment)
+
+
+    def add_track_numbers(self):
+        """
+        add numbers to each mark.tag
+        according to position
+        """
+        self.sort()
+
+        count = 1
+        for mark in self:
+            if not re.match('\d', mark.tag):
+                mark.tag = "%s. %s" % (count, mark.tag)
+            count += 1
+        
+    def extract_titles(self):
+        """
+        go through the list of marks we have
+        and generate a list of titles
+
+        this can be useful for tagging
+        """
+        self.sort()
+        titles = []
+        for mark in self:
+            titles.append(mark.tag)
+        return titles
 
     def from_comma(self, source):
         """
@@ -1241,7 +1270,24 @@ class Content(object):
         the order specified here is generally the order that gets printed(?)
         (maybe not)
         """
-        snapshot = copy.deepcopy(self.remainder)
+        #deep copy was crashing on pretty small track lists (<150 in length)
+        #using a manual alternative instead
+        #snapshot = copy.deepcopy(self.remainder)
+
+        #print self.remainder
+        snapshot = {}
+        for key, value in self.remainder.items():
+            if isinstance(value, list):
+                snapshot[key] = value[:]
+            elif isinstance(value, str) or isinstance(value, unicode):
+                snapshot[key] = value
+            else:
+                print "deep copy for type: %s : %s" % (type(value), value)
+                snapshot[key] = copy.deepcopy(value)
+        #print ""
+        #print snapshot
+        #exit()
+
         #check to make sure we have values...
         #no need to clutter up json with empty values
         if self.tags:
