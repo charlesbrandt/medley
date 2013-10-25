@@ -6,6 +6,9 @@ from shared import all_contents
 
 from medley.content import Content, Mark
 from medley.playlist import Playlist
+from medley.helpers import find_json, make_json_path, load_json
+
+from moments.path import Path
 
 class PlaylistModel(QtCore.QAbstractTableModel):
     """
@@ -476,7 +479,8 @@ class PlaylistView(QtGui.QTableView):
         sm = self.selectionModel()
         #this is needed to avoid SegFaults on Linux:
         #http://srinikom.github.io/pyside-bz-archive/1041.htlm
-        sm.setParent(None)
+        #sm.setParent(None)
+
         sm.selectionChanged.connect(self.store_current_selection)
 
         play_index = self.model().key_order.index('play')
@@ -567,7 +571,84 @@ class PlaylistView(QtGui.QTableView):
         self.content_view.resize(640, 250)
         self.content_view.show()
 
-    def add_content(self):
+    def add_contents(self, contents):
+
+        ## parent = self.model().getNode(self.cur_index)
+        ## child_count = parent.childCount()
+
+        #how many to insert:
+        #count = 1
+        count = len(contents)
+        total_rows = self.model().rowCount(None)
+
+        self.model().beginInsertRows( self.cur_index, total_rows, total_rows+count-1 )
+
+        #for i in range(count):
+        for content in contents:
+            self.model().playlist.append(content)
+            ## name_only = os.path.basename(fname)
+            ## child = Node(name_only)
+            ## child.source = fname
+
+            ## #open fname here and assign Playlist object as child.content
+            ## playlist = load_playlist(fname)
+            ## child.content = playlist
+            ## #add Node to tree of playlists:
+            ## success = parent.insertChild(child_count, child)
+            
+        self.model().endInsertRows()
+        #print self.model().playlist
+
+        return "success"
+    
+    def add_media(self, fname):
+        all_results = True
+        contents = []
+        options = []
+        if fname:
+            p = Path(fname)
+            if p.type() == "Directory":
+                d = p.load()
+                d.scan_filetypes()
+                options.extend(d.movies)
+                options.extend(d.sounds)
+            else:
+                #name = p.name
+                #must be some other file type... load the parent directory:
+                #parent = p.parent()
+                #d = parent.load()
+                options.append(p)
+
+            for option in options:
+                json_source = find_json(unicode(option))
+                if not json_source:
+                    json_source = make_json_path(unicode(option))
+
+                #won't need json_objects, but need to create the json file if new
+                json_objects = load_json(json_source, create=True)
+
+                if all_contents.has_key(json_source):
+                    #print "Matched existing Content object with path: %s" % json_source
+                    content = all_contents[json_source]
+                else:
+                    content = Content(json_source)
+                    if not unicode(option) in content.media:
+                        content.media.append(unicode(option))
+                    content.filename = option.filename
+                    all_contents[json_source] = content
+                    content.save()
+
+                contents.append(content)
+
+        print "CONTENTS DURING LOAD: %s" % contents
+        result = self.add_contents(contents)
+            
+        if not result:
+            all_results = False
+        
+        return all_results
+
+    def add_content_dialog(self):
         """
         open a open dialog to select the json source of a Content object
         load the Content object
@@ -584,30 +665,49 @@ class PlaylistView(QtGui.QTableView):
 
         content = Content(fname)
 
-        ## parent = self.model().getNode(self.cur_index)
-        ## child_count = parent.childCount()
+        result = self.add_contents([content])
+        
+        return result
 
-        #how many to insert:
-        count = 1
-        total_rows = self.model().rowCount(None)
+    def add_media_dialog(self):
+        """
+        open a open dialog to select a media file
+        check if there is an associated Content object (load it if so)
 
-        self.model().beginInsertRows( self.cur_index, total_rows, total_rows+count-1 )
+        if not, create a new Content object
+        then append it to self.model().playlist
+        """
+        #can implement this later if it would be helpful:
+        self.last_folder = None
+        
+        if self.last_folder:
+            fname, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open Media',
+                                                         self.last_folder)
+        else:
+            fname, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open Media')
 
-        for i in range(count):
-            self.model().playlist.append(content)
-            ## name_only = os.path.basename(fname)
-            ## child = Node(name_only)
-            ## child.source = fname
+        result = self.add_media(fname)
+        return result
 
-            ## #open fname here and assign Playlist object as child.content
-            ## playlist = load_playlist(fname)
-            ## child.content = playlist
-            ## #add Node to tree of playlists:
-            ## success = parent.insertChild(child_count, child)
-            
-        self.model().endInsertRows()
-        #print self.model().playlist
-        return "success"
+    def add_folder_dialog(self):
+        """
+        open a open dialog to select a media file
+        check if there is an associated Content object (load it if so)
+
+        if not, create a new Content object
+        then append it to self.model().playlist
+        """
+        #can implement this later if it would be helpful:
+        self.last_folder = None
+        
+        if self.last_folder:
+            fname = QtGui.QFileDialog.getExistingDirectory(self, 'Open Directory',
+                                                              self.last_folder)
+        else:
+            fname = QtGui.QFileDialog.getExistingDirectory(self, 'Open Directory')
+
+        result = self.add_media(fname)
+        return result
 
 class MarksWidget(QtGui.QWidget):
     """
@@ -732,19 +832,37 @@ class MarksWidget(QtGui.QWidget):
         self.content.marks.pop(row)    
 
     def on_changed(self, item):
-        row = self.marks.row(item)
-        mark = self.content.marks[row]
-        text = "%s - %s" % (mark.as_time(), mark.tag)
-        if text != item.text():
-            parts = item.text().split(' - ', 1)
-            #print "PARTS: %s" % parts
-            ts, tag = parts
-            mark.from_time(ts)
-            mark.tag = tag
-            self.content.marks[row] = mark
-            #print "Marks.on_change called: %s, %s" % (item.text(), text)
-            self.sync()
-        
+        """
+        occasionally crashes with following traceback:
+
+Traceback (most recent call last):
+  File "/c/medley/player/playlist_view.py", line 736, in on_changed
+    row = self.marks.row(item)
+TypeError: 'PySide.QtGui.QListWidget.row' called with wrong argument types:
+  PySide.QtGui.QListWidget.row(PySide.QtGui.QItemSelectionModel)
+Supported signatures:
+  PySide.QtGui.QListWidget.row(PySide.QtGui.QListWidgetItem)
+Segmentation fault: 11        
+        """
+
+        if isinstance(item, QtGui.QListWidgetItem):
+            row = self.marks.row(item)
+            mark = self.content.marks[row]
+            text = "%s - %s" % (mark.as_time(), mark.tag)
+            if text != item.text():
+                parts = item.text().split(' - ', 1)
+                #print "PARTS: %s" % parts
+                ts, tag = parts
+                mark.from_time(ts)
+                mark.tag = tag
+                self.content.marks[row] = mark
+                #print "Marks.on_change called: %s, %s" % (item.text(), text)
+                self.sync()
+        else:
+            print dir(item)
+            print "Item: %s" % item
+            raise TypeError, "WRONG TYPE SENT: %s" % type(item)
+            
     def open_marks(self):
         pass
 

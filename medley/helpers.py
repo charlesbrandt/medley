@@ -59,8 +59,26 @@ def find_htmls(item):
             
     return matches
     
+def make_json_path(item):
 
-def find_json(item, debug=False):
+    name = ''
+    parent = ''
+
+    p = Path(item)
+    if p.type() == "Directory":
+        #item must be a directory... just look here
+        parent = p
+        name = p.name
+    else:
+        name = p.name
+        #must be some other file type... load the parent directory:
+        parent = p.parent()
+
+    json_name = "%s.json" % name
+    print json_name
+    return os.path.join(str(parent), json_name)
+
+def find_json(item, limit_by_name=True, debug=False):
     """
     take any string
     see if it is a path for a json file
@@ -69,29 +87,42 @@ def find_json(item, debug=False):
 
     if more than one json file found, print a warning
     return the last json file
-        """
+
+    if limit_by_name is true, and if item is a (non-json) file,
+    use its filename to limit jsons to match that filename by default
+    """
     if re.search('.*\.json$', item):
         if debug:
             #print "find_and_load_json: item is a json string: %s" % item
             logging.debug("find_json: item is a json string: %s" % item)
         return item
+
     else:
         parent = ''
+        name = ''
         p = Path(item)
         if p.type() == "Directory":
             #item must be a directory... just look here
             parent = p
             d = p.load()
         else:
+            name = p.name
             #must be some other file type... load the parent directory:
             parent = p.parent()
             d = parent.load()
             
         matches = []
         for j in d.files:
-            if re.search('.*\.json$', str(j)):
-                match = os.path.join(str(parent), str(j))
-                matches.append(match)
+            if re.search('.*\.json$', unicode(j)):
+                match = os.path.join(unicode(parent), unicode(j))
+                #this should allow us to hone in on one
+                #if there is more than one media file in a directory
+                if name and limit_by_name:
+                    if re.search(name, unicode(j)):
+                        matches.append(match)
+                else:
+                    matches.append(match)
+                    
 
         if not matches:
             return None

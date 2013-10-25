@@ -1090,8 +1090,10 @@ class Content(object):
         else:
             content = self.content
 
-        if not content:
-            raise ValueError, "No Content!"
+        #if we're trying to create a new Content object from scratch,
+        #we don't want to raise this error.
+        #if not content:
+        #    raise ValueError, "No Content!"
 
         if debug:
             print content

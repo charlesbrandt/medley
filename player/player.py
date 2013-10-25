@@ -363,14 +363,20 @@ class PlayerWidget(QtGui.QWidget):
         #look for cur_content: source file, start position, end position
         #print "PlayerWidget.play() called!"
         if self.cur_content:
+            title = "%s: %s" % (self.cur_content.filename, self.cur_content.title)
 
             global main_window
-            main_window.setWindowTitle(self.cur_content.filename)
+            #main_window.setWindowTitle(self.cur_content.filename)
+            main_window.setWindowTitle(title)
 
+            #this raises the video window every time a new segment starts:
+            #self.check_video()
+            #self.video_window.setWindowTitle(self.cur_content.filename)
 
-            self.check_video()
-            self.video_window.setWindowTitle(self.cur_content.filename)
-
+            #this might not catch all instances when video window does not
+            #exist, but better than nothing:
+            if self.video_window:
+                self.video_window.setWindowTitle(title)
 
 
             print "making path"
@@ -689,19 +695,38 @@ class AppWindow(QtGui.QMainWindow):
         saveAction.triggered.connect(self.widget.left_nav.tree_view.save_lists)
         fileMenu.addAction(saveAction)
 
-        fileMenu.addSeparator()
+        #metaMenu.addSeparator()
+
+        metaMenu = self.menuBar().addMenu("Me&ta")
+
+        openMetaAction = QtGui.QAction('Open Content Json', self)
+        #openMetaAction.setShortcut('Ctrl+O')
+        openMetaAction.setStatusTip('Add content to current playlist')        
+        openMetaAction.triggered.connect(self.widget.table.playlist_view.add_content_dialog)
+        metaMenu.addAction(openMetaAction)
+
+        ## openFolderAction = QtGui.QAction('Open Folder', self)
+        ## #openFolderAction.setShortcut('Ctrl+O')
+        ## openFolderAction.setStatusTip('Add folder to current playlist')        
+        ## openFolderAction.triggered.connect(self.widget.table.playlist_view.add_content)
+        ## metaMenu.addAction(openFolderAction)
+
+
+        mediaMenu = self.menuBar().addMenu("&Media")
 
         openMediaAction = QtGui.QAction('Open Media', self)
         #openMediaAction.setShortcut('Ctrl+O')
         openMediaAction.setStatusTip('Add media to current playlist')        
-        openMediaAction.triggered.connect(self.widget.table.playlist_view.add_content)
-        fileMenu.addAction(openMediaAction)
+        openMediaAction.triggered.connect(self.widget.table.playlist_view.add_media_dialog)
+        mediaMenu.addAction(openMediaAction)
+
 
         openFolderAction = QtGui.QAction('Open Folder', self)
         #openFolderAction.setShortcut('Ctrl+O')
         openFolderAction.setStatusTip('Add folder to current playlist')        
-        openFolderAction.triggered.connect(self.widget.table.playlist_view.add_content)
-        fileMenu.addAction(openFolderAction)
+        openFolderAction.triggered.connect(self.widget.table.playlist_view.add_folder_dialog)
+        mediaMenu.addAction(openFolderAction)
+
 
 
 

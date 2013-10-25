@@ -7,6 +7,7 @@ from medley.playlist import Playlist
 from medley.content import Content
 
 from shared import all_contents
+from playlist_view import PlaylistModel
 
 def load_playlist(fname):
     """
@@ -454,13 +455,28 @@ class TreeModel(QtCore.QAbstractItemModel):
         return mimedata
 
     def dropMimeData(self, mimedata, action, row, column, parent):
+        #print dir(mimedata)
+        #print mimedata.data.keys()
         print 'dropMimeData %s %s %s %s' % (mimedata.data('text/json'), action, row, parent)
-        item = Node('')
-        item.from_json( str(mimedata.data('text/json')) )
-        dropParent = self.getNode( parent )
-        dropParent.addChild( item )
-        #self.insertRows( dropParent.numChildren()-1, 1, parentIndex )
+
+        formats = mimedata.formats()
+        print "formats: %s" % formats
+        if 'text/json' in formats:
+            item = Node('')
+            item.from_json( str(mimedata.data('text/json')) )
+            dropParent = self.getNode( parent )
+            dropParent.addChild( item )
+            #self.insertRows( dropParent.numChildren()-1, 1, parentIndex )
+        elif 'json/content' in formats:
+            print "Adding content to playlist"
+            dropParent = self.getNode( parent )
+            #self.cur_node = self.cur_index.internalPointer()
+            print "using content: %s" % dropParent.content
+            subtree = PlaylistModel(dropParent.content)
+            subtree.dropMimeData(mimedata, action, row, column, parent)
+            
         self.dataChanged.emit( parent, parent )
+        
         return True        
 
 
@@ -572,7 +588,8 @@ class PlaylistsTreeView(QtGui.QTreeView):
         sm = self.selectionModel()
         #this is needed to avoid SegFaults on Linux:
         #http://srinikom.github.io/pyside-bz-archive/1041.htlm
-        sm.setParent(None)
+        #sm.setParent(None)
+        
         sm.selectionChanged.connect(self.change_selection)
 
     def change_selection(self, newSelection, oldSelection):
