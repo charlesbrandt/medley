@@ -393,6 +393,9 @@ class Playlist(PositionList):
         return found
 
     def save(self, destination):
+        """
+        consider using ContentPointer object here.. (is it useful?)
+        """
         items = []
         for content in self:
             json_path = os.path.join(content.path, content.json_source)

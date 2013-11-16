@@ -46,7 +46,8 @@ bottle.TEMPLATE_PATH.append(template_path)
 import sys, codecs, json
 
 from helpers import load_json
-from collector import Collections, Collection
+from collector import Collections, Collection, CollectionSummary
+from people import People
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -132,15 +133,44 @@ def get_collection(collection_name):
 def rescan(collection_name=None):
     if collection_name:
         collection = get_collection(collection_name)
+        summary = get_summary(collection_name)
+        collection.summary = summary
 
     print "REPARSING COLLECTION: %s" % (collection_name)
     collection.reparse()
     
     return template('rescan', collection=collection)
 
+@route('/people')
+def people():
+    print configs
+    print configs['people_root']
+    print configs['person_term']
+
+    path = configs['people_root']
+    if re.match('^\.', path):
+        path = os.path.join(configs['root'], path[2:])
+
+    p = People(path, configs['person_term'])
+    #cs = CollectionSummary(path)
+    #print cs.summary()
+
+    #cluster = cs.load_cluster()
+    #print cluster
+        
+
+    #return template('collection', summary=summary, c=collection, cluster=cluster)
+
+    #collections = load_collections(collection_root)
+    #collections = Collections(, configs['collection_list'])
+    #print len(collections)
+    #return template('people', collections=collections)
+    return template('people', summary=people, cluster=p.cluster)
+
+
 
 @route('/collection/:collection_name/person/:person_name')
-def person(collection_name=None, person_name=None):
+def collection_person(collection_name=None, person_name=None):
     if collection_name:
         summary = get_summary(collection_name)
         #print summary
@@ -150,8 +180,11 @@ def person(collection_name=None, person_name=None):
         collection = get_collection(collection_name)
         #print collection
 
-        drive_root = os.path.dirname(os.path.dirname(summary.available[0]))
+        #drive_root = os.path.dirname(os.path.dirname(summary.available[0]))
+        drive_root = os.path.dirname(summary.available[0])
         print drive_root
+
+        #filter the whole collection down to only items with this person:
         results = []
         for content in collection:
             if person_name in content.people:
@@ -171,7 +204,7 @@ def person(collection_name=None, person_name=None):
         results = []
         collection = None
 
-    return template('person', name=person_name, summary=summary, c=collection, results=results)
+    return template('collection_person', name=person_name, summary=summary, c=collection, results=results)
         
 
         
@@ -195,14 +228,19 @@ def collection(collection_name=None):
     return template('collection', summary=summary, c=collection, cluster=cluster)
         
 
+@route('/collections')
+def collections_details():
+    #collections = load_collections(collection_root)
+    collections = Collections(configs['root'], configs['collection_list'])
+    #print len(collections)
+    return template('collections', collections=collections)
 
 @route('/')
 def index():
     #collections = load_collections(collection_root)
     collections = Collections(configs['root'], configs['collection_list'])
     #print len(collections)
-    return template('collections', collections=collections)
-    #return template('main', title="Collections", body='')
+    return template('main', collections=collections)
 
 
 

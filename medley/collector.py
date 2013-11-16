@@ -987,9 +987,9 @@ class Cluster(list):
         if clouds.tag(tag):
             lines = clouds.tags(tag)[0].data.splitlines()
         else:
-            print "no %s tags found!" % tag
+            print "no ->%s<- tags found!" % tag
 
-        print len(lines)
+        #print len(lines)
         groups = []
         for l in lines:
             new_group = l.split()
@@ -1063,8 +1063,31 @@ class Cluster(list):
             #print len(group)
 
         return flat
-        
 
+    def contains(self, lookup):
+        """
+        helper
+        just flattens all lists and sees if lookup is in that
+        """
+        flat = self.flatten()
+        if lookup in flat:
+            return True
+        else:
+            return False
+
+    def add_at(self, item, position):
+        """
+        take the item and add it to the sub group at position
+        if position is out of range for the cluster's length
+        add extra lists to pad it out
+        """
+        while position >= len(self):
+            self.append([])
+
+        #remove from anywhere else first:
+        self.remove( [item] )
+        self[position].append(item)
+        
     def merge_in(self, incoming, add_new=False, keep_order=False):
         """
         take the incoming cluser and merge its items in, moving our items around
