@@ -708,7 +708,7 @@ class iPhoneBookmarks(list):
             groups[cur_track] = cur_list
 
         #return self
-        print groups
+        #print groups
         if len(groups.items()) == 2:
             return groups
         else:
