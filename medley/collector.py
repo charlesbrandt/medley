@@ -3,6 +3,12 @@ Main objects needed for sorting collections.
 
 Collection and Content may need to be customized for the specific type of colleciton in use. 
 
+OVERVIEW:
+============
+
+A Collections object is created with the root location and the list of acceptable collection directories available.  These option are generally stored as a JSON file named 'config.json' in the root of the collections directory, but could easily be generated and passed in at run time. The main function is to load and store all of the CollectionSummary objects.
+
+A CollectionSummary will look for a 'summary.json' file in either the main root directory associated with the CollectionSummary, or in the meta subdirectory of the main root directory (meta_root).  This summary data includes other drive locations where the Collection and all other associated data may be found.
 
 """
 import os, re, logging, codecs
@@ -409,8 +415,8 @@ class CollectionSummary(object):
      - json item lists
      - collection indexes
 
-     this might be a good place to make parent class for subclassing for
-     plugins based on YAPSY and IPlugins.
+    this might be a good place to make parent class for subclassing for
+    plugins based on YAPSY and IPlugins.
     """
     def __init__(self, root):
         #if this changes, might need to rename existing files to stay consistent
@@ -1063,6 +1069,20 @@ class Cluster(list):
             #print len(group)
 
         return flat
+
+    def position(self, lookup):
+        """
+        similar to contains, but returns the exact position if it exists
+        """
+        match = None
+        group_num = 0
+        for group in self:
+            #print len(group)
+            if lookup in group:
+                match = (group_num, group.index(lookup))
+
+            group_num += 1
+        return match
 
     def contains(self, lookup):
         """

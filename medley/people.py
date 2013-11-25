@@ -36,6 +36,8 @@ class ContentPointer(object):
         #for estimating size later (even if it might not be available)
         self.size = ''
 
+
+
 class Person(object):
     def __init__(self, source='', tag='', debug=False):
         """
@@ -117,6 +119,10 @@ class Person(object):
         print "Loaded: %s" % result
         self.__dict__.update(result)
 
+        #TODO:
+        #scan for local content directories here
+        #make sure to ignore them on a save
+
     def update_default(self, new_tag):
         """
         update our default tag
@@ -174,7 +180,7 @@ class People(list):
             raise ValueError, "Could not find meta root in: %s" % source
         
         options = os.listdir(self.meta_root)
-        print options
+        #print options
         self.cloud_file = os.path.join(self.meta_root, "clouds.txt")
         if not os.path.exists(self.cloud_file):
             raise ValueError, "Could not find cloud file: %s" % self.cloud_file

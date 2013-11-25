@@ -141,17 +141,36 @@ def rescan(collection_name=None):
     
     return template('rescan', collection=collection)
 
+def get_people():
+    path = configs['people_root']
+    if re.match('^\.', path):
+        path = os.path.join(configs['root'], path[2:])
+
+    p = People(path, configs['person_term'])
+    return p
+
+@route('/person/:person_name')
+def person(person_name):
+    ppl = get_people()
+    ppl.load()
+
+    p_list = ppl.get(person_name)
+    #print "Looked up: %s" % person_name
+    #print "Received: %s" % p_list
+    p = p_list[0]
+
+    related = ppl.search(person_name)
+    
+    return template('person', person=p, related=related)
+
 @route('/people')
 def people():
     print configs
     print configs['people_root']
     print configs['person_term']
 
-    path = configs['people_root']
-    if re.match('^\.', path):
-        path = os.path.join(configs['root'], path[2:])
-
-    p = People(path, configs['person_term'])
+    p = get_people()
+    
     #cs = CollectionSummary(path)
     #print cs.summary()
 
