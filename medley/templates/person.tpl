@@ -1,20 +1,22 @@
-<h3>  <a href="/person/{{ person.tag }}">{{ person.name }}</a> </h3>
+<h1>  <a href="/person/{{ person.tag }}">{{ person.name }}</a> </h3>
 
-<p class="tag">Main Tag: {{ person.tag }}</p>
+<h3 class="tag">{{ person.tag }}</h3>
 
-<p>Other tags:</p>
-<ul>
-%for tag in person.tags:
-  <li>{{tag}}</li>
+%if person.tags:
+<p>Also Known As:</p>
+%include tag_block tags=person.tags
 %end
-</ul>
 
 <p>Similar names:</p>
+    %include people_block people=related
+
+<p>Content:</p>
 <ul>
-%for item in related:
-  <li><a href="/person/{{ item.tag }}">{{ item.tag }}</a></li>
+%for content in person.contents:
+  <li>
+    %include content_summary content=content
+  </li>
 %end
 </ul>
-
 
 %rebase layout title=str(person.tag), active="home"

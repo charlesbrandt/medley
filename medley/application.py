@@ -159,7 +159,26 @@ def person(person_name):
     #print "Received: %s" % p_list
     p = p_list[0]
 
+    #in this case we want to remove person.tag from person.tags
+    #so that tags only includes other tags
+    p.tags.remove(p.tag)
+
     related = ppl.search(person_name)
+
+    p.load_content()
+
+    #TODO:
+    #check for available content here (or meta data for content)
+
+    #TODO:
+    #locate a default image
+
+    #TODO:
+    #track history / notes (manual journal ok)
+
+    #TODO:
+    #default external links (search concerts, etc)
+    #these should be configured based on collection (not hard coded here)
     
     return template('person', person=p, related=related)
 

@@ -35,9 +35,7 @@ class CollectionSimple(list):
     """
     def __init__(self, source='', root='', contents=[], walk=False, as_dict=False, debug=False):
         """
-        source should be the full path to source
-        
-        walk will force a walk, regardless of if a source is available
+        source should be the full path to source        
         """
         #this is a json representation of the whole Collection:
         self.source = source
@@ -56,9 +54,9 @@ class CollectionSimple(list):
         else:
             self.root = root
 
-        if not root:
-            #print "Warning, no root"
-            self.summary = None
+        ## if not root:
+        ##     #print "Warning, no root"
+        ##     self.summary = None
 
     def save(self, destination=None):
         if not destination:
@@ -71,6 +69,77 @@ class CollectionSimple(list):
             all_contents.append(d)
 
         save_json(destination, all_contents)
+
+    #aka walk()
+    def rescan(self, ignores=[], debug=False):
+        """
+        look for all json files that describe the content items
+        these should have been generated externally (e.g. during scrape)
+        
+        json files should contain the main attributes that a Content object has
+        the rest will be kept in a remainder
+
+        parsing html and generating json summaries of content
+        is beyond the scope of this application
+        and should be kept outside of this code base (too specific to content)
+        """
+
+        if not self.root:
+            raise ValueError, "Cannot rescan. No root set on collection: %s" % self.root
+        
+        #clear out anything else
+        del self[:]
+
+        if debug:
+            print "walking directory for contents: %s" % self.root
+
+        json_check = re.compile('.*\.json$')
+
+        #it might be inefficient to try to define these here...
+        #too many different names that might work in different contexts
+        #ignores = ["contents", "collection", "incompletes"]
+        #can pass them in if needed...
+        
+        self_root_path = Path(self.root)
+        parent = self_root_path.parent()
+        if not os.path.isdir(self.root):
+            self.root = os.path.dirname(self.root)
+            #if we still don't have a directory, something is wrong with root
+            assert os.path.isdir(self.root)
+
+        
+        #instead of looking for ignores
+        #will limit by convention
+        #top level directory should only contain meta jsons
+        #(that should be ignored as content data)
+        #content jsons will always be in a subdirectory
+        #similarly, meta jsons should never be in a subdirectory
+
+        #for root,dirs,files in os.walk(self.root):
+        subdirs = self_root_path.load().directories
+        for subdir in subdirs:
+            for root,dirs,files in os.walk(str(subdir)):
+                for f in files:
+
+                    #if json_check.search(f):
+                    if json_check.search(f) and not check_ignore(f, ignores):
+                        json_file = os.path.join(root, f)
+                        p_root = Path(root)
+                        relative_root = p_root.to_relative(str(parent))
+                        #get rid of leading slash
+                        if re.match('/', relative_root):
+                            relative_root = relative_root[1:]
+                        if debug:
+                            print "loading content from: %s" % json_file
+                        #c = Content(json_file, root=relative_root)
+                        c = Content(json_file)
+                        if debug:
+                            print "setting base_dir to: %s" % relative_root
+                        c.base_dir = relative_root
+                        self.append(c)
+
+        if debug:
+            print "Finished loading %s contents manually" % (len(self))
 
 
 class Collection(CollectionSimple):
@@ -189,7 +258,7 @@ class Collection(CollectionSimple):
 
     def load(self, source=None, debug=False):
         """
-        load a collection from a previously generate json file
+        load a collection from a previously generated summary json file
         should contain all data for all included content items
         this content would have been assembled in a previous scan
         """
@@ -230,58 +299,6 @@ class Collection(CollectionSimple):
         else:
             raise ValueError, "No source file specified: %s" % self.source
 
-    def rescan(self):
-        """
-        look for all json files that describe the content items
-        these should have been generated externally (e.g. during scrape)
-        
-        json files should contain the main attributes that a Content object has
-        the rest will be kept in a remainder
-
-        parsing html and generating json summaries of content
-        is beyond the scope of this application
-        and should be kept outside of this code base (too specific to content)
-        """
-        
-        #clear out anything else
-        del self[:]
-
-        print "walking directory for contents: %s" % self.root
-        json_check = re.compile('.*\.json$')
-        #it might be inefficient to try to filter these here...
-        #too many different names that might work in different contexts
-        #ignores = ["contents", "collection", "incompletes"]
-
-        #instead of looking for ignores
-        #will limit by convention
-        #top level directory should only contain meta jsons
-        #(that should be ignored as content data)
-        #content jsons will always be in a subdirectory
-        #similarly, meta jsons should never be in a subdirectory
-        self_root_path = Path(self.root)
-        parent = self_root_path.parent()
-        if os.path.isdir(self.root):
-            #for root,dirs,files in os.walk(self.root):
-            subdirs = self_root_path.load().directories
-            for subdir in subdirs:
-                for root,dirs,files in os.walk(str(subdir)):
-                    for f in files:
-
-                        #if json_check.search(f) and not check_ignore(f, ignores):
-                        if json_check.search(f):
-                            json_file = os.path.join(root, f)
-                            p_root = Path(root)
-                            relative_root = p_root.to_relative(str(parent))
-                            #get rid of leading slash
-                            relative_root = relative_root[1:]
-                            print "loading content from: %s" % json_file
-                            #c = Content(json_file, root=relative_root)
-                            c = Content(json_file)
-                            print "setting base_dir to: %s" % relative_root
-                            c.base_dir = relative_root
-                            self.append(c)
-
-        print "Finished loading %s contents manually" % (len(self))
 
     def reparse(self):
         """

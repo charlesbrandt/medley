@@ -12,9 +12,9 @@ might be good to have some qualities of Content referenced locally
 
 see also people_create.py
 """
-import os, re
+import os, re, copy
 
-from collector import Cluster
+from collector import Cluster, CollectionSimple
 from helpers import save_json, load_json
 from moments.tag import to_tag
 
@@ -45,6 +45,8 @@ class Person(object):
         """
         #for disply purposes only
         self.name = ''
+
+        self.debug = debug
         
         if tag:
             #aka main tag
@@ -79,6 +81,11 @@ class Person(object):
         else:
             self.root = ''
 
+    #TODO:
+    #this might be better as a property
+    def main_dir(self):
+        return os.path.join(self.root, self.tag)        
+
     def make_path(self, root=None):
         if root:
             self.root = root
@@ -86,7 +93,7 @@ class Person(object):
         if not self.root:
             raise ValueError, "No root specified: %s" % self.root
         
-        main_dir = os.path.join(self.root, self.tag)
+        main_dir = self.main_dir()
         if not os.path.exists(main_dir):
             os.makedirs(main_dir)
 
@@ -111,18 +118,38 @@ class Person(object):
         #print dest_file
         #print self.__dict__
         #???
-        save_json(dest_file, self.__dict__)
+        temp_d = copy.copy(self.__dict__)
+        #make sure to ignore loaded/scanned contents on a save
+        temp_d.pop("contents", None)
+        #save_json(dest_file, self.__dict__)
+        save_json(dest_file, temp_d)
 
     def load(self, root=None):
         source_file = self.make_path(root)
         result = load_json(source_file)
-        print "Loaded: %s" % result
+        if self.debug:
+            print "Loaded: %s" % result
         self.__dict__.update(result)
 
-        #TODO:
-        #scan for local content directories here
-        #make sure to ignore them on a save
+    #making this a separate call...
+    #when loading people, load() is called
+    #don't want to scan for content in that case...
+    #only when it is requested
+    def load_content(self):
+        md = self.main_dir()
 
+        #scan for local content directories here
+        self.contents = CollectionSimple(root=md)
+        #ok to use collection for walking here.
+        self.contents.rescan(debug=True)
+
+        #TODO:
+        #check self.content_order
+        #apply order to contents
+        #place any new items at the beginning of the list
+        #update content_order accordingly
+        #(some way to sync the two generally??? (for saving))
+        
     def update_default(self, new_tag):
         """
         update our default tag
@@ -165,9 +192,12 @@ class People(list):
         """
         pass in the people term from the config
         """
-        print source
+        if debug:
+            print source
         options = os.listdir(source)
-        print options
+        if debug:
+            print options
+        self.debug = debug
 
         self.root = source
         if 'meta' in options:
@@ -203,8 +233,9 @@ class People(list):
             person = Person(path)
             self.append(person)
 
-        print "People loaded: " 
-        self.summary()
+        if self.debug:
+            print "People loaded: " 
+            self.summary()
         
     #aka lookup
     def get(self, name):
