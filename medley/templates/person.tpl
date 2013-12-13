@@ -1,6 +1,6 @@
 <h1>  <a href="/person/{{ person.tag }}">{{ person.name }}</a> </h3>
 
-<h3 class="tag">{{ person.tag }}</h3>
+<h3 class="main_tag">{{ person.tag }}</h3>
 
 %if person.tags:
 <p>Also Known As:</p>
@@ -10,10 +10,10 @@
 <p>Similar names:</p>
     %include people_block people=related
 
-<p>Content:</p>
-<ul>
+%#<p>Content:</p>
+<ul class="contents">
 %for content in person.contents:
-  <li>
+  <li class="content">
     %include content_summary content=content
   </li>
 %end

@@ -401,6 +401,40 @@ a:hover,
 a:active {
   outline: 0;
 }
+ul {
+  padding-left: 0px;
+}
+.page {
+  padding: 10px;
+}
+.content {
+  list-style-type: none;
+  display: inline-block;
+  vertical-align: top;
+}
+.person {
+  list-style-type: none;
+  display: inline-block;
+  padding-right: 10px;
+}
+.tags {
+  text-align: left;
+  padding-left: 20px;
+}
+.tag {
+  list-style-type: none;
+  display: inline-block;
+  padding-right: 10px;
+  font-size: small;
+}
+.summary {
+  margin: 5px;
+  text-align: center;
+  width: 260px;
+}
+.available {
+  background-color: lightgray;
+}
 @media screen and (max-width: 720px) {
   #maincolumn,
   #sidebar {

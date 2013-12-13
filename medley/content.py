@@ -898,7 +898,7 @@ class Content(object):
             if not option:
                 option = self._seek_down('_filename')
                 if not option:
-                    print "Could not find filename anywhere"
+                    #print "Could not find filename anywhere"
                     return ''
                     #don't call self.debug() if raising an error!
                     #raise ValueError, "Could not find filename anywhere"
@@ -921,7 +921,7 @@ class Content(object):
                 #option = self._seek_down('_json_source')
                 #if not option:
 
-                print "Could not find json_source above"
+                #print "Could not find json_source above"
                 return ''
 
             else:
@@ -940,7 +940,7 @@ class Content(object):
             if not option:
                 option = self._seek_down('_track_prefix')
                 if not option:
-                    print "Could not find track_prefix anywhere"
+                    #print "Could not find track_prefix anywhere"
                     return ''
                 
             return option
@@ -1100,6 +1100,9 @@ class Content(object):
 
         if not isinstance(content, dict):
             #print "%s" % content
+            print ""
+            print content
+            print self.json_source
             raise ValueError, "Unknown type of content: %s" % type(content)
 
         #start keeping track of ultimate source for this content
@@ -1107,9 +1110,10 @@ class Content(object):
         if content.has_key('json_source'):
             option = content['json_source']
             if self.json_source and self.json_source != option:
-                print "WARNING: over-writing old source."
-                print "keeping initial source: %s and skipping found source: %s" % (self.json_source, option)
-                print ""
+                #print "WARNING: over-writing old source."
+                #print "keeping initial source: %s and skipping found source: %s" % (self.json_source, option)
+                #print ""
+                pass
             else:
                 self.json_source = option
             del content['json_source']

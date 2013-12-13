@@ -3,8 +3,10 @@
 {{ len(collection) }} items found<br>
 
 %for content in collection:
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   (<a href="/content/{{ str(content) }}">{{ content.root }}, {{ content.title }}, {{ content.source }}</a>) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   (<a href="/content/{{ str(content) }}">{{ content.root }}, {{ content.title }}, </a>) <br>
 %end
+
+%#{{ content.source }}
 
 loaded from: {{ str(collection.source) }}<br>
 walked? {{ collection.walk }}<br>

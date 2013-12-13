@@ -59,6 +59,23 @@ def find_htmls(item):
             
     return matches
     
+def find_zips(item):
+    p = Path(item)
+    if p.type() == "Directory":
+        root = item
+    else:
+        parent = p.parent()
+        root = str(parent)
+
+    matches = []
+    options = os.listdir(root)
+    for o in options:
+        if re.search('.*\.zip$', o):
+            zipf = os.path.join(root, o)
+            matches.append(zipf)
+            
+    return matches
+    
 def make_json_path(item):
 
     name = ''
@@ -110,19 +127,31 @@ def find_json(item, limit_by_name=True, debug=False):
             #must be some other file type... load the parent directory:
             parent = p.parent()
             d = parent.load()
+            if debug:
+                print "%s not a directory, using: %s" % (item, parent)
             
         matches = []
         for j in d.files:
-            if re.search('.*\.json$', unicode(j)):
+            #if debug:
+            #    print "Checking: %s" % j
+            if re.search('\.json$', unicode(j)):
+                if debug:
+                    print "matched json: %s" % j
+
                 match = os.path.join(unicode(parent), unicode(j))
                 #this should allow us to hone in on one
                 #if there is more than one media file in a directory
                 if name and limit_by_name:
                     if re.search(name, unicode(j)):
                         matches.append(match)
+                    else:
+                        if debug:
+                            print "could not find %s in %s" % (name, unicode(j))
                 else:
                     matches.append(match)
-                    
+
+        if debug:
+            print "Found the following: %s" % matches
 
         if not matches:
             return None

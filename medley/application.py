@@ -45,12 +45,14 @@ bottle.TEMPLATE_PATH.append(template_path)
 
 import sys, codecs, json
 
-from helpers import load_json
+from helpers import load_json, find_zips
 from collector import Collections, Collection, CollectionSummary
 from people import People
 
-logging.basicConfig(level=logging.DEBUG)
+from moments.path import Path
 
+#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(filename="debug.log", level=logging.DEBUG)
 
 
 #from moments.tag import to_tag
@@ -105,6 +107,38 @@ def images_static(filename):
 def help():
     return template('help')
 
+path_root = "/"
+
+@route('/path/:relative#.+#')
+def path(relative=''):
+    """
+    serve a static file
+
+    this also allows pose to function as a customizable file system browser
+
+    be careful with what you set path_root to
+    if the machine you run this on has sensitive information
+    and is connected to a public network
+    """
+    global path_root
+
+    if re.match('~', relative):
+        relative = os.path.expanduser(relative)
+
+    full_path = os.path.join(path_root, relative)
+ 
+    path = Path(full_path, relative_prefix=path_root)
+    if path.type() == "Directory":
+        #we shouldn't be returning directory listing here
+        pass    
+    else:
+        #this is equivalent to a view...
+        #indicate it in the log:
+        #path.log_action()
+        return static_file(relative, root=path_root)
+
+
+
 def get_summary(collection_name):
     """
     helper to look through local config list of collections
@@ -136,16 +170,24 @@ def rescan(collection_name=None):
         summary = get_summary(collection_name)
         collection.summary = summary
 
-    print "REPARSING COLLECTION: %s" % (collection_name)
-    collection.reparse()
+        print "REPARSING COLLECTION: %s" % (collection_name)
+        #don't think this is what we want here!!!
+        #collection.reparse()
+        summary.scan_metas()
+        #summary.save()
     
     return template('rescan', collection=collection)
 
-def get_people():
+def people_path():
     path = configs['people_root']
     if re.match('^\.', path):
         path = os.path.join(configs['root'], path[2:])
 
+    return path
+
+def get_people():
+    path = people_path()
+    
     p = People(path, configs['person_term'])
     return p
 
@@ -163,23 +205,64 @@ def person(person_name):
     #so that tags only includes other tags
     p.tags.remove(p.tag)
 
+
     related = ppl.search(person_name)
 
+    #check for available content here (or meta data for content)
     p.load_content()
 
-    #TODO:
-    #check for available content here (or meta data for content)
+    collections = Collections(configs['root'], configs['collection_list'])
+    #this should be redundant:
+    #collections.load_summaries()
 
-    #TODO:
+
     #locate a default image
+    path = people_path()
+    for content in p.contents:
+        #logging.info(path)
+        
+        #this method works for finding images,
+        #but trying to be consistent if possible:
+        ## #logging.info(os.path.join(path, content.base_dir))
+        ## full_path = os.path.join(path, content.base_dir)
+        ## bdp = Path(full_path)
+        ## directory = bdp.load()
+        ## directory.scan_filetypes()
+        ## #logging.info(directory.images)
+        ## if directory.images:
+        ##     #get rid of leading slash:
+        ##     content.image = directory.images[0].path[1:]
+        ##     #logging.info(content.image)
 
-    #TODO:
-    #track history / notes (manual journal ok)
+        content.drive_dir = path
+        images = content.find_media(kind="Image", relative=False, debug=True)
+        if images:
+            print images
+            content.image = images[0]
 
+        else:
+            content.image = ''
+
+        #check if content's collection is available
+        collection_name = content.remainder['collection']
+        collection_summary = collections.get_summary(collection_name)
+        #collection = collection_summary.load_collection()
+
+        #logging.info("%s available? %s" % (collection_name, collection_summary.available))
+
+        if len(collection_summary.available):
+            content.available = True
+        else:
+            content.available = False
+
+            
     #TODO:
     #default external links (search concerts, etc)
     #these should be configured based on collection (not hard coded here)
     
+    #TODO:
+    #track history / notes (manual journal ok)
+
     return template('person', person=p, related=related)
 
 @route('/people')
@@ -196,16 +279,89 @@ def people():
     #cluster = cs.load_cluster()
     #print cluster
         
-
     #return template('collection', summary=summary, c=collection, cluster=cluster)
-
+ 
     #collections = load_collections(collection_root)
     #collections = Collections(, configs['collection_list'])
     #print len(collections)
     #return template('people', collections=collections)
     return template('people', summary=people, cluster=p.cluster)
 
+@route('/collection/:collection_name/zip/:content_name#.+#')
+def collection_zip(collection_name=None, content_name=None):
+    """
 
+    """
+    result = ''
+    content = None
+    if collection_name:
+        summary = get_summary(collection_name)
+        content = summary.load_content(content_name)
+        if content:
+
+            sources = []
+            content.zips = find_zips(content.path)
+            import zipfile
+            for zipf in content.zips:
+                zipp = Path(zipf)
+                #print zipp.name
+                zip_root = os.path.join(content.path, zipp.name)
+                if not os.path.exists(zip_root):
+                    os.makedirs(zip_root)
+                zfile = zipfile.ZipFile(zipf)
+                for name in zfile.namelist():
+                    (dirname, filename) = os.path.split(name)
+                    #print "Decompressing " + filename + " on " + dirname
+                    dest_dir = os.path.join(zip_root, dirname)
+                    if not dest_dir in sources:
+                        sources.append(dest_dir)
+                    print "Decompressing " + filename + " to " + dest_dir + "<br>"
+                    if not os.path.exists(dest_dir):
+                         os.makedirs(dest_dir)
+                    dest = os.path.join(dest_dir, name)
+                    if not os.path.exists(dest):
+                        fd = open(dest, "w")
+                        fd.write(zfile.read(name))
+                        fd.close()
+                        dpath = Path(dest)
+                        print "making thumb"
+                        img = dpath.load()
+                        img.make_thumbs(['small'], save_original=False)
+
+
+            zips = []
+            for source in sources:
+                spath = Path(source, relative_prefix=path_root)
+                sdir = spath.load()
+                zips.append(sdir.contents)
+                print source
+
+    #return template('simple', body=result, title="unzip!")
+    return template('zip', zips=zips)
+  
+@route('/collection/:collection_name/content/:content_name#.+#')
+def collection_content(collection_name=None, content_name=None):
+    content = None
+    if collection_name:
+        summary = get_summary(collection_name)
+        content = summary.load_content(content_name)
+        if content:
+            images = content.find_media(kind="Image", relative=False, debug=True)
+            if images:
+                #print images
+                content.image = images[0]
+            else:
+                content.image = None
+                
+            content.movies = content.find_media(relative=False, debug=True)
+            content.sounds = content.find_media(kind="Sound", relative=False, debug=True)
+            content.zips = find_zips(content.path)
+            print content.zips
+            print content_name, content.base_dir
+            return template('content', content=content, collection=collection_name)
+
+    message = "Could not find: %s in %s" % (content_name, collection_name)
+    return template('404', message=message)
 
 @route('/collection/:collection_name/person/:person_name')
 def collection_person(collection_name=None, person_name=None):

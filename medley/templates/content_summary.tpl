@@ -1,20 +1,39 @@
+%if content.available:
+
+<div class="summary available">
+%if content.image:
+<div><a href="/collection/{{content.remainder['collection'] }}/content/{{ content.remainder['original_base_dir'] }}"><img src="/path/{{content.image}}"></a></div>
+%end
+<a href="/collection/{{content.remainder['collection'] }}/content/{{ content.remainder['original_base_dir'] }}"><b>{{ content.title }}</b></a>
+
+
+%else:
+
 <div class="summary">
-<h4>{{ content.title }}</h4>
+%if content.image:
+<div><img src="/path/{{content.image}}"></div>
+%end
+<b>{{ content.title }}</b>
+
+%end
+
+
 
 %# not exactly the same: include people_block people=content.people
 <ul>
 %for tag in content.people:
-  <li><a href="/person/{{ tag }}">{{ tag }}</a></li>
+  <li class="person"><a href="/person/{{ tag }}">{{ tag }}</a></li>
 %end
 </ul>
 
-<p>Tags:</p>
+%#<p>Tags:</p>
 %include tag_block tags=content.tags
 
-<p>{{ content.description }}</p>
 
-<p>Collection: {{ content.remainder['collection'] }}</p>
-<p>available?</p>
+%#<p>{{ content.description }}</p>
+
+<p>Via: <a href="/collection/{{ content.remainder['collection'] }}">{{ content.remainder['collection'] }}</a></p>
+%#<p>available? {{ content.available }}</p>
 
 %#<p>{{ content.remainder }}</p>
 %#<p>{{ content.debug() }}</p>

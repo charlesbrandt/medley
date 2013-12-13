@@ -1,5 +1,5 @@
-<ul>
+<ul class="tags">
 %for tag in tags:
-  <li>{{tag}}</li>
+  <li class="tag">{{tag}}</li>
 %end
 </ul>

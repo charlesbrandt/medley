@@ -21,3 +21,4 @@ Medley.egg-info/
 build/*
 dist/*
 player/configs.json.*
+medley/tricks.yaml

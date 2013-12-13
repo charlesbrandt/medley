@@ -1,0 +1,7 @@
+tricks:
+- watchdog.tricks.ShellCommandTrick:
+    patterns: ["*.less", ]
+    shell_command: 'lessc less/style.less > css/style.css'
+- watchdog.tricks.AutoRestartTrick:
+    patterns: ["*.py", ]
+    command: ["python", "application.py", "path/to/content"]

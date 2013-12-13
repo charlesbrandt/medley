@@ -6,9 +6,9 @@ Collection and Content may need to be customized for the specific type of collec
 OVERVIEW:
 ============
 
-A Collections object is created with the root location and the list of acceptable collection directories available.  These option are generally stored as a JSON file named 'config.json' in the root of the collections directory, but could easily be generated and passed in at run time. The main function is to load and store all of the CollectionSummary objects.
+A 'Collections' object is created with the root location and the list of acceptable collection directories available.  These option are generally stored as a JSON file named 'config.json' in the root of the collections directory, but could easily be generated and passed in at run time. The main function is to load and store all of the CollectionSummary objects.
 
-A CollectionSummary will look for a 'summary.json' file in either the main root directory associated with the CollectionSummary, or in the meta subdirectory of the main root directory (meta_root).  This summary data includes other drive locations where the Collection and all other associated data may be found.
+A 'CollectionSummary' will look for a 'summary.json' file in either the main root directory associated with the CollectionSummary, or in the meta subdirectory of the main root directory (meta_root).  This summary data includes other drive locations where the 'Collection' and all other associated data may be found.
 
 """
 import os, re, logging, codecs
@@ -16,7 +16,7 @@ import os, re, logging, codecs
 #used in Cluster.save():
 import json
 
-from helpers import load_json, save_json
+from helpers import load_json, save_json, find_json
 
 from content import Content
 
@@ -588,6 +588,28 @@ class CollectionSummary(object):
         self.collection = collection
 
         return collection
+
+    def load_content(self, base_dir):
+        """
+        sometimes it is useful to retrieve a specifice content item
+        without loading the whole collection
+
+        look in all available locations and return the corresponding Content
+        """
+        json = None
+        for root in self.available:
+            option = os.path.join(root, base_dir)
+            print "Checking path: %s" % option
+            if os.path.exists(option): 
+                json = find_json(option)
+                if json:
+                    print "FOUND: %s" % json
+
+        if json:
+            content = Content(json)
+            return content
+        else:
+            return None
 
     def load_cluster(self, json_file=None):
         """
