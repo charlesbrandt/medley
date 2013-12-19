@@ -18,7 +18,34 @@
   <meta name="keywords" content="{{keywords}}" />
   <meta name="author" content="{{author}}" />
   
-  %include head 
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="">
+  <meta name="keywords" content="" />
+  <meta name="author" content="" />
+
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />  
+  <meta name="HandheldFriendly" content="True" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+  <link rel="shortcut icon" href="/favicon.png" />
+  <link rel="icon" href="/favicon.png" />
+
+  <!-- apple splash screens
+       check http://susy.oddbird.net/demos/magic/ -->
+  <link href="img/splash-iphone.png" media="screen and (max-device-width: 480px) and not (-webkit-min-device-pixel-ratio: 2)" rel="apple-touch-startup-image">
+  <link href="img/splash-iphone4.png" media="screen and (max-device-width: 480px) and (-webkit-min-device-pixel-ratio: 2)" rel="apple-touch-startup-image">
+  <link href="img/splash-portrait.png" media="screen and (min-device-width: 768px) and (orientation: portrait)" rel="apple-touch-startup-image">
+  <link href="img/splash-landscape.png" media="screen and (min-device-width: 768px) and (orientation: landscape)" rel="apple-touch-startup-image">
+
+  <link href="/css/style.css" rel="stylesheet" type="text/css" />
+
+  <!--[if lte IE 8]>
+  <link rel="stylesheet" href="css/fallback.css" />
+  <![endif]-->
+
+  %#include other javascript at the end of the page to improve loading
 
   <script type="application/javascript">  
   </script>
@@ -40,17 +67,6 @@
   %#include footer
     
   </div><!-- END .page -->    
-
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-  <script>window.jQuery || document.write('<script src="/js/libs/jquery-1.7.1.min.js"><\/script>')</script>
-
-  <!-- these should all be minified and combined before a production release -->
-  <script src="/js/libs/util.js"></script>
-  <script src="/js/plugins.js"></script>
-  <script src="/js/script.js"></script>
-
-  <script src="/js/libs/bootstrap-button.js"></script>
-  <script src="/js/libs/bootstrap-collapse.js"></script>
 
   <script>
     var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];

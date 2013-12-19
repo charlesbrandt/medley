@@ -2,7 +2,7 @@
 
 <div class="summary available">
 %if content.image:
-<div><a href="/collection/{{content.remainder['collection'] }}/content/{{ content.remainder['original_base_dir'] }}"><img src="/path/{{content.image}}"></a></div>
+<div><a href="/collection/{{content.remainder['collection'] }}/content/{{ content.remainder['original_base_dir'] }}"><img src="/path/{{content.image}}" class="thumb"></a></div>
 %end
 <a href="/collection/{{content.remainder['collection'] }}/content/{{ content.remainder['original_base_dir'] }}"><b>{{ content.title }}</b></a>
 
@@ -11,7 +11,7 @@
 
 <div class="summary">
 %if content.image:
-<div><img src="/path/{{content.image}}"></div>
+<div><img src="/path/{{content.image}}" class="thumb"></div>
 %end
 <b>{{ content.title }}</b>
 

@@ -58,17 +58,68 @@ class CollectionSimple(list):
         ##     #print "Warning, no root"
         ##     self.summary = None
 
-    def save(self, destination=None):
-        if not destination:
-            #maybe destination should default to source???
-            destination = os.path.join(self.root, "contents-saved.json")
-
+    def as_list(self):
+        """
+        generate a list of standard python objects
+        for saving or exporting to json
+        """
         all_contents = []
         for content in self:
             d = content.to_dict()
             all_contents.append(d)
 
+        return all_contents
+    
+    def save(self, destination=None):
+        if not destination:
+            #maybe destination should default to source???
+            destination = os.path.join(self.root, "contents-saved.json")
+
+        all_contents = self.as_list()
         save_json(destination, all_contents)
+
+    def load(self, source=None, debug=False):
+        """
+        load a collection from a previously generated summary json file
+        should contain all data for all included content items
+        this content would have been assembled in a previous scan
+        """
+        if source:
+            self.source = source
+            
+        # do the loading now:
+        if self.source:
+            if os.path.exists(self.source):
+                json_contents = load_json(self.source)
+                #this will depend on how json_contents was stored (list vs dict):
+                #for content in json_contents.values():
+
+                #if as_dict:
+                if isinstance(json_contents, dict):
+                    if debug:
+                        print "Reading JSON as dictionary"
+                    for content in json_contents.values():
+                        s = Content(content=content)
+                        s.load()
+                        if debug:
+                            print s
+                        self.append(s)
+                else:
+                    if debug:
+                        print "Reading JSON as list"
+                    # storing as a list seems most versatile
+                    # can create a dictionary version later
+                    # (too many ways to index)
+                    for content in json_contents:
+                        if debug:
+                            print content
+                        s = Content(content=content)
+                        s.load()
+                        self.append(s)
+            else:
+                print "WARNING: couldn't find contents json path: %s" % self.source
+        else:
+            raise ValueError, "No source file specified: %s" % self.source
 
     #aka walk()
     def rescan(self, ignores=[], debug=False):
@@ -140,6 +191,63 @@ class CollectionSimple(list):
 
         if debug:
             print "Finished loading %s contents manually" % (len(self))
+
+    def update(self, new_group):
+        """
+        clear out everything we hold
+        then apply everything in the new_group
+
+        this preserves all attributes for the Collection object (meta data)
+        (rather than instantiating a new version)
+
+        also [2012.09.21 12:40:12]
+        this can be done more suscinctly with
+        del self[:]
+        self.extend(new_group)
+        
+        """
+        print "clearing contents: %s" % len(self)
+
+        for item in self[:]:
+            self.remove(item)
+
+        print "should be clear (0): %s" % len(self)
+
+        for item in new_group:
+            self.append(item)
+            
+        print "applied new order: %s" % len(self)
+        
+    def apply_order(self, order):
+        """
+        take an ordered list of base dirs
+        and apply the order to the contents in the collection
+        """
+        
+        new_group = []
+        for item in order:
+            for content in self[:]:
+                if content.base_dir == item:
+                    print "adding %s to new list" % item
+                    if not content in new_group:
+                        new_group.append(content)
+                    self.remove(content)
+
+        #anything not in order list should be added to the beginning
+        #which means adding the new_group to the end of anything that is left
+        self.extend(new_group)
+
+    def get_order(self):
+        """
+        return a list of all base dirs
+        that represent all contents in the loaded collection
+        """
+        order = []
+        for item in self:
+            if not item.base_dir in order:
+                order.append(item.base_dir)
+
+        return order
 
 
 class Collection(CollectionSimple):
@@ -256,49 +364,6 @@ class Collection(CollectionSimple):
         #this should not matter if a content object is edited directly
         self.sync_contents = True
 
-    def load(self, source=None, debug=False):
-        """
-        load a collection from a previously generated summary json file
-        should contain all data for all included content items
-        this content would have been assembled in a previous scan
-        """
-        if source:
-            self.source = source
-            
-        # do the loading now:
-        if self.source:
-            if os.path.exists(self.source):
-                json_contents = load_json(self.source)
-                #this will depend on how json_contents was stored (list vs dict):
-                #for content in json_contents.values():
-
-                #if as_dict:
-                if isinstance(json_contents, dict):
-                    if debug:
-                        print "Reading JSON as dictionary"
-                    for content in json_contents.values():
-                        s = Content(content=content)
-                        s.load()
-                        if debug:
-                            print s
-                        self.append(s)
-                else:
-                    if debug:
-                        print "Reading JSON as list"
-                    # storing as a list seems most versatile
-                    # can create a dictionary version later
-                    # (too many ways to index)
-                    for content in json_contents:
-                        if debug:
-                            print content
-                        s = Content(content=content)
-                        s.load()
-                        self.append(s)
-            else:
-                print "WARNING: couldn't find contents json path: %s" % self.source
-        else:
-            raise ValueError, "No source file specified: %s" % self.source
-
 
     def reparse(self):
         """
@@ -370,32 +435,6 @@ class Collection(CollectionSimple):
 
 
 
-    def update(self, new_group):
-        """
-        clear out everything we hold
-        then apply everything in the new_group
-
-        this preserves all attributes for the Collection object (meta data)
-        (rather than instantiating a new version)
-
-        also [2012.09.21 12:40:12]
-        this can be done more suscinctly with
-        del self[:]
-        self.extend(new_group)
-        
-        """
-        print "clearing contents: %s" % len(self)
-
-        for item in self[:]:
-            self.remove(item)
-
-        print "should be clear (0): %s" % len(self)
-
-        for item in new_group:
-            self.append(item)
-            
-        print "applied new order: %s" % len(self)
-        
     def sort_by_date(self, debug=False):
         dates = []
         for i in self:
@@ -419,9 +458,6 @@ class Collection(CollectionSimple):
         """
         print "MAY WANT TO CALL LOAD CLUSTER DIRECT ON SUMMARY!"
         return self.summary.load_cluster()
-
-
-
 
 class CollectionSummary(object):
     """

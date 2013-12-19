@@ -62,6 +62,10 @@ class Person(object):
         #these should be read only (don't want to have to synchronize changes)
         self.contents = []
 
+        #ok to store this list
+        #just a list of base_dirs for each content item
+        self.content_order = []
+
         #correspond to main cluster group?
         self.rating = ''
 
@@ -80,6 +84,9 @@ class Person(object):
             self.load()
         else:
             self.root = ''
+
+    def __repr__(self):
+        return "Person: %s" % self.tag
 
     #TODO:
     #this might be better as a property
@@ -143,12 +150,22 @@ class Person(object):
         #ok to use collection for walking here.
         self.contents.rescan(debug=True)
 
-        #TODO:
         #check self.content_order
         #apply order to contents
         #place any new items at the beginning of the list
+
+        #print self.contents
+
+        self.contents.apply_order(self.content_order)
+
         #update content_order accordingly
+        #update order with anything new
+        self.content_order = self.contents.get_order()
+        print self.content_order
+
+        #consider:
         #(some way to sync the two generally??? (for saving))
+        
         
     def update_default(self, new_tag):
         """
@@ -223,19 +240,33 @@ class People(list):
         """
         look at all directories and load the corresponding person object
         """
-        options = os.listdir(self.root)
+        options = os.listdir(self.root) 
         if 'meta' in options:
             options.remove('meta')
 
+        missing = []
         #print options
         for option in options:
             path = os.path.join(self.root, option)
-            person = Person(path)
-            self.append(person)
 
+            #sometimes paths are updated, but content takes time to migrate
+            #should catch this and alert someone to update accordingly
+            try:
+                person = Person(path)
+                self.append(person)
+            except:
+                missing.append(option)
+                
         if self.debug:
             print "People loaded: " 
             self.summary()
+
+        if missing:
+            for item in missing:
+                matches = self.get(item)
+                print "MISSING: %s, please move to: %s" % (item, matches[0])
+
+            raise ValueError, "Missing content detected... please fix"
         
     #aka lookup
     def get(self, name):

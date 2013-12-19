@@ -203,8 +203,8 @@ def person(person_name):
 
     #in this case we want to remove person.tag from person.tags
     #so that tags only includes other tags
-    p.tags.remove(p.tag)
-
+    #doing this here is dangerous if save is called later:
+    #p.tags.remove(p.tag)
 
     related = ppl.search(person_name)
 
@@ -215,10 +215,12 @@ def person(person_name):
     #this should be redundant:
     #collections.load_summaries()
 
-
-    #locate a default image
     path = people_path()
+
+    #locate a default image for every content item
+    #check for content's collection availability
     for content in p.contents:
+
         #logging.info(path)
         
         #this method works for finding images,
@@ -234,6 +236,13 @@ def person(person_name):
         ##     content.image = directory.images[0].path[1:]
         ##     #logging.info(content.image)
 
+
+        #right now no way to store a default image with content item
+        #because image may be consider a piece of content
+        #this means lookup for images will happen every time here.
+        #could consider if it is common enough to associate an image (thumb?)
+        #with all content types
+        
         content.drive_dir = path
         images = content.find_media(kind="Image", relative=False, debug=True)
         if images:
@@ -243,11 +252,10 @@ def person(person_name):
         else:
             content.image = ''
 
+
         #check if content's collection is available
         collection_name = content.remainder['collection']
         collection_summary = collections.get_summary(collection_name)
-        #collection = collection_summary.load_collection()
-
         #logging.info("%s available? %s" % (collection_name, collection_summary.available))
 
         if len(collection_summary.available):
@@ -263,7 +271,8 @@ def person(person_name):
     #TODO:
     #track history / notes (manual journal ok)
 
-    return template('person', person=p, related=related)
+    content_json = json.dumps(p.contents.as_list())
+    return template('person', person=p, related=related, contents=content_json)
 
 @route('/people')
 def people():
