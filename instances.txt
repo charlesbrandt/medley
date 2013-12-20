@@ -1,3 +1,18 @@
+*2013.12.20 17:43:49 layout
+/c/medley/instances.txt
+/c/medley/medley/templates/collections.tpl
+/c/medley/medley/templates/footer.tpl
+/c/medley/medley/templates/navigation.tpl
+/c/medley/medley/templates/layout.tpl
+/c/medley/medley/templates/tag_block.tpl
+/c/medley/medley/less/style.less
+/c/medley/medley/templates/content_summary.tpl
+/c/medley/medley/templates/content.tpl
+/c/medley/medley/templates/people_block.tpl
+/c/medley/medley/templates/people.tpl
+/c/medley/medley/templates/person.tpl
+/c/medley/medley/js/people.js
+
 *2013.12.03 12:10:21 layout
 /c/medley/instances.txt
 /c/medley/medley/templates/collections.tpl
