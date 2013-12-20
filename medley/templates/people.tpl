@@ -3,7 +3,7 @@
 
   %for group in cluster:
      %for item in group:
-       <a href="/person/{{ item }}">{{ item }}</a>
+       <a href="/person/{{ item }}/">{{ item }}</a>
      %end
      <br>
   %end

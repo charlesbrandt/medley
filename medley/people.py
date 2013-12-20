@@ -120,8 +120,13 @@ class Person(object):
         """
         #create an appropriate directory
         #save the person meta data
+        if root:
+            self.root = root
+
+        if not self.root:
+            raise ValueError, "Need a root to know where to save: %s" % self.root
         
-        dest_file = self.make_path(root)
+        dest_file = self.make_path(self.root)
         #print dest_file
         #print self.__dict__
         #???

@@ -1,4 +1,4 @@
-<h1>  <a href="/person/{{ person.tag }}">{{ person.name }}</a> </h3>
+<h1>  <a href="/person/{{ person.tag }}/">{{ person.name }}</a> </h1>
 
 <h3 class="main_tag">{{ person.tag }}</h3>
 
@@ -12,22 +12,90 @@
 <p>Similar names:</p>
     %include people_block people=related
 
-%#<p>Content:</p>
-<ul class="contents">
-%for content in person.contents:
-  <li class="content">
-    %include content_summary content=content
-  </li>
-%end
+<ul id="people" class="content" data-bind='template: { name: "personTmpl", foreach: people }'>
 </ul>
 
+<script id="personTmpl" type="text/html">
+    <li class="draggable summary content" draggable="true" data-bind="css: { available: available}, event:{
+       dragstart:   function(data, event){ 
+                    $(event.target).addClass('dragSource')
+                    $root.drag_start_index($index());
+                    return $(event.target).hasClass('draggable');
+       },    
+
+       dragend:   function(data, event){  
+                   $root.drag_start_index(-1);
+                   $(event.target).removeClass('dragSource')
+                   return true;
+       },    
+       
+       dragover:  function(data, event){event.preventDefault();},
+
+       dragenter: function(data, event){
+                $root.drag_target_index($index());
+                var element = $(event.target)
+                if(element.hasClass('draggable'))
+                     element.toggleClass('dragover'); 
+                event.preventDefault();
+       },
+
+       dragleave: function(data, event, $index){
+                var element = $(event.target)
+                if(element.hasClass('draggable'))
+                     element.toggleClass('dragover');
+                event.preventDefault();
+       },
+
+       drop: function(data, event){
+                $(event.target).removeClass('dragover'); 
+                //console.log('swap', $root.drag_start_index(),  $root.drag_target_index() );
+                $root.move($root.drag_start_index(),  $root.drag_target_index());
+		$root.post();
+       }
+
+}">
+
+	<div class="wrapper" data-bind="if: available"> 
+	  <div class="wrapper" data-bind="if: image"> 
+	    <a data-bind="attr: { href: '/collection/' + collection + '/content/' + original_base_dir }"><img data-bind="attr: { src: '/path/' + image }" class="thumb"></a>
+	  </div>
+	    
+	  <a data-bind="attr: { href: '/collection/' + collection + '/content/' + original_base_dir }"><b data-bind='text: title'></b></a>
+	</div>
+
+	<div class="wrapper" data-bind="ifnot: available"> 
+	  <div class="wrapper" data-bind="if: image"> 
+	    <img data-bind="attr: { src: '/path/' + image }" class="thumb">
+	  </div>
+	</div>
+
+	<b data-bind='text: title'></b>
+
+
+	<ul data-bind="foreach: people">
+	  <li class="person"><a data-bind="attr: { href: '/person/' + $data + '/' }, text: $data"></a></li>
+	</ul>
+	
+	<ul data-bind="foreach: tags" class="tags">
+	  <li class="tag"><a data-bind="attr: { href: '/tag/' + $data }, text: $data"></a></li>
+	</ul>
+	
+	
+	<p data-bind="text: description, style: {'display': 'none'}"></p>
+	
+	<p>Via: <a data-bind="attr: { href: '/collection/' + collection }, text: collection"></a></p>
+	
+
+    </li>
+</script>
+
 <script type="text/javascript">
-  {{! contents }}
+  var contents = {{! contents }};
 </script>
 
   <script type="text/javascript">window.JSON || document.write('<script src="js/lib/json2.js"><\/script>')</script>
     
-    <script type="text/javascript" src="js/lib/require.js"></script>
+    <script type="text/javascript" src="/js/lib/require.js"></script>
     <script type="text/javascript">
       //this allows require.js to be in a different directory (lib)
       //than main custom code

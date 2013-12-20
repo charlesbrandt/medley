@@ -22,7 +22,7 @@
 %# not exactly the same: include people_block people=content.people
 <ul>
 %for tag in content.people:
-  <li class="person"><a href="/person/{{ tag }}">{{ tag }}</a></li>
+  <li class="person"><a href="/person/{{ tag }}/">{{ tag }}</a></li>
 %end
 </ul>
 

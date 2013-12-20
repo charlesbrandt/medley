@@ -1271,7 +1271,7 @@ class Content(object):
         ##     print self.remainder
 
 
-    def to_dict(self):
+    def to_dict(self, include_empty=False):
         """
         the order specified here is generally the order that gets printed(?)
         (maybe not)
@@ -1296,66 +1296,69 @@ class Content(object):
 
         #check to make sure we have values...
         #no need to clutter up json with empty values
-        if self.tags:
+        if self.tags or include_empty:
             snapshot['tags'] = self.tags
-        if self.people:
+        if self.people or include_empty:
             snapshot['people'] = self.people
-        if self.sites:
+        if self.sites or include_empty:
             snapshot['sites'] = self.sites
-        if self.description:
+        if self.description or include_empty:
             snapshot['description'] = self.description
-        if self.title:
+        if self.title or include_empty:
             snapshot['title'] = self.title
-        if self.timestamp:
+        if self.timestamp or include_empty:
             snapshot['timestamp'] = self.timestamp.compact()
 
-        if self.status:
+        if self.status or include_empty:
             snapshot['status'] = self.status
 
         #segments don't need content_base to be set if root has it:
-        if self.base_dir:
+        if self.base_dir or include_empty:
             snapshot['content_base'] = self.base_dir
-        if self.media:
+        if self.media or include_empty:
             snapshot['media'] = self.media
-        if self.filename:
+        if self.filename or include_empty:
             snapshot['filename'] = self.filename
-        if self.hash:
+        if self.hash or include_empty:
             snapshot['hash'] = self.hash
-        if self.drive_dir:
+        if self.drive_dir or include_empty:
             snapshot['drive_dir'] = self.drive_dir
 
-        if self.json_source:
+        if self.json_source or include_empty:
             snapshot['json_source'] = self.json_source
             
-        if self.start.total_seconds():
+        if self.start.total_seconds() or include_empty:
             snapshot['start'] = self.start.total_seconds()
 
         if self.end:
             snapshot['end'] = self.end.total_seconds()
+        elif include_empty:
+            #shouldn't need this
+            pass
 
-        if self.segment_id:
+        if self.segment_id or include_empty:
             snapshot['segment_id'] = self.segment_id
 
-        if self.next_segment_id != 1:
+        if self.next_segment_id != 1 or include_empty:
             snapshot['next_segment_id'] = self.next_segment_id
 
-        if self.track_prefix:
+        if self.track_prefix or include_empty:
             snapshot['track_prefix'] = self.track_prefix
 
         #marks = []
         #for m in self.marks:
         #    marks.append(m.total_seconds())
         marks = self.marks.to_tuples()
-        if marks:
+        if marks or include_empty:
             snapshot['marks'] = marks
 
         segments = []
         for segment in self.segments:
             segments.append(segment.to_dict())
-        if segments:
+        if segments or include_empty:
             snapshot['segments'] = segments
 
-        if self.history:
+        if self.history or include_empty:
             l = Log()
             l.from_entries(self.history.sort())
             snapshot['history'] = l.to_string()

@@ -58,14 +58,14 @@ class CollectionSimple(list):
         ##     #print "Warning, no root"
         ##     self.summary = None
 
-    def as_list(self):
+    def as_list(self, include_empty=False):
         """
         generate a list of standard python objects
         for saving or exporting to json
         """
         all_contents = []
         for content in self:
-            d = content.to_dict()
+            d = content.to_dict(include_empty)
             all_contents.append(d)
 
         return all_contents

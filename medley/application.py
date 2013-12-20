@@ -191,6 +191,23 @@ def get_people():
     p = People(path, configs['person_term'])
     return p
 
+@post('/person/:person_name/update')
+def person_update(person_name):
+    ppl = get_people()
+    ppl.load()
+
+    p_list = ppl.get(person_name)
+    #print "Looked up: %s" % person_name
+    #print "Received: %s" % p_list
+    p = p_list[0]
+
+    ppl_json = request.forms.get('people')
+    p.content_order = json.loads(ppl_json)
+    #print p.content_order
+    p.save()
+    
+
+@route('/person/:person_name/')
 @route('/person/:person_name')
 def person(person_name):
     ppl = get_people()
@@ -247,10 +264,13 @@ def person(person_name):
         images = content.find_media(kind="Image", relative=False, debug=True)
         if images:
             print images
-            content.image = images[0]
+            #content.image = images[0]
+            #since we're using javascript now, need this somewher else
+            content.remainder['image'] = images[0]
 
         else:
-            content.image = ''
+            #content.image = ''
+            content.remainder['image'] = ''
 
 
         #check if content's collection is available
@@ -259,9 +279,12 @@ def person(person_name):
         #logging.info("%s available? %s" % (collection_name, collection_summary.available))
 
         if len(collection_summary.available):
-            content.available = True
+            #content.available = True
+            content.remainder['available'] = True
         else:
-            content.available = False
+            #content.available = False
+            content.remainder['available'] = False
+
 
             
     #TODO:
@@ -271,7 +294,7 @@ def person(person_name):
     #TODO:
     #track history / notes (manual journal ok)
 
-    content_json = json.dumps(p.contents.as_list())
+    content_json = json.dumps(p.contents.as_list(include_empty=True))
     return template('person', person=p, related=related, contents=content_json)
 
 @route('/people')

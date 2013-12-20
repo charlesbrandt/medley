@@ -12,7 +12,7 @@
 
 <ul>
 %for tag in content.people:
-  <li class="person"><a href="/person/{{ tag }}">{{ tag }}</a></li>
+  <li class="person"><a href="/person/{{ tag }}/">{{ tag }}</a></li>
 %end
 </ul>
 
