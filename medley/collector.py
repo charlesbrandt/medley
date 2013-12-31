@@ -218,7 +218,7 @@ class CollectionSimple(list):
             
         print "applied new order: %s" % len(self)
         
-    def apply_order(self, order):
+    def apply_order(self, order, debug=False):
         """
         take an ordered list of base dirs
         and apply the order to the contents in the collection
@@ -228,7 +228,8 @@ class CollectionSimple(list):
         for item in order:
             for content in self[:]:
                 if content.base_dir == item:
-                    print "adding %s to new list" % item
+                    if debug:
+                        print "adding %s to new list" % item
                     if not content in new_group:
                         new_group.append(content)
                     self.remove(content)
@@ -1081,17 +1082,23 @@ class Cluster(list):
 
         return groups
 
-    def to_cloud(self, destination=None, tag=None):
+    def to_cloud(self, destination=None, tags=[]):
         if destination is None:
             print "Using previous source: %s" % self.source
             destination = self.source
             #print "Using previous source: %s" % ('temp.txt')
             #destination = 'temp.txt'
-        if tag is None:
-            tag = self.tag
 
-        if not tag:
-            raise ValueError, "Need a tag! (%s)" % tag
+        if isinstance(tags, str) or isinstance(tags, unicode):
+            raise ValueError, "tags should be a list! (%s)" % tags
+        elif not tags:
+            tags.append(self.tag)
+        else:
+            #we must have a non-False value and it's not a string...
+            assert isinstance(tags, list)
+
+        if not tags:
+            raise ValueError, "Need a tag! (%s)" % tags
         
         data = ''
         ct = 0
@@ -1107,7 +1114,7 @@ class Cluster(list):
 
         clouds = Journal(destination)
         #make_entry
-        clouds.make(data=data, tags=[tag])
+        clouds.make(data=data, tags=tags)
         clouds.save(destination)
         print "Saved cloud: %s" % destination
         

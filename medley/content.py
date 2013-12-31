@@ -664,6 +664,14 @@ class Content(object):
         self.people = []
         self.tags = []
 
+        #seeing more applications for this
+        #aka thumbnail
+        #aka default_image
+        #might be slightly redundant if the content in reference *is* an image
+        #but even then, there could be a default, smaller version
+        #plus, totally optional
+        self.image = ''
+        
         self.marks = MarkList()
 
         self.segments = []
@@ -805,6 +813,7 @@ class Content(object):
             #else:
 
             #base_dir will only be set if it already exists in the loaded json
+            #print self.base_dir
             if re.search(self.base_dir, source_dir):
                 #must have self.base_dir in source_dir
                 #if not drive_dir_matches:
@@ -1137,6 +1146,10 @@ class Content(object):
             self.sites = content['sites']
             del content['sites']
 
+        if content.has_key('image'):
+            self.image = content['image']
+            del content['image']
+
         if content.has_key('people'):
             for person in content['people']:
                 self.people.append(to_tag(person))
@@ -1302,6 +1315,8 @@ class Content(object):
             snapshot['people'] = self.people
         if self.sites or include_empty:
             snapshot['sites'] = self.sites
+        if self.image or include_empty:
+            snapshot['image'] = self.image
         if self.description or include_empty:
             snapshot['description'] = self.description
         if self.title or include_empty:
@@ -1431,6 +1446,23 @@ class Content(object):
                             options.append(media)
         return options
 
+    def find_image(self, ignores=[], debug=False):
+        images = self.find_media(kind="Image", relative=False, debug=debug)
+        if images:
+            #clear out anything that should be removed first
+            for ignore in ignores:
+                for image in images[:]:
+                    if str(image) == str(ignore):
+                        if debug:
+                            print "Removing: %s" % image
+                        images.remove(image)
+                        
+            if debug:
+                print images
+            self.image = images[0]
+        else:
+            self.image = ''
+        
     def find_media(self, location=None, kind="Movie", relative=True,
                    ignores=[], limit_by_name=False, debug=False):
         """
@@ -1610,7 +1642,8 @@ class Content(object):
                     #if the path matches,
                     #media has a size field,
                     #and the size has a value
-                    if item == m[0] and (len(m) > 1) and (m[1]):
+                    #then no need to rescan. remove it.
+                    if item == m[0] and (len(m) > 2) and (m[1]):
                         print "skipping: %s because it matched %s" % (item, m)
                         matches.append(m)
                         if item in options:
@@ -1621,10 +1654,13 @@ class Content(object):
             print "still need to find: %s new items" % len(options)
 
         for item in options:
-            size = get_media_dimensions(item)
+            dimensions = get_media_dimensions(item)
             if debug:
-                print "FOUND SIZE: %s" % size
-            matches.append( [item, size] )
+                print "FOUND DIMENSIONS: %s" % dimensions
+            filesize = os.path.getsize(item)
+            if debug:
+                print "FOUND FILE SIZE: %s" % filesize
+            matches.append( [item, dimensions, filesize] )
 
         self.media = matches
 

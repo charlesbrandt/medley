@@ -203,6 +203,7 @@ def person_update(person_name):
 
     ppl_json = request.forms.get('people')
     p.content_order = json.loads(ppl_json)
+    p.update_image(people_path(), force=True, debug=False)
     #print p.content_order
     p.save()
     
@@ -224,6 +225,11 @@ def person(person_name):
     #p.tags.remove(p.tag)
 
     related = ppl.search(person_name)
+    #related.remove(person_name)
+    for rel in related[:]:
+        if rel.tag == person_name:
+            related.remove(rel)
+    related.sort(key=lambda rel: rel.tag)
 
     #check for available content here (or meta data for content)
     p.load_content()
@@ -264,13 +270,14 @@ def person(person_name):
         images = content.find_media(kind="Image", relative=False, debug=True)
         if images:
             print images
-            #content.image = images[0]
-            #since we're using javascript now, need this somewher else
-            content.remainder['image'] = images[0]
+            content.image = images[0]
 
+            #since we're using javascript now, need this somewher else
+            #content.remainder['image'] = images[0]
+            
         else:
-            #content.image = ''
-            content.remainder['image'] = ''
+            content.image = ''
+            #content.remainder['image'] = ''
 
 
         #check if content's collection is available
@@ -297,8 +304,11 @@ def person(person_name):
     content_json = json.dumps(p.contents.as_list(include_empty=True))
     return template('person', person=p, related=related, contents=content_json)
 
-@route('/people')
-def people():
+@route('/people/tags')
+def people_tags():
+    """
+    the original version that only shows tags
+    """
     print configs
     print configs['people_root']
     print configs['person_term']
@@ -317,7 +327,18 @@ def people():
     #collections = Collections(, configs['collection_list'])
     #print len(collections)
     #return template('people', collections=collections)
-    return template('people', summary=people, cluster=p.cluster)
+    return template('people_tags', cluster=p.cluster)
+
+@route('/people')
+def people():
+    p = get_people()
+    p.load()
+    
+    for person in p:
+        print person.image, person.tag
+    
+    return template('people', people=p, cluster=p.cluster, people_json="{}")
+
 
 @route('/collection/:collection_name/zip/:content_name#.+#')
 def collection_zip(collection_name=None, content_name=None):

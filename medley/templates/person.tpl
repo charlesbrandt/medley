@@ -107,7 +107,7 @@
 	                'ko'     : 'lib/knockout-3.0.0'
 		}
       });
-      require(['people'], function(people) {});
+      require(['person'], function(person) {});
     </script>
 
 %rebase layout title=str(person.tag), active="home"

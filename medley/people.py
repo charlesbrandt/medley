@@ -76,7 +76,7 @@ class Person(object):
         self.links = ''
 
         #path, should be locally available
-        self.default_image = ''
+        self.image = ''
 
         if source:
             #drive dir
@@ -125,7 +125,7 @@ class Person(object):
 
         if not self.root:
             raise ValueError, "Need a root to know where to save: %s" % self.root
-        
+         
         dest_file = self.make_path(self.root)
         #print dest_file
         #print self.__dict__
@@ -133,8 +133,13 @@ class Person(object):
         temp_d = copy.copy(self.__dict__)
         #make sure to ignore loaded/scanned contents on a save
         temp_d.pop("contents", None)
+        #getting rid of old format... could convert, but nothing has this set:
+        temp_d.pop("default_image", None)
+        
         #save_json(dest_file, self.__dict__)
+        print "Saving: %s to %s" % (temp_d, dest_file)
         save_json(dest_file, temp_d)
+        
 
     def load(self, root=None):
         source_file = self.make_path(root)
@@ -147,13 +152,13 @@ class Person(object):
     #when loading people, load() is called
     #don't want to scan for content in that case...
     #only when it is requested
-    def load_content(self):
+    def load_content(self, debug=False):
         md = self.main_dir()
 
         #scan for local content directories here
         self.contents = CollectionSimple(root=md)
         #ok to use collection for walking here.
-        self.contents.rescan(debug=True)
+        self.contents.rescan(debug=debug)
 
         #check self.content_order
         #apply order to contents
@@ -161,12 +166,13 @@ class Person(object):
 
         #print self.contents
 
-        self.contents.apply_order(self.content_order)
+        self.contents.apply_order(self.content_order, debug=debug)
 
         #update content_order accordingly
         #update order with anything new
         self.content_order = self.contents.get_order()
-        print self.content_order
+        if debug:
+            print self.content_order
 
         #consider:
         #(some way to sync the two generally??? (for saving))
@@ -195,6 +201,46 @@ class Person(object):
         self.tag = new_tag
         #now save it to our new destination (should over-write old data)
         self.save()
+
+    def update_image(self, drive_dir, force=False, debug=False):
+        update = False
+        if force:
+            update = True
+        elif not self.image:
+            update = True
+        else:
+            #must have a default image and not forcing an update... skip
+            pass
+
+        if update:
+            self.load_content()
+            #can only do something if we have some content
+            if len(self.contents):
+                first = self.contents[0]
+                if not first.image:
+                    #need to set this to use
+                    #the locally cached people directory:
+                    first.drive_dir = drive_dir
+                    first.find_image(debug=debug)
+
+                if first.image:
+                    self.image = first.image
+                    if debug:
+                        print "updating %s image to %s" % (self.tag, self.image)
+                    self.save()
+                    
+                else:
+                    if debug:
+                        print "No image associate with first content: %s" % self.tag
+                        print "%s contents total" % len(self.contents)
+                    
+            else:
+                if debug:
+                    print "No content found for %s" % self.tag
+                
+        else:
+            if debug:
+                print "Not updating: %s" % self.tag
 
 class People(list):
     """
@@ -288,6 +334,17 @@ class People(list):
                 matches.append(person)
 
         return matches
+
+    def get_first(self, name):
+        """
+        just return the first item (or None) from a get request
+        """
+        matches = self.get(name)
+        if len(matches):
+            first = matches[0]
+        else:
+            first = None
+        return first
 
     def search(self, name):
         """
