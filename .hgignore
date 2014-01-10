@@ -22,3 +22,4 @@ build/*
 dist/*
 player/configs.json.*
 medley/tricks.yaml
+medley/debug.log

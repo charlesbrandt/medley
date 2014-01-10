@@ -329,15 +329,85 @@ def people_tags():
     #return template('people', collections=collections)
     return template('people_tags', cluster=p.cluster)
 
-@route('/people')
-def people():
+
+@route('/people/static')
+def people_static():
+    """
+    similar to people
+    but no javascript capabilities for re-ordering...
+    for large data sets, javascript can be slow
+    this may be useful for read only purposes
+    """
     p = get_people()
     p.load()
+     
+    #make a cluster-like object here
+    #list of lists
+    #need to distill it to json eventually
+    groups = []
+    for group in p.cluster[:]:
+        #print group
+        new_group = []
+        for item in group:
+            person = p.get_first(item)
+            if person:
+                new_group.append(person.to_dict())
+            else:
+                new_group.append({'image':'', 'tag':item})
+
+        groups.append(new_group)
+        
+    #pj = json.dumps(groups)
+    #print "Length: %s" % len(groups)
+    #print pj
+
+    #for person in p:
+    #    print person.image, person.tag
     
-    for person in p:
-        print person.image, person.tag
+    return template('people_static', people=p, cluster=p.cluster)
+
+
+
+
+@post('/people/update')
+def people_update():
+
+    cluster_json = request.forms.get('cluster')
+    cluster = json.loads(cluster_json)
+    #p.update_image(people_path(), force=True, debug=False)
+    print cluster
+    #p.save()
     
-    return template('people', people=p, cluster=p.cluster, people_json="{}")
+
+@route('/people')
+def people(): 
+    p = get_people()
+    p.load()
+     
+    #make a cluster-like object here
+    #list of lists
+    #need to distill it to json eventually
+    groups = []
+    for group in p.cluster[:]:
+        #print group
+        new_group = []
+        for item in group:
+            person = p.get_first(item)
+            if person:
+                new_group.append(person.to_dict())
+            else:
+                new_group.append({'image':'', 'tag':item})
+
+        groups.append(new_group)
+        
+    pj = json.dumps(groups)
+    print "Length: %s" % len(groups)
+    #print pj
+
+    #for person in p:
+    #    print person.image, person.tag
+    
+    return template('people', people=p, cluster=p.cluster, people_json=pj)
 
 
 @route('/collection/:collection_name/zip/:content_name#.+#')

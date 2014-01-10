@@ -11,7 +11,7 @@ Song, Podcast, Album, Image, Book, Movie, Scene,
 import os, re, copy
 import hashlib
 
-from helpers import save_json, get_media_dimensions, find_json, load_json
+from helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties
 
 from moments.path import Path
 from moments.timestamp import Timestamp
@@ -27,7 +27,7 @@ class Mark(object):
     AKA:
     jump, bookmark, markpoint/MarkPoint
     """
-    def __init__(self, tag='', position=0, source=None, length=None, created=None, bytes=None, title=""):
+    def __init__(self, tag='', position=0, source=None, length=None, created=None, bytes=None, title="", seconds=None):
         #*2013.06.16 08:24:49 
         #not sure how tag and title differ... (see note below)
         #also what about 'name' or 'description' (better in a segment)
@@ -39,11 +39,14 @@ class Mark(object):
         #once we've determined the real title of the mark location:
         #self.title = title
         #this is better represented in a segment instead of a mark
-        
+
         #in milliseconds
         self.position = int(position)
         self.source = source
 
+        if seconds:
+            self.position = float(seconds) * 1000
+        
         #only used in mortplayer
         #assuming length should be ms?
         self.length = length
@@ -1022,7 +1025,7 @@ class Content(object):
             return os.path.join(dd_option, bd_option)
         else:
             return os.path.join(self.drive_dir, self.base_dir)
-            
+        
     path = property(_get_path)
     #def _set_path(self, name):
     #    self.parse_name(name)
@@ -1428,7 +1431,9 @@ class Content(object):
         if location is None:
             location = self.path
 
-        media_check = re.compile(search_for)
+        search = "%s$" % search_for
+        #print "searching using: %s" % search
+        media_check = re.compile(search)
         options = []
         
         if location and os.path.exists(location) and os.path.isdir(location):
@@ -1438,6 +1443,7 @@ class Content(object):
                 for f in files:
                     ignore = False
                     for i in ignores:
+                        #want to make sure extension shows up at the end of the file:
                         if re.search(i, f):
                             ignore = True
                     if not ignore:
@@ -1654,7 +1660,10 @@ class Content(object):
             print "still need to find: %s new items" % len(options)
 
         for item in options:
-            dimensions = get_media_dimensions(item)
+            #dimensions = get_media_dimensions(item)
+            dimensions, duration = get_media_properties(item)
+            self.end = Mark(seconds=duration)
+            #print self.end
             if debug:
                 print "FOUND DIMENSIONS: %s" % dimensions
             filesize = os.path.getsize(item)

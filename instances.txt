@@ -26,6 +26,7 @@
 
 *2013.12.02 20:03:23 code
 /c/medley/instances.txt
+/c/medley/launch.sh
 /c/medley/medley/yapsy/PluginManager.py
 /c/medley/medley/yapsy/IPlugin.py
 /c/medley/medley/scraper.py

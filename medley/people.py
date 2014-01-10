@@ -113,6 +113,20 @@ class Person(object):
         main_file = os.path.join(main_dir, filename)
         return main_file
 
+    def to_dict(self):
+        """
+        simplified version of creating a simple dict object
+        """
+        #print self.__dict__
+        #???
+        temp_d = copy.copy(self.__dict__)
+        #make sure to ignore loaded/scanned contents on a save
+        temp_d.pop("contents", None)
+        #getting rid of old format... could convert, but nothing has this set:
+        temp_d.pop("default_image", None)
+
+        return temp_d
+
     def save(self, root=None):
         """
         make a directory if none exists
@@ -128,13 +142,7 @@ class Person(object):
          
         dest_file = self.make_path(self.root)
         #print dest_file
-        #print self.__dict__
-        #???
-        temp_d = copy.copy(self.__dict__)
-        #make sure to ignore loaded/scanned contents on a save
-        temp_d.pop("contents", None)
-        #getting rid of old format... could convert, but nothing has this set:
-        temp_d.pop("default_image", None)
+        temp_d = self.to_dict()
         
         #save_json(dest_file, self.__dict__)
         print "Saving: %s to %s" % (temp_d, dest_file)
@@ -279,7 +287,11 @@ class People(list):
         
         options = os.listdir(self.meta_root)
         #print options
-        self.cloud_file = os.path.join(self.meta_root, "clouds.txt")
+        #self.cloud_file = os.path.join(self.meta_root, "clouds.txt")
+
+        #moving this to a different file...
+        #don't want to log each entry separately
+        self.cloud_file = os.path.join(self.meta_root, "people.txt")
         if not os.path.exists(self.cloud_file):
             raise ValueError, "Could not find cloud file: %s" % self.cloud_file
 

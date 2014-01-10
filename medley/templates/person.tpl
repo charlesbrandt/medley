@@ -12,7 +12,7 @@
 <p>Similar names:</p>
     %include people_block people=related
 
-<ul id="people" class="content" data-bind='template: { name: "personTmpl", foreach: people }'>
+<ul id="people" class="content" data-bind='template: { name: "personTmpl", foreach: contents }'>
 </ul>
 
 <script id="personTmpl" type="text/html">
@@ -55,21 +55,13 @@
 
 }">
 
-	<div class="wrapper" data-bind="if: available"> 
+	<div class="wrapper"> 
 	  <div class="wrapper" data-bind="if: image"> 
-	    <a data-bind="attr: { href: '/collection/' + collection + '/content/' + original_base_dir }"><img data-bind="attr: { src: '/path/' + image }" class="thumb"></a>
+	    <a data-bind="attr: { href: '/collection/' + collection + '/content/' + content_base }"><img data-bind="attr: { src: '/path/' + image }" class="thumb"></a>
 	  </div>
 	    
-	  <a data-bind="attr: { href: '/collection/' + collection + '/content/' + original_base_dir }"><b data-bind='text: title'></b></a>
+	  <a data-bind="attr: { href: '/collection/' + collection + '/content/' + content_base }"><b data-bind='text: title'></b></a>
 	</div>
-
-	<div class="wrapper" data-bind="ifnot: available"> 
-	  <div class="wrapper" data-bind="if: image"> 
-	    <img data-bind="attr: { src: '/path/' + image }" class="thumb">
-	  </div>
-	</div>
-
-	<b data-bind='text: title'></b>
 
 
 	<ul data-bind="foreach: people">
@@ -83,9 +75,15 @@
 	
 	<p data-bind="text: description, style: {'display': 'none'}"></p>
 	
-	<p>Via: <a data-bind="attr: { href: '/collection/' + collection }, text: collection"></a></p>
+	<p>
+	  <img data-bind="click: $parent.move_to_top" src="/img/arrow-up.svg" width="25" />
+	  <input size="4" data-bind="value: position" />
+	  <img data-bind="click: $parent.move_to_bottom" src="/img/arrow-down.svg" width="25" />
+	</p>
+	<p>
+	  Via: <a data-bind="attr: { href: '/collection/' + collection }, text: collection"></a>
+	</p>
 	
-
     </li>
 </script>
 

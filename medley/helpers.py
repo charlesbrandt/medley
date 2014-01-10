@@ -12,6 +12,7 @@ helper functions, often needed in multiple modules
 import os, json, codecs, re
 import logging
 import subprocess
+import zipfile
 
 from moments.path import Path
 from moments.journal import Journal
@@ -210,6 +211,144 @@ def get_media_dimensions(movie_p, debug=False):
 
     #print size
     return size
+
+def get_media_properties(movie_p, debug=False):
+    """
+    expects a full path to a media item
+    use ffmpeg/avconv to query media for dimensions
+
+    return a string representation of the size
+    the duration in seconds
+    and the file size
+
+    sudo apt-get install libav-tools
+    """
+    #command1 = "ffmpeg -i %s" % (movie_p)
+    command1 = 'avconv -i "%s"' % (movie_p)
+    #print command1
+    process = subprocess.Popen(command1, shell=True,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    #output = process.communicate()[0]
+    output = process.communicate()[1]
+
+    #print output
+    size = None
+    seconds = None
+    
+    lines = output.splitlines()
+    for line in lines:
+        #print line
+        if re.search('Stream', line):
+            if re.search('Video', line):
+                #this is specific to the version of ffmpeg you are using
+                #adjust accordingly
+                parts = line.split(' ')
+                if debug:
+                    print "FOUND: %s" % parts
+                #size = parts[-1]
+                for p in parts:
+                    if re.search('x', p) and len(p.split('x')) == 2:
+                        size = p
+
+                #get rid of trailing commas:
+                if re.search(',$', size):
+                    size = size[:-1]
+                    
+                #size = parts[-11]
+        elif re.search('Duration', line):
+            #print "DURATION!!"
+            #print line
+            parts = line.split()
+            #print parts
+            dstring = parts[1].replace(',', '')
+            #print dstring
+            h, m, s = dstring.split(':')
+            seconds = (int(h) * 60 * 60) + (int(m) * 60) + float(s)
+            #print seconds
+        else:
+            #could look for other content here:
+            #print line
+            pass
+
+    if not seconds:
+        print lines
+        exit()
+    #could return filesize if needed (content.update_dimensions handles this)
+    #filesize = os.path.getsize(movie_p)
+
+    #print size
+    return size, seconds
+
+def grab_frame(movie_p, position, destination=None, debug=False):
+    """
+    expects a full path to a media item
+    use ffmpeg/avconv to extract a frame from the specified file
+
+    position is in seconds
+    
+    sudo apt-get install libav-tools
+
+    http://blog.roberthallam.org/2010/06/extract-a-single-image-from-a-video-using-ffmpeg/comment-page-1/
+    http://ubuntuforums.org/showthread.php?t=2014630
+    """
+    if not destination:
+        parent = os.path.dirname(movie_p)
+        destination = os.path.join(parent, '1.jpg')
+        
+    #command1 = "ffmpeg -i %s" % (movie_p)
+    command1 = "avconv -i %s" % (movie_p)
+    #command1 = "ffmpeg -ss %s -i %s -t 1 -s 480x300 -f image2 imagefile.jpg" % (position, movie_p)
+    #command1 = "avconv -ss %s -i %s -t 1 -f image2 1.jpg" % (position, movie_p)
+    command1 = "avconv -ss %s -i %s -t 1 -f image2 %s" % (position, movie_p, destination)
+    #print command1
+    process = subprocess.Popen(command1, shell=True,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    #output = process.communicate()[0]
+    output = process.communicate()[1]
+
+    return destination
+
+def extract_zip(zip_file, debug=False):
+    """
+    >>> a = 'hello'
+    >>> os.path.split(a)
+    ('', 'hello')
+    """
+    
+    sources = []
+    zipp = Path(zip_file)
+    #print zipp.name
+    #zip_root = os.path.join(content.path, zipp.name)
+    zip_root = os.path.join(os.path.dirname(zip_file), zipp.name)
+    #sources.append(zip_root)
+    if not os.path.exists(zip_root):
+        os.makedirs(zip_root)
+        
+    zfile = zipfile.ZipFile(zip_file)
+    for name in zfile.namelist():
+        (dirname, filename) = os.path.split(name)
+        #print "Decompressing " + filename + " on " + dirname
+        dest_dir = os.path.join(zip_root, dirname)
+        if not dest_dir in sources:
+            sources.append(dest_dir)
+        if debug:
+            print "Decompressing " + filename + " to " + dest_dir + "<br>"
+        if not os.path.exists(dest_dir):
+             os.makedirs(dest_dir)
+
+        dest = os.path.join(dest_dir, name)
+        if not os.path.exists(dest):
+            fd = open(dest, "w")
+            fd.write(zfile.read(name))
+            fd.close()
+            #dpath = Path(dest)
+            #print "making thumb"
+            #img = dpath.load()
+            #img.make_thumbs(['small'], save_original=False)
+
+    return sources
 
 def load_cloud(cloud_name, cloud_file):
     if not cloud_file:
