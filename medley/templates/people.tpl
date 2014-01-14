@@ -1,7 +1,10 @@
 
 <ul id="cluster" class="content" data-bind="foreach: cluster.groups">
-  <button class="button" type="button" data-bind="click: $root.show($index), text: 'Section' + $index()"></button>
-  <div class="wrapper" data-bind="if: $root.showing() === $index">
+  <li class="content"><button class="button" type="button" data-bind="click: $root.show($index()), text: $index() + '. ' + items()[0].tag"></button></li>
+</ul>
+
+<ul id="cluster" class="content" data-bind="foreach: cluster.groups">
+  <div class="wrapper" data-bind="if: $root.showing() === $index()">
     <ul id="people" class="content" data-bind="template: { name: 'personTmpl', foreach: items }"> 
     </ul>
   </div>
@@ -53,7 +56,7 @@
 
 	<div class="wrapper"> 
 	  <div class="wrapper" data-bind="if: image"> 
-	    <a data-bind="attr: { href: '/person/' + tag }"><img class="lazy thumb" data-bind="lazyImage: imageUrl" /></a>
+	    <a data-bind="attr: { href: '/person/' + tag + '/'}"><img class="lazy thumb" data-bind="lazyImage: imageUrl" /></a>
 	  </div>
 	    
 	  <a data-bind="attr: { href: '/person/' + tag }"><b data-bind='text: tag'></b></a>

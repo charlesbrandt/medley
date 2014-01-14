@@ -83,6 +83,9 @@ define(['jquery', 'lodash', 'ko', 'viewports'], function($, _, ko, vp) {
 	//console.log("self: " + this);
 
 	self.parent = parent;
+	
+	//console.log("Adding data: " + data);
+	//console.log("data length" + data.length);
 
 	self.items = ko.observableArray();
 	for (var i = 0, len = data.length; i < len; i++) {
@@ -90,6 +93,12 @@ define(['jquery', 'lodash', 'ko', 'viewports'], function($, _, ko, vp) {
 	    self.items.push(new Person(i, self, cur_item.tag, cur_item.image));
 	    //console.log("after adding person: " + self.items().length);
 	};
+
+	//special case for empty lists:
+	if (data.length === 0) {
+	    console.log("No data sent, creating empty");
+	    self.items.push(new Person(0, self, "empty", "no_image"));
+	}
 
 	self.update_pos = function() {
 	    //finally update the position of everything
@@ -183,12 +192,17 @@ var PeopleModel = function() {
 
     //console.log(groups.length);
     //console.log(groups);
-    
+    self.log = function(something) {
+	console.log("something: " + something);
+	return something;
+    }
+
     self.cluster = new Cluster(ogroups);
     //console.log(self.cluster.groups().length);
 
     self.showing = ko.observable('');
     self.show = function(what) {
+	//console.log("Switching view to: " + what );
         return (function(){ self.showing(what); });
     }
 

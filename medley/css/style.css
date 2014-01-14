@@ -384,8 +384,8 @@ ul {
 }
 .summary {
   margin: 5px;
+  margin-top: 10px;
   text-align: center;
-  width: 260px;
 }
 .available {
   background-color: lightgray;

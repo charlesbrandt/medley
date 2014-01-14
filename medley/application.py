@@ -50,6 +50,7 @@ from collector import Collections, Collection, CollectionSummary
 from people import People
 
 from moments.path import Path
+from moments.journal import Journal
 
 #logging.basicConfig(level=logging.DEBUG)
 logging.basicConfig(filename="debug.log", level=logging.DEBUG)
@@ -366,18 +367,35 @@ def people_static():
     
     return template('people_static', people=p, cluster=p.cluster)
 
-
-
-
 @post('/people/update')
 def people_update():
-
+    
     cluster_json = request.forms.get('cluster')
     cluster = json.loads(cluster_json)
     #p.update_image(people_path(), force=True, debug=False)
-    print cluster
+    #print cluster
     #p.save()
+
+    data = ''
+    for group in cluster:
+        for item in group:
+            data += item + " "
+        data += "\n"
+
+    #print data
     
+    path = people_path()
+    #TODO:
+    #generalize path creation here:
+    full_path = os.path.join(path, 'meta', 'people.txt')
+
+    if os.path.exists(full_path):
+        os.remove(full_path)
+
+    clouds = Journal(full_path)
+    #make_entry
+    clouds.make(data=data, tags=[ configs['person_term'] ])
+    clouds.save(full_path)
 
 @route('/people')
 def people(): 
