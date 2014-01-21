@@ -60,6 +60,7 @@ class Person(object):
         self.local_path = ''
 
         #these should be read only (don't want to have to synchronize changes)
+        #don't make changes to the json files they were loaded from either!
         self.contents = []
 
         #ok to store this list
