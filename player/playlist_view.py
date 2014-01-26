@@ -10,6 +10,11 @@ from medley.helpers import find_json, make_json_path, load_json
 
 from moments.path import Path
 
+re1='(\\d+)(\.)'	# Integer Number 1
+find_number = re.compile(re1,re.IGNORECASE|re.DOTALL)
+
+
+
 class PlaylistModel(QtCore.QAbstractTableModel):
     """
     wrap a medley.playlist.Playlist object
@@ -745,6 +750,10 @@ class MarksWidget(QtGui.QWidget):
         addAction.triggered.connect(self.add_mark)
         marks_toolbar.addAction(addAction)
 
+        snapshotAction = QtGui.QAction(QtGui.QIcon('images/camera.png'), 'Take Snapshot', self)
+        snapshotAction.triggered.connect(self.take_snapshot)
+        marks_toolbar.addAction(snapshotAction)
+
         removeAction = QtGui.QAction(QtGui.QIcon('images/minus.png'), 'Remove', self)
         removeAction.triggered.connect(self.remove_mark)
         marks_toolbar.addAction(removeAction)
@@ -760,6 +769,7 @@ class MarksWidget(QtGui.QWidget):
         mergeAction = QtGui.QAction(QtGui.QIcon('images/merge.png'), 'Merge titles and marks', self)
         mergeAction.triggered.connect(self.merge_titles)
         marks_toolbar.addAction(mergeAction)
+
 
         #SPACER HERE
         #don't see any spacers for toolbars.
@@ -781,6 +791,8 @@ class MarksWidget(QtGui.QWidget):
         """
         synchronize the contents of content.marks
         with what is in QListWidget
+
+        (updates the view)
         """
         #reorder list based on times
         self.content.marks.sort()
@@ -802,7 +814,7 @@ class MarksWidget(QtGui.QWidget):
 
 
 
-    def add_mark(self, mark=''):
+    def add_mark(self, tag=''):
         #get current position from player (00:00 is ok)
         if self.player:
         #if main_player:
@@ -811,7 +823,7 @@ class MarksWidget(QtGui.QWidget):
             
             #display_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
             #hours = time / 3600000
-            mark = Mark(mark, time)
+            mark = Mark(tag, time)
             self.content.marks.append(mark)
             self.sync()
             #mark = "%s - %s" % (display_time.toString('h:mm:ss'), mark)
@@ -824,6 +836,8 @@ class MarksWidget(QtGui.QWidget):
             self.content.marks.append(mark)
             self.sync()
 
+        return mark
+    
     def remove_mark(self, row=None):
         if row is None:
             row = self.marks.currentRow()
@@ -833,6 +847,8 @@ class MarksWidget(QtGui.QWidget):
 
     def on_changed(self, item):
         """
+        handle a manual edit of a mark after change accepted
+        
         occasionally crashes with following traceback:
 
 Traceback (most recent call last):
@@ -858,6 +874,7 @@ Segmentation fault: 11
                 self.content.marks[row] = mark
                 #print "Marks.on_change called: %s, %s" % (item.text(), text)
                 self.sync()
+
         else:
             print dir(item)
             print "Item: %s" % item
@@ -873,32 +890,117 @@ Segmentation fault: 11
         new_prefix = self.track_prefix.text()
         self.content.track_prefix = new_prefix
 
-        if not self.content.remainder.has_key("tracks"):
-            self.content.remainder['tracks'] = []
-        tracks = self.content.remainder['tracks']
+        #if not self.content.remainder.has_key("tracks"):
+        #    self.content.remainder['tracks'] = [ "1. " ]
+        #if not len(self.content.titles):
+        #    self.titles.append("1. ")
+        
+        #tracks = self.content.remainder['tracks']
+        #self.content.marks.make_segments(self.content, titles=tracks)
+        self.content.marks.make_segments(self.content)
         self.content.history.make("Merging titles with marks", ["merge"])
-        self.content.marks.make_segments(self.content, titles=tracks)
         self.content.save()
-
-        #matching titles/tracks should happen in make_segments() now:
-        ## count = 0
-        ## tracks = self.content.remainder['tracks']
-        ## #tracks = self.content.tracks
-        ## for cur_track in tracks:
-        ##     if count < len(self.content.segments):
-        ##         self.content.segments[count].title = cur_track
-        ##     else:
-        ##         print "%s tracks, %s segments" % (len(tracks), len(self.content.segments))
-        ##         print "EXTRA track title: %s" % cur_track
-        ##     count += 1
-
-        ## if len(self.content.segments) > len(tracks):
-        ##     print "WARNING: extra segments: %s tracks, %s segments" % (len(tracks), len(self.content.segments))
 
         #refresh ContentWindow with latest changes
         self.parent().parent().update_view(self.content)
 
+    def add_mark_and_title(self, title='', add_index=True):
+        """
+        similar to add_mark
+        but also add a title
+        and shift any following title numbers accordingly
 
+        if add_index is True,
+        will look for the index at the current mark position
+        add that index to the current title
+        then increment all subsequent titles
+
+        this may not be necessary if the new mark is not meant
+        to designate a new segment (just a note)
+
+        but in this case, isn't easier to just use the mark.title
+        to keep everything in the right place?
+        """
+
+        if self.player:
+            time = self.player.currentTime()
+            mark = Mark(mark, time)
+
+            self.content.marks.sort()
+            index = 0
+            found = False
+            new_pos = None
+            for existing in self.content.marks:
+                if not found and (existing.position > mark.position):
+                    found = True
+                    new_pos = index
+                index += 1
+
+            if len(self.content.titles) > new_pos:
+                new_pos_number = None
+
+                for item in self.content.titles[new_pos:]:
+                    #go through and increment all subsequent titles
+                    #then create a new title
+                    item = self.content.titles[new_pos]
+                    m = find_number.search(title)
+                    if m:
+                        number = int(m.group(1))
+                        #print "("+int1+")"+"\n"
+                        #sorting.append( (int(int1), title) )
+
+            #self.content.marks.append(mark)
+            self.sync()
+            #mark = "%s - %s" % (display_time.toString('h:mm:ss'), mark)
+
+        else:
+            #nothing to get a time from
+            pass
+
+    def take_snapshot(self):
+        """
+        add a new mark with a corresponding title
+        """
+        for existing in self.content.marks:
+            if existing.tag == "snapshot, default":
+                existing.tag = "snapshot"
+                                
+        mark = self.add_mark('snapshot, default')
+
+        #this always returns null image:
+        #seems to be a known bug:
+        #http://qt-project.org/forums/viewthread/2487
+        #image = self.player.video.snapshot()
+
+        #this will include any windows that are over the video window
+        image = QtGui.QPixmap.grabWindow(self.player.video_window.winId())
+        
+        options = os.listdir(self.content.path)
+        #print self.content.path
+        #print options
+        destination = os.path.join(self.content.path, "1.jpg")
+        if os.path.exists(destination):
+            index = 2
+            available = None
+            while not available:
+                name = "%s.jpg" % index
+                option = os.path.join(self.content.path, name)
+                if not os.path.exists(option):
+                    available = option
+                index += 1
+            #move the existing 1.jpg to the new available option:
+            os.rename(destination, available)
+
+        result = image.save(destination, "JPEG", quality=100)
+        print "Image Saved: %s" % destination
+        #print "Null?: %s" % image.isNull()
+        #print image.size()
+        #print result
+
+        #format is not a method of QPixmap
+        #print image.format()
+        
+        
 class TitleList(QtGui.QListWidget):
     """
     ListWidget that allows custom drag and drop response:
@@ -920,16 +1022,17 @@ class TitleList(QtGui.QListWidget):
         just use the order of the ListWidget as authoritative
         """
         #print "Order change detected!!"
-        if self.content and self.content.remainder.has_key('tracks'):
+        #if self.content and self.content.remainder.has_key('tracks'):
+        if self.content:
             new_order = []
             for row in range(self.count()):
                 print self.item(row).text()
                 new_order.append(self.item(row).text())
-            self.content.remainder['tracks'] = new_order
+            #self.content.remainder['tracks'] = new_order
+            self.content.titles = new_order
             #self.content.remainder['tracks'].sort()
             #for title in self.content.remainder['tracks']:
         self.parent().sync()
-        print
         
         
 class TitlesWidget(QtGui.QWidget):
@@ -991,38 +1094,41 @@ class TitlesWidget(QtGui.QWidget):
 
     def on_changed(self, item):
         row = self.titles.row(item)
-        if self.content.remainder.has_key('tracks'):
-            tracks = self.content.remainder['tracks']
-            if row < len(tracks):
-                title = tracks[row]
-                #title = self.content.titles[row]
-                if title != item.text():
-                    tracks[row] = item.text()
-                    #print "Titles.on_change called: %s, %s" % (item.text(), title)
-                    #be careful where sync is called...
-                    #easy to get into an infinite loop with this
-                    self.sync()
-            else:
-                #must have a new item... just append it:
-                tracks.append(item.text())
+        #if self.content.remainder.has_key('tracks'):
+            #tracks = self.content.remainder['tracks']
+
+        if row < len(self.content.titles):
+            title = self.content.titles[row]
+            #title = self.content.titles[row]
+            if title != item.text():
+                self.content.titles[row] = item.text()
+                #print "Titles.on_change called: %s, %s" % (item.text(), title)
+                #be careful where sync is called...
+                #easy to get into an infinite loop with this
                 self.sync()
+        else:
+            #must have a new item... just append it:
+            self.content.titles.append(item.text())
+            self.sync()
 
 
     def new_title(self, title='-'):        
-        if title == '-' and self.content.remainder.has_key('tracks'):
+        #if title == '-' and self.content.remainder.has_key('tracks'):
+        if title == '-':
             #passed the default...
             #try to find the next number to add automatically
 
             #self.content.remainder['tracks'].sort()
-            re1='(\\d+)(\.)'	# Integer Number 1
-            rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
 
-            tracks = self.content.remainder['tracks']
+            #tracks = self.content.remainder['tracks']
+            #tracks = self.content.titles
             #print "TRACKS: %s" % tracks
 
             sorting = []
-            for title in tracks:
-                m = rg.search(title)
+            #for title in tracks:
+            for title in self.content.titles:
+                #m = rg.search(title)
+                m = find_number.search(title)
                 if m:
                     int1 = m.group(1)
                     #print "("+int1+")"+"\n"
@@ -1032,6 +1138,8 @@ class TitlesWidget(QtGui.QWidget):
                 number = sorting[-1][0]
                 plus = number + 1
                 title = "%s. " % plus
+            else:
+                title = "1. "
 
         item = self.add_title(title)
 
@@ -1069,36 +1177,39 @@ class TitlesWidget(QtGui.QWidget):
         #print content.to_dict()
         self.titles.clear()
         #self.titles.addItems(content.remainder['titles'])
-        if self.content.remainder.has_key('tracks'):
-            #self.content.remainder['tracks'].sort()
-            re1='(\\d+)(\.)'	# Integer Number 1
-            rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
+        #if self.content.remainder.has_key('tracks'):
 
-            tracks = self.content.remainder['tracks']
-            #print "TRACKS: %s" % tracks
+        #self.content.remainder['tracks'].sort()
+        #re1='(\\d+)(\.)'	# Integer Number 1
+        #rg = re.compile(re1,re.IGNORECASE|re.DOTALL)
 
-            sorting = []
-            for title in tracks:
-                m = rg.search(title)
-                if m:
-                    int1 = m.group(1)
-                    #print "("+int1+")"+"\n"
-                    sorting.append( (int(int1), title) )
-                else:
-                    sorting.append( (1000000, title) )
-            sorting.sort()
-            #print "SORTING: %s" % sorting
-            
-            updated = []
-            for item in sorting:
-                updated.append(item[1])
-            #print "UPDATED: %s" % updated
+        #tracks = self.content.remainder['tracks']
+        #print "TRACKS: %s" % tracks
 
-            self.content.remainder['tracks'] = updated
-            
-            for title in updated:
-                self.add_title(title)
-            #self.titles.addItems(content.remainder['tracks'])
+        sorting = []
+        for title in self.content.titles:
+            #m = rg.search(title)
+            m = find_number.search(title)
+            if m:
+                int1 = m.group(1)
+                #print "("+int1+")"+"\n"
+                sorting.append( (int(int1), title) )
+            else:
+                sorting.append( (1000000, title) )
+        sorting.sort()
+        #print "SORTING: %s" % sorting
+
+        updated = []
+        for item in sorting:
+            updated.append(item[1])
+        #print "UPDATED: %s" % updated
+
+        #self.content.remainder['tracks'] = updated
+        self.content.titles = updated
+
+        for title in updated:
+            self.add_title(title)
+        #self.titles.addItems(content.remainder['tracks'])
 
 
     def remove_title(self, row=None):
@@ -1109,7 +1220,8 @@ class TitlesWidget(QtGui.QWidget):
         self.titles.takeItem(row)
         #this might be unnecessary after self.titles runs sync
         #seems very necessary
-        self.content.remainder['tracks'].pop(row)    
+        #self.content.remainder['tracks'].pop(row)    
+        self.content.titles.pop(row)    
 
     def open_titles(self):
         pass
@@ -1173,6 +1285,11 @@ class ContentWindow(QtGui.QMainWindow):
         make_title = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
                                     self, self.titles_col.new_title)
 
+        make_segments = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+S'),
+                                        self, self.marks_col.merge_titles)
+
+        screen_capture = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+B'),
+                                         self, self.marks_col.take_snapshot)
 
         plays = QtGui.QShortcut(QtGui.QKeySequence(" "), self,
                                 player.toggle_play)

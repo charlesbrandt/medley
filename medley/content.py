@@ -276,6 +276,10 @@ class MarkList(list):
         to only apply titles to segments
         (can try to do this outside of method, but might be harder)
         """
+        if not titles:
+            #get titles from parent content object:
+            titles = parent.titles
+        
         groups = [ ]
 
         #reset segment ID
@@ -598,7 +602,7 @@ class Content(object):
     or multiple, varying instances of the same content
     (e.g. different bitrates, non-compressed, different resoultions)
 
-    this is a place to draw those together
+    this is a place to draw those together and track meta data
     """
     def __init__(self, source=None, content={}, root=None, base_dir='', debug=False):
         """
@@ -653,7 +657,8 @@ class Content(object):
         self.media = []
 
 
-
+        #our title
+        #not to be confused with titles, which are used with segments and marks
         self.title = ''
         self.description = ''
         #when content was created or published (according to publisher)
@@ -676,7 +681,11 @@ class Content(object):
         self.image = ''
         
         self.marks = MarkList()
-
+        #it is common to keep a separate list of titles
+        #that are then paired with marks to create segments
+        #this is the way many marks+titles are imported from other sources
+        #these are usually stored as remainder['tracks']
+        self.titles = []
         self.segments = []
 
         #using a segment id (immutable)
@@ -1163,6 +1172,11 @@ class Content(object):
                 self.tags.append(to_tag(tag))
             del content['tags']
 
+        if content.has_key('tracks'):
+            for title in content['tracks']:
+                self.titles.append(title)
+            del content['tracks']
+
         if content.has_key('status'):
             self.status = content['status']
             del content['status']
@@ -1325,7 +1339,10 @@ class Content(object):
         if self.title or include_empty:
             snapshot['title'] = self.title
         if self.timestamp or include_empty:
-            snapshot['timestamp'] = self.timestamp.compact()
+            if self.timestamp: 
+                snapshot['timestamp'] = self.timestamp.compact()
+            else:
+                snapshot['timestamp'] = ''
 
         if self.status or include_empty:
             snapshot['status'] = self.status
@@ -1362,6 +1379,11 @@ class Content(object):
 
         if self.track_prefix or include_empty:
             snapshot['track_prefix'] = self.track_prefix
+
+
+        #keeping this consistent with old format:
+        if self.titles or include_empty:
+            snapshot['tracks'] = self.titles
 
         #marks = []
         #for m in self.marks:
