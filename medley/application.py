@@ -198,12 +198,25 @@ def person_update(person_name):
     ppl.load()
 
     p_list = ppl.get(person_name)
-    #print "Looked up: %s" % person_name
+    #print "Looked up: %s" % person_name 
     #print "Received: %s" % p_list
     p = p_list[0]
 
-    ppl_json = request.forms.get('people')
-    p.content_order = json.loads(ppl_json)
+    content_json = request.forms.get('contents')
+    p.content_order = json.loads(content_json)
+
+    cutoff_json = request.forms.get('cutoffs')
+    p.cutoffs = json.loads(cutoff_json)
+
+    cutoff_tag_json = request.forms.get('cutoff_tags')
+    p.cutoff_tags = json.loads(cutoff_tag_json)
+
+    link_json = request.forms.get('links')
+    p.links = json.loads(link_json)
+
+    note_json = request.forms.get('notes')
+    p.notes = json.loads(note_json)
+
     p.update_image(people_path(), force=True, debug=False)
     #print p.content_order
     p.save()

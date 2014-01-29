@@ -394,8 +394,24 @@ ul {
 .thumb {
   width: 230px;
 }
+.icon {
+  width: 20px;
+  height: 20px;
+}
 header#top {
   margin-bottom: 1em;
+}
+.leftcolumn {
+  display: inline;
+  float: left;
+  width: 47.91666666666667%;
+  margin: 0 1.0416666666666665%;
+}
+.rightcolumn {
+  display: inline;
+  float: left;
+  width: 47.91666666666667%;
+  margin: 0 1.0416666666666665%;
 }
 #maincolumn {
   display: inline;

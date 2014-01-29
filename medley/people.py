@@ -10,9 +10,9 @@ Could store small meta data like cover art, as a reference / reminder
 
 might be good to have some qualities of Content referenced locally
 
-see also people_create.py
+see also people_create.py 
 """
-import os, re, copy
+import os, re, copy, json
 
 from collector import Cluster, CollectionSimple
 from helpers import save_json, load_json
@@ -67,6 +67,16 @@ class Person(object):
         #just a list of base_dirs for each content item
         self.content_order = []
 
+        #cutoffs is a list of numbers
+        #each number specifies a position in the contents
+        #where a different class of content starts
+        #cutoff tags gives a label to each of those cutoffs
+        #
+        #stored as a comma separated string for easier editing
+        #can split when using in scripts
+        self.cutoffs = ''
+        self.cutoff_tags = ''
+
         #correspond to main cluster group?
         self.rating = ''
 
@@ -74,6 +84,7 @@ class Person(object):
 
         self.notes = ''
 
+        #verified links only
         self.links = ''
 
         #path, should be locally available
@@ -89,6 +100,9 @@ class Person(object):
     def __repr__(self):
         return "Person: %s" % self.tag
 
+    def split_tag(self):
+        return self.tag.replace('_', '+')
+        
     #TODO:
     #this might be better as a property
     def main_dir(self):
@@ -114,6 +128,12 @@ class Person(object):
         main_file = os.path.join(main_dir, filename)
         return main_file
 
+    def as_json(self):
+        """
+        for using a person object in javascript
+        """
+        return json.dumps(self.to_dict())
+    
     def to_dict(self):
         """
         simplified version of creating a simple dict object

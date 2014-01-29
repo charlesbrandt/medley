@@ -1,3 +1,9 @@
+*2014.01.29 12:15:54 layout_simple
+/c/medley/instances.txt
+/c/medley/medley/less/style.less
+/c/medley/medley/js/person.js
+/c/medley/medley/templates/person.tpl
+
 *2013.12.20 17:43:49 layout
 /c/medley/instances.txt
 /c/medley/medley/templates/collections.tpl

@@ -1318,7 +1318,7 @@ class Content(object):
             elif isinstance(value, str) or isinstance(value, unicode):
                 snapshot[key] = value
             else:
-                print "deep copy for type: %s : %s" % (type(value), value)
+                #print "deep copy for type: %s : %s" % (type(value), value)
                 snapshot[key] = copy.deepcopy(value)
         #print ""
         #print snapshot

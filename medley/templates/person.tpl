@@ -1,3 +1,5 @@
+<div class="leftcolumn">
+
 <h1>  <a href="/person/{{ person.tag }}/">{{ person.name }}</a> </h1>
 
 <h3 class="main_tag">{{ person.tag }}</h3>
@@ -11,6 +13,40 @@
 
 <p>Similar names:</p>
     %include people_block people=related
+
+
+</div>
+
+
+
+<div class="rightcolumn">
+
+<p>Links:
+<b data-bind="visible: !editing_links(), text: links, click: edit_links"></b>
+<textarea data-bind="visible: editing_links(), value: links, hasFocus: editing_links" rows="4" cols="50"></textarea>
+<img src="/img/edit.png" class="icon" data-bind="visible: !editing_links(), click: edit_links">
+<a href="http://www.google.com/search?q={{ person.split_tag() }}">google</a>
+</p>
+
+
+
+<p>Notes:
+<b data-bind="visible: !editing_notes(), text: notes, click: edit_notes"></b>
+<textarea data-bind="visible: editing_notes(), value: notes, hasFocus: editing_notes" rows="4" cols="50"></textarea>
+<img src="/img/edit.png" class="icon" data-bind="visible: !editing_notes(), click: edit_notes">
+</p>
+
+<p>Cutoffs: <b data-bind="visible: !editing_cutoffs(), text: cutoffs, click: edit_cutoffs"></b>
+<input data-bind="visible: editing_cutoffs(), value: cutoffs, hasFocus: editing_cutoffs">
+<img src="/img/edit.png" class="icon" data-bind="visible: !editing_cutoffs(), click: edit_cutoffs">
+</p>
+
+<p>Cutoff tags: <b data-bind="visible: !editing_cutoff_tags(), text: cutoff_tags, click: edit_cutoff_tags"></b>
+<input data-bind="visible: editing_cutoff_tags(), value: cutoff_tags, hasFocus: editing_cutoff_tags">
+<img src="/img/edit.png" class="icon" data-bind="visible: !editing_cutoff_tags(), click: edit_cutoff_tags">
+</p>
+
+</div>
 
 <ul id="people" class="content" data-bind='template: { name: "personTmpl", foreach: contents }'>
 </ul>
@@ -89,6 +125,7 @@
 
 <script type="text/javascript">
   var contents = {{! contents }};
+  var cur_person = {{! person.as_json() }};
 </script>
 
   <script type="text/javascript">window.JSON || document.write('<script src="js/lib/json2.js"><\/script>')</script>

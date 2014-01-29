@@ -7,6 +7,90 @@ define(['jquery', 'lodash', 'ko'], function($, _, ko) {
 var ContentModel = function() {
     var self = this;
 
+    //list of positions that mark different cut off points
+    //self._cutoffs = cur_person.cutoffs;
+    //self._cutoffs = "test";
+
+    self._cutoffs = ko.observable(cur_person.cutoffs);
+
+    self.editing_cutoffs = ko.observable(false);
+    self.edit_cutoffs = function() {
+	//console.log("Changing editing_cutoffs");
+	self.editing_cutoffs(true);
+	
+	/*
+	if (self.editing_cutoffs()) {
+	    self.editing_cutoffs(false);
+	}
+	else {
+	    self.editing_cutoffs(true);
+	}
+	*/
+    };
+    self.cutoffs = ko.computed({
+	read: function () {
+	    return self._cutoffs();
+	},
+	write: function (value) {
+	    //console.log(this);
+	    //console.log("changing cutoffs value: ", value);
+	    //self._cutoffs = value;
+	    self._cutoffs(value);
+	    self.post();
+	    //console.log(self._cutoffs());
+	},
+	owner: self
+    });
+
+
+    self._cutoff_tags = ko.observable(cur_person.cutoff_tags);
+    self.editing_cutoff_tags = ko.observable(false);
+    self.edit_cutoff_tags = function() { self.editing_cutoff_tags(true) };	
+    self.cutoff_tags = ko.computed({
+	read: function () {
+	    return self._cutoff_tags();
+	},
+	write: function (value) {
+	    self._cutoff_tags(value);
+	    self.post();
+	},
+	owner: self
+    });
+
+    self._links = ko.observable(cur_person.links);
+    self.editing_links = ko.observable(false);
+    self.edit_links = function() { self.editing_links(true) };	
+    self.links = ko.computed({
+	read: function () {
+	    return self._links();
+	},
+	write: function (value) {
+	    self._links(value);
+	    self.post();
+	},
+	owner: self
+    });
+
+    self._notes = ko.observable(cur_person.notes);
+    self.editing_notes = ko.observable(false);
+    self.edit_notes = function() { self.editing_notes(true) };	
+    self.notes = ko.computed({
+	read: function () {
+	    return self._notes();
+	},
+	write: function (value) {
+	    self._notes(value);
+	    self.post();
+	},
+	owner: self
+    });
+
+    //console.log(self.editing_cutoffs());
+    //console.log(!self.editing_cutoffs());
+
+
+
+
     self.drag_start_index = ko.observable();
     self.drag_target_index = ko.observable();
     self.dragging = ko.computed(function() {
@@ -41,6 +125,31 @@ var ContentModel = function() {
 
 	self.contents.push(contents[i]);
     }
+
+
+    self.post = function() {
+	// really only need to send the base dirs here:
+	var bases = [];
+	for (var i = 0, len = self.contents().length; i < len; i++) {
+	    bases.push(self.contents()[i].content_base);
+	}
+	//console.log(self.contents());
+	//console.log(bases);
+	$.ajax({
+	    url: 'update',
+	    type: 'POST',
+	    data: {
+		//'people': ko.toJSON(self.contents),
+		'contents': JSON.stringify(bases),
+		'cutoffs': JSON.stringify(self.cutoffs()),
+		'cutoff_tags': JSON.stringify(self.cutoff_tags()),
+		'links': JSON.stringify(self.links()),
+		'notes': JSON.stringify(self.notes()),
+	    }
+	});
+    };
+
+
 
     self.update_pos = function() {
 	//finally update the position of everything
@@ -91,24 +200,6 @@ var ContentModel = function() {
         self.contents()[from] = toObj;
         self.contents.valueHasMutated()
     }
-
-    self.post = function() {
-	// really only need to send the base dirs here:
-	var bases = [];
-	for (var i = 0, len = self.contents().length; i < len; i++) {
-	    bases.push(self.contents()[i].content_base);
-	}
-	//console.log(self.contents());
-	//console.log(bases);
-	$.ajax({
-	    url: 'update',
-	    type: 'POST',
-	    data: {
-		//'people': ko.toJSON(self.contents),
-		'people': JSON.stringify(bases),
-	    }
-	});
-    };
 
 };
 ko.applyBindings(new ContentModel());
