@@ -675,7 +675,9 @@ class iPhoneBookmarks(list):
                 time = line[12:]
                 cur_mark.from_time(time)
 
-            elif re.match("Notes: ", line):
+            #only need to worry about Notes if we have a current mark
+            #e.g. ignore global notes object:
+            elif re.match("Notes: ", line) and cur_mark:
                 cur_mark.tag = line[7:].strip() + " " + cur_mark.tag
 
             else:

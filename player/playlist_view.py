@@ -577,6 +577,9 @@ class PlaylistView(QtGui.QTableView):
         self.content_view.show()
 
     def add_contents(self, contents):
+        """
+        helper for add_media to do the actual update of View Model
+        """
 
         ## parent = self.model().getNode(self.cur_index)
         ## child_count = parent.childCount()
