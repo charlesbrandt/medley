@@ -330,14 +330,14 @@ class MarkList(list):
             #print
             #print default_pattern
             #print next_mark.tag
-            if re.search('skip*', next_mark.tag) or re.search('\+', next_mark.tag):
+            if re.search('skip', next_mark.tag) or re.search('Skip', next_mark.tag) or re.search('\+', next_mark.tag):
                 segment.marks.append( next_mark )
                 tags = next_mark.tag.split(' ')
                 if '-' in tags:
                     tags.remove('-')
                 segment.tags.extend(tags)
 
-            elif re.search('talk*', next_mark.tag) or re.search('Talk*', next_mark.tag) or re.search('call*', next_mark.tag) or re.search('Call*', next_mark.tag):
+            elif re.search('talk', next_mark.tag) or re.search('Talk', next_mark.tag) or re.search('call', next_mark.tag) or re.search('Call', next_mark.tag):
                     in_talk = True
 
                     #split the current track up into segments too
