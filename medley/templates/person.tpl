@@ -1,19 +1,22 @@
 <div class="leftcolumn">
 
-<h1>  <a href="/person/{{ person.tag }}/">{{ person.name }}</a> </h1>
+<h3 class="main_tag">{{ person.tag }} (<b>{{ len(person.contents) }}</b>)</h3>
 
-<h3 class="main_tag">{{ person.tag }}</h3>
-
-%if person.tags:
-<p>Also Known As:</p>
 % other_tags = person.tags[:]
 % other_tags.remove(person.tag)
+%if other_tags:
+<p>Also known as:</p>
 %include tag_block tags=other_tags
 %end
 
+<p>Similar to:
+<span data-bind="visible: !editing_similar(), html: similar_links, click: edit_similar"></span>
+<input data-bind="visible: editing_similar(), value: similar, hasFocus: editing_similar">
+<img src="/img/edit.png" class="icon" data-bind="visible: !editing_similar(), click: edit_similar">
+</p>
+
 <p>Similar names:</p>
     %include people_block people=related
-
 
 </div>
 
@@ -27,8 +30,6 @@
 <img src="/img/edit.png" class="icon" data-bind="visible: !editing_links(), click: edit_links">
 <a href="http://www.google.com/search?q={{ person.split_tag() }}">google</a>
 </p>
-
-
 
 <p>Notes:
 <b data-bind="visible: !editing_notes(), text: notes, click: edit_notes"></b>
@@ -47,6 +48,8 @@
 </p>
 
 </div>
+
+<div class="row"></div>
 
 <ul id="people" class="content" data-bind='template: { name: "personTmpl", foreach: contents }'>
 </ul>
@@ -91,6 +94,13 @@
 
 }">
 
+	<p class="position">
+	  <img class="icon" data-bind="click: $parent.move_to_top" src="/img/arrow-up.svg" />
+	  <input size="4" data-bind="value: position" />
+	  <img class="icon" data-bind="click: $parent.move_to_bottom" src="/img/arrow-down.svg" />
+	</p>
+
+
 	<div class="wrapper"> 
 	  <div class="wrapper" data-bind="if: image"> 
 	    <a data-bind="attr: { href: '/collection/' + collection + '/content/' + content_base }"><img data-bind="attr: { src: '/path/' + image }" class="thumb"></a>
@@ -111,11 +121,6 @@
 	
 	<p data-bind="text: description, style: {'display': 'none'}"></p>
 	
-	<p>
-	  <img data-bind="click: $parent.move_to_top" src="/img/arrow-up.svg" width="25" />
-	  <input size="4" data-bind="value: position" />
-	  <img data-bind="click: $parent.move_to_bottom" src="/img/arrow-down.svg" width="25" />
-	</p>
 	<p>
 	  Via: <a data-bind="attr: { href: '/collection/' + collection }, text: collection"></a>
 	</p>

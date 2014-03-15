@@ -186,7 +186,11 @@ class CollectionSimple(list):
                         c = Content(json_file)
                         if debug:
                             print "setting base_dir to: %s" % relative_root
+
+                        #if updating one here, should update the other:
                         c.base_dir = relative_root
+                        c.drive_dir = str(parent)
+                        
                         self.append(c)
 
         if debug:

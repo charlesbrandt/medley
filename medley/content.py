@@ -824,20 +824,39 @@ class Content(object):
             #    print "WARNING: could not find base_dir (%s) in source_dir (%s)" % (self.base_dir, source_dir)
             #else:
 
+
             #base_dir will only be set if it already exists in the loaded json
             #print self.base_dir
-            if re.search(self.base_dir, source_dir):
-                #must have self.base_dir in source_dir
-                #if not drive_dir_matches:
-                if len(self.base_dir):
+            if len(self.base_dir):
+                if re.search(self.base_dir, source_dir):
                     base_len = len(self.base_dir) * -1
                     new_drive = source_dir[:base_len]
-                else:
-                    new_drive = source_dir
 
-                if self.drive_dir != new_drive:
-                    print "Updating self.drive_dir: ->%s<- (type: %s) with new name: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), new_drive, type(new_drive))
-                self.drive_dir = new_drive
+                    if self.drive_dir != new_drive:
+                        #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), new_drive, type(new_drive))
+                        pass
+
+                    self.drive_dir = new_drive
+                        
+                else:
+                    #base_dir didn't match our source_path
+                    #this could happen in the case of copied content
+                    #to people indexes
+                    #update both in that case
+                    #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), source_dir, type(source_dir))
+                    self.base_dir = ''
+                    self.drive_dir = source_dir
+
+
+            else:
+                if self.drive_dir != source_dir:
+                    #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), source_dir, type(source_dir))
+                    self.drive_dir = source_dir
+                    
+            #print self.drive_dir
+            #print self.base_dir
+            #print self.path
+            #print
 
 
 
@@ -1480,7 +1499,10 @@ class Content(object):
             #clear out anything that should be removed first
             for ignore in ignores:
                 for image in images[:]:
-                    if str(image) == str(ignore):
+                    #this is a 1:1 match:
+                    #if str(image) == str(ignore):
+                    #regular expression might be better here:
+                    if re.search(ignore, str(image)):
                         if debug:
                             print "Removing: %s" % image
                         images.remove(image)

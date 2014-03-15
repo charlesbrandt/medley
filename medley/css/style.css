@@ -356,8 +356,20 @@ body:after {
 body:after {
   clear: both;
 }
+p {
+  margin: 0;
+  margin-top: .5em;
+}
 ul {
   padding-left: 0px;
+  margin: 0;
+}
+.icon {
+  width: 22px;
+}
+.position {
+  margin: 0;
+  margin-bottom: 5px;
 }
 .page {
   padding: 10px;
@@ -366,6 +378,10 @@ ul {
   list-style-type: none;
   display: inline-block;
   vertical-align: top;
+  margin: 0;
+}
+.row {
+  clear: both;
 }
 .person {
   list-style-type: none;

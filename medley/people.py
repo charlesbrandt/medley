@@ -67,6 +67,9 @@ class Person(object):
         #just a list of base_dirs for each content item
         self.content_order = []
 
+        #keep track of the last length of contents after a load_content call
+        self.count = ''
+
         #cutoffs is a list of numbers
         #each number specifies a position in the contents
         #where a different class of content starts
@@ -77,11 +80,13 @@ class Person(object):
         self.cutoffs = ''
         self.cutoff_tags = ''
 
+        #will depend on content type:
+        #e.g. sounds like, looks like, etc...
+        self.similar_to = ''
+
         #correspond to main cluster group?
         self.rating = ''
-
         self.quote = ''
-
         self.notes = ''
 
         #verified links only
@@ -145,6 +150,8 @@ class Person(object):
         temp_d.pop("contents", None)
         #getting rid of old format... could convert, but nothing has this set:
         temp_d.pop("default_image", None)
+        #this is only used locally
+        temp_d.pop("debug", None)
 
         return temp_d
 
@@ -203,9 +210,9 @@ class Person(object):
         if debug:
             print self.content_order
 
-        #consider:
-        #(some way to sync the two generally??? (for saving))
-        
+        #update the count:
+        self.count = len(self.contents)
+        self.save()
         
     def update_default(self, new_tag):
         """
@@ -246,11 +253,13 @@ class Person(object):
             #can only do something if we have some content
             if len(self.contents):
                 first = self.contents[0]
-                if not first.image:
+                if not first.image or force:
+                    #if force set, look again
+                    
                     #need to set this to use
                     #the locally cached people directory:
                     first.drive_dir = drive_dir
-                    first.find_image(debug=debug)
+                    first.find_image(ignores=[], debug=debug)
 
                 if first.image:
                     self.image = first.image
@@ -432,7 +441,21 @@ class People(list):
             print "%s. %s" % (opt_count, option.tag)
             opt_count += 1
         print ""
-        
+
+    def everyone(self, alts=True):
+        """
+        return a list of all loaded people tags
+        if alts is True, include multiple versions (person.tags)
+        """
+        tags = []
+        for person in self:
+            for ptag in person.tags:
+                if not ptag in tags:
+                    tags.append(ptag)
+                else:
+                    #this shouldn't happen, should alert so it can be cleaned up
+                    print "WARNING: duplicate tag found in loaded People: %s" % ptag
+        return tags
     
 class Group(object):
     """

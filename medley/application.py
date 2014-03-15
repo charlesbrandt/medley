@@ -202,6 +202,8 @@ def person_update(person_name):
     #print "Received: %s" % p_list
     p = p_list[0]
 
+    #track history / notes (manual journal ok)
+
     content_json = request.forms.get('contents')
     p.content_order = json.loads(content_json)
 
@@ -216,6 +218,9 @@ def person_update(person_name):
 
     note_json = request.forms.get('notes')
     p.notes = json.loads(note_json)
+
+    similar_json = request.forms.get('similar')
+    p.similar_to = json.loads(similar_json)
 
     p.update_image(people_path(), force=True, debug=False)
     #print p.content_order
@@ -312,9 +317,6 @@ def person(person_name):
     #default external links (search concerts, etc)
     #these should be configured based on collection (not hard coded here)
     
-    #TODO:
-    #track history / notes (manual journal ok)
-
     content_json = json.dumps(p.contents.as_list(include_empty=True))
     return template('person', person=p, related=related, contents=content_json)
 

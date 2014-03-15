@@ -27,13 +27,14 @@ define(['jquery', 'lodash', 'ko', 'viewports'], function($, _, ko, vp) {
 	}
     };
     
-    var Person = function(position, parent, tag, image) { 
+    var Person = function(position, parent, tag, image, count) { 
 	var self = this;
 
 	self.cur_pos = ko.observable(position);
 	self.parent = parent;
 	self.tag = tag;
 	self.image = image;
+	self.count = count;
 
 	//creating a writable observable for action to happen on change:
 	self.position = ko.computed({
@@ -90,7 +91,8 @@ define(['jquery', 'lodash', 'ko', 'viewports'], function($, _, ko, vp) {
 	self.items = ko.observableArray();
 	for (var i = 0, len = data.length; i < len; i++) {
 	    var cur_item = data[i];
-	    self.items.push(new Person(i, self, cur_item.tag, cur_item.image));
+	    //console.log(cur_item);
+	    self.items.push(new Person(i, self, cur_item.tag, cur_item.image, cur_item.count));
 	    //console.log("after adding person: " + self.items().length);
 	};
 

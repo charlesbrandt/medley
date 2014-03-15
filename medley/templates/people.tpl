@@ -54,19 +54,20 @@
 
 }">
 
+	<p class="position">
+	  <img class="icon" data-bind="click: $parent.move_to_top" src="/img/arrow-up.svg" />
+	  <input size="4" data-bind="value: position" />
+	  <img class="icon" data-bind="click: $parent.move_to_bottom" src="/img/arrow-down.svg" />
+	</p>
+
 	<div class="wrapper"> 
 	  <div class="wrapper" data-bind="if: image"> 
 	    <a data-bind="attr: { href: '/person/' + tag + '/'}"><img class="lazy thumb" data-bind="lazyImage: imageUrl" /></a>
 	  </div>
 	    
-	  <a data-bind="attr: { href: '/person/' + tag }"><b data-bind='text: tag'></b></a>
+	  <a data-bind="attr: { href: '/person/' + tag }"><b data-bind='text: tag'></b></a> &nbsp;(<span data-bind='text: count, visible: count'></span>)
 	</div>
 	
-	<p>
-	  <img data-bind="click: $parent.move_to_top" src="/img/arrow-up.svg" width="25" />
-	  <input size="4" data-bind="value: position" />
-	  <img data-bind="click: $parent.move_to_bottom" src="/img/arrow-down.svg" width="25" />
-	</p>
 	
     </li>
 </script>

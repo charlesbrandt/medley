@@ -85,6 +85,42 @@ var ContentModel = function() {
 	owner: self
     });
 
+    self._similar = ko.observable(cur_person.similar_to);
+    self.editing_similar = ko.observable(false);
+    self.edit_similar = function() { self.editing_similar(true) };	
+    self.similar = ko.computed({
+	read: function () {
+	    return self._similar();
+	},
+	write: function (value) {
+	    self._similar(value);
+	    //self.make_similar_links();
+	    self.post();
+	},
+	owner: self
+    });
+
+    
+    self.similar_links = ko.observable();
+
+    self.make_similar_links = ko.computed(function () {
+	console.log(self.similar());
+	if (self.similar()) {
+	    var items = self.similar().split(',');
+	    //items.pop();
+	    console.log(items);
+
+	    var result = '';
+	    for (var i = 0; i < items.length; i++) {
+		result += '<a href="/person/' + items[i] + '/">' + items[i] + '</a>,';
+	    }
+	    console.log(result);
+	    self.similar_links(result);
+	};
+    });
+
+    console.log(self.similar_links());
+
     //console.log(self.editing_cutoffs());
     //console.log(!self.editing_cutoffs());
 
@@ -145,6 +181,7 @@ var ContentModel = function() {
 		'cutoff_tags': JSON.stringify(self.cutoff_tags()),
 		'links': JSON.stringify(self.links()),
 		'notes': JSON.stringify(self.notes()),
+		'similar': JSON.stringify(self.similar()),
 	    }
 	});
     };
