@@ -6,7 +6,7 @@ from medley.helpers import load_json, save_json
 from medley.playlist import Playlist
 from medley.content import Content
 
-from shared import all_contents
+from shared import all_contents, configs
 from playlist_view import PlaylistModel
 
 def load_playlist(fname):
@@ -504,24 +504,27 @@ class PlaylistsTreeView(QtGui.QTreeView):
         ## #self.nodes = [Node('node0'), Node('node1'), Node('node2')]
         self.playlists = TreeModel(root)
         #print root.log()
+
         
-        self.config_source = 'configs.json'
-        self.configs = load_json(self.config_source, create=True)
-
-        if self.configs.has_key('last_folder'):
-            self.last_folder = self.config['last_folder']
-        else:
-            self.last_folder = '/'
-
         previous = False
-        if self.configs.has_key('previously'):
-            if self.configs['previously']:
-                if os.path.exists(self.configs['previously']):
-                    #try:
-                    self.load_lists(self.configs['previously'])
-                    previous = True
-                    #except:
-                    #    print "Error loading previous configuration: %s" % self.configs['previously']
+
+        previous_path = configs.get('previously')
+        if previous_path and os.path.exists(previous_path):
+            #try:
+            self.load_lists(previous_path)
+            previous = True
+            #except:
+            #    print "Error loading previous configuration: %s" % previous_path
+
+        ## #old way, when loading configs locally here
+        ## if self.configs.has_key('previously'):
+        ##     if self.configs['previously']:
+        ##         if os.path.exists(self.configs['previously']):
+        ##             #try:
+        ##             self.load_lists(self.configs['previously'])
+        ##             previous = True
+        ##             #except:
+        ##             #    print "Error loading previous configuration: %s" % self.configs['previously']
 
         if not previous:
             print "Could not find a valid previous setup... starting blank"
@@ -720,8 +723,8 @@ class PlaylistsTreeView(QtGui.QTreeView):
         """
         save self.configs to local 'configs.json' file
         """
-        save_json(self.config_source, self.configs)
-        
+        #save_json(self.config_source, self.configs)
+        configs.save_configs()
 
     def open_lists(self):
         """
@@ -782,7 +785,8 @@ class PlaylistsTreeView(QtGui.QTreeView):
 
             self.playlists.root.save_all()
 
-            self.configs['previously'] = fname
+            #self.configs['previously'] = fname
+            configs.configs['previously'] = fname
             self.save_configs()
             #print tree
 

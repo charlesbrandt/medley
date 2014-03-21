@@ -23,10 +23,11 @@
 
 
 """
+from medley.helpers import load_json, save_json
+
 # simple place to keep track of all loaded content objects
 
 all_contents = {}
-
 
 # rather than pass this in everywhere, allow it to be imported
 #since this is a widget, it probably needs to created like before
@@ -34,3 +35,37 @@ all_contents = {}
 #main_player = PlayerWidget(self)
 #main_player = PlayerWidget(None)
 
+config_source = 'configs.json'
+
+class Configs(object):
+    def __init__(self):
+        global config_source
+        self.configs = load_json(config_source, create=True)
+
+        #aka drive_dir ??? (be consistent with content Object?)
+        #maybe last_folder is a different configuration
+        if self.configs.has_key('last_folder'):
+            self.last_folder = self.config['last_folder']
+        else:
+            self.last_folder = '/'
+
+    def get(self, key):
+        """
+        automatcially check if we have the key
+        return blank if none exists
+        """
+
+        if self.configs.has_key(key):
+            return self.configs[key]
+        else:
+            return ''
+
+    def save_configs(self):
+        """
+        save self.configs to local 'configs.json' file
+        """
+        global config_source
+        #save_json(self.config_source, self.configs)
+        save_json(config_source, self.configs)
+    
+configs = Configs()

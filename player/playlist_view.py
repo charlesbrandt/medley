@@ -1,7 +1,7 @@
 import json, re, os
 from PySide import QtGui, QtCore
 
-from shared import all_contents
+from shared import all_contents, configs
 #from shared import main_player
 
 from medley.content import Content, Mark
@@ -643,6 +643,23 @@ class PlaylistView(QtGui.QTableView):
                     if not unicode(option) in content.media:
                         content.media.append(unicode(option))
                     content.filename = option.filename
+
+                    #set content_base here too
+                    #ideally find the path prefix where binary data (media) is
+                    #(based on local machine)
+                    #then find a unique suffix for specific content
+                    content_path = os.path.dirname(unicode(option))
+                    drive_dir = configs.get('default_drive_dir')
+                    if not drive_dir:
+                        print "WARNING: No path prefix set: %s" % drive_dir
+                        content.base_dir = content_path
+                    else:
+                        dd_path = Path(drive_dir)
+                        content.base_dir = dd_path.to_relative(content_path)
+                        print "SETTING content.base_dir TO: %s" % content.base_dir
+                        content.drive_dir = drive_dir
+
+                        
                     all_contents[json_source] = content
                     content.save()
 
