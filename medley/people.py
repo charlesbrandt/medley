@@ -97,6 +97,8 @@ class Person(object):
 
         if source:
             #drive dir
+            if debug:
+                print "using %s as source" % source
             self.root = source
             self.load()
         else:
@@ -111,7 +113,9 @@ class Person(object):
     #TODO:
     #this might be better as a property
     def main_dir(self):
-        return os.path.join(self.root, self.tag)        
+        #when root is sent from People object, tag is included:
+        #return os.path.join(self.root, self.tag)
+        return self.root
 
     def make_path(self, root=None):
         if root:
@@ -180,6 +184,12 @@ class Person(object):
     def load(self, root=None):
         source_file = self.make_path(root)
         result = load_json(source_file)
+
+        #don't always want to load a cached root,
+        #especially when it has been passed in...
+        #delete unless it's necessary at some point (can re-enable then)
+        del result['root'] 
+        
         if self.debug:
             print "Loaded: %s" % result
         self.__dict__.update(result)
@@ -190,6 +200,7 @@ class Person(object):
     #only when it is requested
     def load_content(self, debug=False):
         md = self.main_dir()
+        print "Looking for contents in: %s" % md
 
         #scan for local content directories here
         self.contents = CollectionSimple(root=md)
@@ -249,7 +260,12 @@ class Person(object):
             pass
 
         if update:
-            self.load_content()
+            if debug:
+                print "Loading content for: %s" % (self.tag)
+            self.load_content(debug=debug)
+            if debug:
+                print self.to_dict()
+                
             #can only do something if we have some content
             if len(self.contents):
                 first = self.contents[0]
@@ -345,14 +361,14 @@ class People(list):
             #sometimes paths are updated, but content takes time to migrate
             #should catch this and alert someone to update accordingly
             try:
-                person = Person(path)
+                person = Person(path, debug=self.debug)
                 self.append(person)
             except:
                 missing.append(option)
                 
-        if self.debug:
-            print "People loaded: " 
-            self.summary()
+        #if self.debug:
+        #    print "People loaded: " 
+        #    self.summary()
 
         if missing:
             for item in missing:
