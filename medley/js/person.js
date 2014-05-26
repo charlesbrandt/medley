@@ -4,6 +4,11 @@ define(['jquery', 'lodash', 'ko'], function($, _, ko) {
       http://stackoverflow.com/questions/7218171/knockout-html5-drag-and-drop
       http://jsfiddle.net/marrok/m63aJ/
      */
+
+$('.expand-one').click(function(){
+    $('.content-one').slideToggle('slow');
+});
+
 var ContentModel = function() {
     var self = this;
 

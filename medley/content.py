@@ -616,6 +616,10 @@ class Content(object):
 
           - root top-most content item for nesting content objects (not a path)
             (if it's not passed in here, child segments are not set correctly)
+
+        NOTE:
+        if content is passed in, it will be modified,
+        which will modify source object
         """
         #root is no longer used for this purpose:
         #"the root location relative to collection base"
@@ -853,18 +857,6 @@ class Content(object):
                     #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), source_dir, type(source_dir))
                     self.drive_dir = source_dir
                     
-            #print self.drive_dir
-            #print self.base_dir
-            #print self.path
-            #print
-
-
-
-        #is it even necessary to link back to the containing list/collection?
-        #can re-enable if there is a usecase
-        #self.collection = ''
-        #what about playlists? way to generalize here?
-
 
     #having trouble getting this:
     #going back to ids for now
@@ -1659,14 +1651,50 @@ class Content(object):
             self.filename = filename
 
         path = os.path.join(self.path, self.filename)
-        
-        md5 = hashlib.md5()
-        with open(path, 'rb') as f: 
-            for chunk in iter(lambda: f.read(8192), b''): 
-                 md5.update(chunk)
 
-        self.hash = md5.hexdigest()
-        return self.hash
+        if not os.path.exists(path) or os.path.isdir(path):
+            print "Skipping Hash: File not found: %s" % path
+            return None
+        else:
+            md5 = hashlib.md5()
+            with open(path, 'rb') as f: 
+                for chunk in iter(lambda: f.read(8192), b''): 
+                     md5.update(chunk)
+
+            self.hash = md5.hexdigest()
+            return self.hash
+
+    def equal(self, content):
+        """
+        take another content object
+
+        TODO: test different approaches to find optimal way for comparing
+        if two content objects are the same, even if they're loaded from
+        different sources
+
+        ideally, the hash was computed at some point and we can just use that
+        """
+        if not self.hash or not content.hash:
+            if not self.filename or not content.filename:
+                print self.debug()
+                print content.debug()
+                #may not be able to calculate hash if media file is not local:
+                #raise ValueError, "Cannot compare unless hash / filename exists"
+                print "Cannot compare unless hash / filename exists"
+                #assume they're not equal
+                return False
+            else:
+                if self.filename == content.filename:
+                    return True
+                else:
+                    return False
+        else:
+            #could just return the result of comparison directly,
+            #but this is a bit more readable IMO
+            if self.hash == content.hash:
+                return True
+            else:
+                return False
 
     def update_dimensions(self, options, force=False, debug=False):
         """

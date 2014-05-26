@@ -226,6 +226,8 @@ class CollectionSimple(list):
         """
         take an ordered list of base dirs
         and apply the order to the contents in the collection
+
+        return the length of new items found for adjusting cutoffs in caller
         """
         
         new_group = []
@@ -238,9 +240,13 @@ class CollectionSimple(list):
                         new_group.append(content)
                     self.remove(content)
 
+        found = len(self)
+
         #anything not in order list should be added to the beginning
         #which means adding the new_group to the end of anything that is left
         self.extend(new_group)
+
+        return found
 
     def get_order(self):
         """
@@ -286,7 +292,10 @@ class Collection(CollectionSimple):
     Looking at YAPSY for this.
     
     """
-    def __init__(self, source='', root='', contents=[], walk=False, as_dict=False, debug=False):
+    #seems like the __init__ from CollectionSimple should be adequate...
+    #this one often defaults in a walk, which is not necessary here
+    #(usually a custom walk involved anyway)
+    def old__init__(self, source='', root='', contents=[], walk=False, as_dict=False, debug=False):
         """
         source should be the full path to source
         
@@ -889,6 +898,16 @@ class Collections(list):
                 raise ValueError, "Non-directory item sent to add: %s" % path
         else:
             print "Path: %s already in collections.paths" % path
+
+    def scan_and_add(self):
+        """
+        just combine the above functions into one call
+        this is an alternative to load_summaries,
+        which manually specifies the list of viable paths
+        """
+        options = self.scan()
+        for option in options:
+            self.add(option)
     
     def load_summaries(self, collection_list=[]):
         """
@@ -950,6 +969,16 @@ class Collections(list):
             # it may already exist
             if not os.path.exists(path):
                 os.makedirs(path)
+
+    def available(self):
+        available = []
+        self.load_summaries()
+        for option in self:
+            if option.available:
+                available.append(option)
+        return available
+            
+         
 
 class Cluster(list):
     """

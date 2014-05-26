@@ -1,6 +1,6 @@
 
 <ul id="cluster" class="content" data-bind="foreach: cluster.groups">
-  <li class="content"><button class="button" type="button" data-bind="click: $root.show($index()), text: $index() + '. ' + items()[0].tag"></button></li>
+  <li class="content" data-bind="ifnot: items()[0].tag === 'empty'"><button class="button" type="button" data-bind="click: $root.show($index()), text: $index() + '. ' + items()[0].tag + ' (' + items().length + ')'"></button></li>
 </ul>
 
 <ul id="cluster" class="content" data-bind="foreach: cluster.groups">
@@ -65,7 +65,7 @@
 	    <a data-bind="attr: { href: '/person/' + tag + '/'}"><img class="lazy thumb" data-bind="lazyImage: imageUrl" /></a>
 	  </div>
 	    
-	  <a data-bind="attr: { href: '/person/' + tag }"><b data-bind='text: tag'></b></a> &nbsp;(<span data-bind='text: count, visible: count'></span>)
+	  <a data-bind="attr: { href: '/person/' + tag }"><b data-bind='text: tag'></b></a> &nbsp;(<span data-bind="text: cutoffs + '/' + count, visible: count"></span>)
 	</div>
 	
 	
@@ -76,6 +76,7 @@
 
 <script type="text/javascript">
   var ogroups = {{! people_json }};
+  //console.log(ogroups);
 </script>
 
   <script type="text/javascript">window.JSON || document.write('<script src="js/lib/json2.js"><\/script>')</script>

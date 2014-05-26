@@ -220,7 +220,41 @@ def person_update(person_name):
     p.notes = json.loads(note_json)
 
     similar_json = request.forms.get('similar')
+
+    old_similars = p.similar_to.split(',')
+    
     p.similar_to = json.loads(similar_json)
+    cur_similars = p.similar_to.split(',')
+
+    #removed = []
+    #remove similarity if it has been removed here
+    for old in old_similars:
+        if not old in cur_similars:            
+            #removed.append(old)
+            #just do the remove here:
+            options = ppl.get(old)
+            if len(options):
+                old_p = options[0]
+                old_p_similars = old_p.similar_to.split(',')
+                if person_name in old_p_similars:
+                    old_p_similars.remove(person_name)
+                    old_p.similar_to = ','.join(old_p_similars)
+                    old_p.save()
+
+    #go through all items referenced in similar to
+    #make sure those similar_tos include this tag
+    for item in cur_similars:
+        options = ppl.get(item)
+        if len(options):
+            new_p = options[0]
+            new_p_similars = new_p.similar_to.split(',')
+            if not person_name in new_p_similars:
+                new_p_similars.append(person_name)
+                new_p.similar_to = ','.join(new_p_similars)
+                new_p.save()
+        else:
+            print "Nothing found for: %s, (%s)" % (item, options)
+
 
     p.update_image(people_path(), force=True, debug=False)
     #print p.content_order

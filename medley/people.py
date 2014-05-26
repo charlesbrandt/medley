@@ -152,6 +152,8 @@ class Person(object):
         temp_d = copy.copy(self.__dict__)
         #make sure to ignore loaded/scanned contents on a save
         temp_d.pop("contents", None)
+        temp_d.pop("matches", None)
+            
         #getting rid of old format... could convert, but nothing has this set:
         temp_d.pop("default_image", None)
         #this is only used locally
@@ -177,7 +179,7 @@ class Person(object):
         temp_d = self.to_dict()
         
         #save_json(dest_file, self.__dict__)
-        print "Saving: %s to %s" % (temp_d, dest_file)
+        #print "Saving: %s to %s" % (temp_d, dest_file)
         save_json(dest_file, temp_d)
         
 
@@ -200,7 +202,7 @@ class Person(object):
     #only when it is requested
     def load_content(self, debug=False):
         md = self.main_dir()
-        print "Looking for contents in: %s" % md
+        #print "Looking for contents in: %s" % md
 
         #scan for local content directories here
         self.contents = CollectionSimple(root=md)
@@ -213,9 +215,24 @@ class Person(object):
 
         #print self.contents
 
-        self.contents.apply_order(self.content_order, debug=debug)
+        found = self.contents.apply_order(self.content_order, debug=debug)
 
-        #update content_order accordingly
+        #update/adjust any cutoffs that are set
+        #so that new items don't mess up the orders
+        #that were previously (manually) set
+        if found and self.cutoffs:
+            cutoff_list = self.cutoffs.split(',')
+            new_list = []
+            for item in cutoff_list:
+                #might be '' if extra commas in cutoffs string...
+                #can ignore those
+                if item:
+                    new_item = int(item) + found
+                    new_list.append(str(new_item))
+
+            self.cutoffs = ','.join(new_list)
+
+        #update our stored content_order accordingly
         #update order with anything new
         self.content_order = self.contents.get_order()
         if debug:
@@ -373,7 +390,10 @@ class People(list):
         if missing:
             for item in missing:
                 matches = self.get(item)
-                print "MISSING: %s, please move to: %s" % (item, matches[0])
+                if len(matches):
+                    print "MISSING: %s, please move to: %s" % (item, matches[0])
+                else:
+                    print "MISSING: %s" % (item)
 
             raise ValueError, "Missing content detected... please fix"
         

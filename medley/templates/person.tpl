@@ -1,6 +1,6 @@
 <div class="leftcolumn">
 
-<h3 class="main_tag">{{ person.tag }} (<b>{{ len(person.contents) }}</b>)</h3>
+<h3 class="main_tag">{{ person.tag }} (<b>{{ len(person.contents) }}</b> items)</h3>
 
 % other_tags = person.tags[:]
 % other_tags.remove(person.tag)
@@ -15,8 +15,10 @@
 <img src="/img/edit.png" class="icon" data-bind="visible: !editing_similar(), click: edit_similar">
 </p>
 
-<p>Similar names:</p>
+<p class="expand-one"><a href="#">Similar names:</a> ({{len(related)}})</p>
+<div class="content-one">
     %include people_block people=related
+</div>
 
 </div>
 
@@ -121,8 +123,8 @@
 	
 	<p data-bind="text: description, style: {'display': 'none'}"></p>
 	
-	<p>
-	  Via: <a data-bind="attr: { href: '/collection/' + collection }, text: collection"></a>
+	<p class="tag">
+	  <span data-bind="text: timestamp"></span>, Via: <a data-bind="attr: { href: '/collection/' + collection }, text: collection"></a>
 	</p>
 	
     </li>
