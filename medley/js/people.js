@@ -1,5 +1,5 @@
 //path to jquery should be defined in main page
-define(['jquery', 'lodash', 'ko', 'viewports'], function($, _, ko, vp) {
+//define(['jquery', 'lodash', 'ko', 'viewports'], function($, _, ko, vp) {
 
   //console.log(vp);
   //console.log("HELLLOOOOO?!?!?!");
@@ -229,4 +229,4 @@ define(['jquery', 'lodash', 'ko', 'viewports'], function($, _, ko, vp) {
     });
   }, 1000);
   
-});
+//});

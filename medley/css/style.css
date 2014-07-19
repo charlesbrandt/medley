@@ -350,8 +350,22 @@ ul {
   padding-left: 0px;
   margin: 0;
 }
-.icon {
-  width: 22px;
+a {
+  color: #dc322f;
+}
+a:visited {
+  color: #a31e1b;
+}
+a:hover {
+  color: #e77370;
+}
+a:focus {
+  outline: thin dotted;
+}
+/* Improve readability when focused and hovered in all browsers: h5bp.com/h */
+a:hover,
+a:active {
+  outline: 0;
 }
 .position {
   margin: 0;
@@ -360,48 +374,8 @@ ul {
 .page {
   padding: 10px;
 }
-.content {
-  list-style-type: none;
-  display: inline-block;
-  vertical-align: top;
-  margin: 0;
-}
-.content-one {
-  display: none;
-}
 .row {
   clear: both;
-}
-.person {
-  list-style-type: none;
-  display: inline-block;
-  padding-right: 10px;
-}
-.tags {
-  text-align: left;
-  padding-left: 20px;
-}
-.tag {
-  list-style-type: none;
-  display: inline-block;
-  padding-right: 10px;
-  font-size: small;
-}
-.summary {
-  margin: 5px;
-  margin-top: 10px;
-  text-align: center;
-  width: 230px;
-}
-.available {
-  background-color: lightgray;
-}
-.thumb {
-  width: 230px;
-}
-.icon {
-  width: 20px;
-  height: 20px;
 }
 header#top {
   margin-bottom: 1em;
@@ -430,6 +404,127 @@ header#top {
   width: 22.91666667%;
   margin: 0 1.04166667%;
 }
+.icon {
+  width: 22px;
+}
+.summary {
+  margin: 5px;
+  margin-top: 10px;
+  text-align: center;
+  width: 230px;
+}
+.available {
+  background-color: lightgray;
+}
+.content {
+  list-style-type: none;
+  display: inline-block;
+  vertical-align: top;
+  margin: 0;
+  line-height: 16px;
+}
+.content-one {
+  display: none;
+}
+.person {
+  list-style-type: none;
+  display: inline-block;
+  padding-right: 10px;
+}
+.tags {
+  text-align: left;
+  padding-left: 20px;
+}
+.tag {
+  list-style-type: none;
+  display: inline-block;
+  padding-right: 10px;
+  font-size: small;
+}
+.thumb {
+  width: 100% !important;
+  height: auto !important;
+}
+.icon {
+  width: 20px;
+  height: 20px;
+}
+/* http://css-tricks.com/seamless-responsive-photo-grid/ */
+.person_name {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  width: 100%;
+  text-align: left;
+}
+.spacer {
+  padding: 0 5px;
+}
+.name_background {
+  color: white;
+  letter-spacing: -1px;
+  background: #000000;
+  /* fallback color */
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+}
+.name_link {
+  font: bold 24px/45px Helvetica, Sans-Serif;
+  text-decoration: none;
+  color: white;
+  line-height: 46px;
+}
+a:visited.name_link {
+  color: white;
+}
+.content_count {
+  font: bold 12px Helvetica, Sans-Serif;
+  line-height: 20px;
+}
+.block {
+  /* Just in case there are inline attributes */
+  width: 100% !important;
+  height: auto !important;
+  position: relative;
+}
+#people {
+  /* Prevent vertical gaps */
+  line-height: 0;
+  -webkit-column-count: 5;
+  -webkit-column-gap: 0px;
+  -moz-column-count: 5;
+  -moz-column-gap: 0px;
+  column-count: 5;
+  column-gap: 0px;
+}
+@media (max-width: 1200px) {
+  #people {
+    -moz-column-count: 4;
+    -webkit-column-count: 4;
+    column-count: 4;
+  }
+}
+@media (max-width: 1000px) {
+  #people {
+    -moz-column-count: 3;
+    -webkit-column-count: 3;
+    column-count: 3;
+  }
+}
+@media (max-width: 800px) {
+  #people {
+    -moz-column-count: 2;
+    -webkit-column-count: 2;
+    column-count: 2;
+  }
+}
+@media (max-width: 400px) {
+  #people {
+    -moz-column-count: 1;
+    -webkit-column-count: 1;
+    column-count: 1;
+  }
+}
 .item {
   display: inline-block;
   list-style-type: none;
@@ -442,23 +537,6 @@ body {
 }
 .lt-ie9 body {
   min-width: 960px;
-}
-a {
-  color: #dc322f;
-}
-a:visited {
-  color: #a31e1b;
-}
-a:hover {
-  color: #e77370;
-}
-a:focus {
-  outline: thin dotted;
-}
-/* Improve readability when focused and hovered in all browsers: h5bp.com/h */
-a:hover,
-a:active {
-  outline: 0;
 }
 @media screen and (max-width: 720px) {
   #maincolumn,

@@ -1,11 +1,11 @@
 
-<ul id="cluster" class="content" data-bind="foreach: cluster.groups">
+<ul id="buttons" class="content" data-bind="foreach: cluster.groups">
   <li class="content" data-bind="ifnot: items()[0].tag === 'empty'"><button class="button" type="button" data-bind="click: $root.show($index()), text: $index() + '. ' + items()[0].tag + ' (' + items().length + ')'"></button></li>
 </ul>
 
 <ul id="cluster" class="content" data-bind="foreach: cluster.groups">
   <div class="wrapper" data-bind="if: $root.showing() === $index()">
-    <ul id="people" class="content" data-bind="template: { name: 'personTmpl', foreach: items }"> 
+    <ul id="people" class="content" data-bind="template: { name: 'personTmpl', foreach: items }, scrollableOnDragOver: 'scroll-while-dragging'"> 
     </ul>
   </div>
   
@@ -13,7 +13,7 @@
 </ul>
 
 <script id="personTmpl" type="text/html">
-    <li class="draggable summary content" draggable="true" data-bind="event:{
+    <li class="draggable summary content block" draggable="true" data-bind="event:{
        dragstart:   function(data, event){ 
                     $(event.target).addClass('dragSource')
                     $root.drag_start_index($index());
@@ -65,8 +65,16 @@
 	    <a data-bind="attr: { href: '/person/' + tag + '/'}"><img class="lazy thumb" data-bind="lazyImage: imageUrl" /></a>
 	  </div>
 	    
-	  <a data-bind="attr: { href: '/person/' + tag }"><b data-bind='text: tag'></b></a> &nbsp;(<span data-bind="text: cutoffs + '/' + count, visible: count"></span>)
-	</div>
+	  <div class="person_name">
+            <span class="name_background">
+              <span class="content_count">(<span data-bind="text: cutoffs + '/' + count, visible: count"></span>)</span><span class="spacer"></span>
+              <br>
+              <span class="spacer"></span>
+              <a class="name_link" data-bind="attr: { href: '/person/' + tag + '/' }"><b data-bind='text: tag'></b></a> 
+            </span>
+          </div>
+
+        </div>
 	
 	
     </li>
@@ -79,29 +87,14 @@
   //console.log(ogroups);
 </script>
 
-  <script type="text/javascript">window.JSON || document.write('<script src="js/lib/json2.js"><\/script>')</script>
+<script type="text/javascript">window.JSON || document.write('<script src="js/lib/json2.js"><\/script>')
+  </script>
     
-    <script type="text/javascript" src="/js/lib/require.js"></script>
-    <script type="text/javascript">
-      //this allows require.js to be in a different directory (lib)
-      //than main custom code
-      require.config({
-		baseUrl: '/js',
-		paths: {
-                        //'jquery' : 'lib/jquery-2.0.3',
-			'jquery' : 'lib/jquery-1.10.2',
-                        'viewports' : 'lib/jquery.viewport.mini', 
-	                'lodash' : 'lib/lodash',
-	                'ko'     : 'lib/knockout-3.0.0'
-		},
-                shim: {
-                        'viewports': {
-                           exports: 'viewports' 
-                         }
-                      }                          
-      });
-      require(['people'], function(people) {});
-    </script>
+  <script type="text/javascript" src="/js/lib/jquery-1.10.2.js"></script>
+  <script type="text/javascript" src="/js/lib/jquery.viewport.mini.js"></script>
+  <script type="text/javascript" src="/js/lib/lodash.js"></script>
+  <script type="text/javascript" src="/js/lib/knockout-3.0.0.js"></script>
+  <script type="text/javascript" src="/js/people.js"></script>
 
 
 %rebase layout title="People", active="home"
