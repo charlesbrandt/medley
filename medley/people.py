@@ -247,21 +247,28 @@ class Person(object):
         update our default tag
         rename our directory and main meta file accordingly
         """
-        new_dir = os.path.join(self.root, new_tag)
+        if not self.root:
+            raise ValueError, "No root specified: %s" % self.root
+        
+        new_dir = os.path.join(os.path.dirname(self.root), new_tag)
+        print "New dir: ", new_dir
         if os.path.exists(new_dir):
             raise ValueError, "Destination exists: %s (from %s)" % (new_dir, self.tag)
 
         original_file = self.make_path()
-        original_dir = os.path.join(self.root, self.tag)
+        #original_dir = os.path.join(self.root, self.tag)
 
         new_name = "%s.json" % new_tag
-        new_file = os.path.join(original_dir, new_name)
+        new_file = os.path.join(self.root, new_name)
+        print "renaming: %s, %s" % (original_file, new_file)
         #rename the file first, to make paths easier
         os.rename(original_file, new_file)
         
         #now move the directory
-        os.rename(original_dir, new_dir)
+        #os.rename(original_dir, new_dir)
+        os.rename(self.root, new_dir)
 
+        self.root = new_dir
         self.tag = new_tag
         #now save it to our new destination (should over-write old data)
         self.save()
