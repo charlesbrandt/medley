@@ -21,6 +21,14 @@
 % end #for collection
 </ul>
 
-<h3><a href="/people">People</a></h3>
+<h3><a href="/people">People</a> </h3>
+<a href="/people/tags">(tags)</a> |
+| <a href="/people/static">(static, single long page, pictures)</a> |
+
+<ul id="buttons" class="content" >
+%for link in links:
+<li class="content">{{! link }}</li>
+%end
+</ul>
 
 %rebase layout title="Medley!", active="home"

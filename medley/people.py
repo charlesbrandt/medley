@@ -338,24 +338,31 @@ class People(list):
         """
         pass in the people term from the config
         """
-        if debug:
-            print source
-        options = os.listdir(source)
-        if debug:
-            print options
         self.debug = debug
 
         self.root = source
-        if 'meta' in options:
-            self.meta_root = os.path.join(self.root, 'meta')
-        else:
-            #should use meta root, but fail if it doesn't exist
-            #or could create it here...
-            #concerned that that may cause recursive dirs if meta root passed in
+        self.meta_root = os.path.join(self.root, 'meta')
+        if not os.path.exists(self.meta_root):
             self.meta_root = None
             raise ValueError, "Could not find meta root in: %s" % source
+            
+        ## if self.debug:
+        ##     print source
+        ## options = os.listdir(source)
+        ## if self.debug:
+        ##     print options
+
+        ## self.root = source
+        ## if 'meta' in options:
+        ##     self.meta_root = os.path.join(self.root, 'meta')
+        ## else:
+        ##     #should use meta root, but fail if it doesn't exist
+        ##     #or could create it here...
+        ##     #concerned that that may cause recursive dirs if meta root passed in
+        ##     self.meta_root = None
+        ##     raise ValueError, "Could not find meta root in: %s" % source
         
-        options = os.listdir(self.meta_root)
+        ## options = os.listdir(self.meta_root)
         #print options
         #self.cloud_file = os.path.join(self.meta_root, "clouds.txt")
 

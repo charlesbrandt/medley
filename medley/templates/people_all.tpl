@@ -1,12 +1,11 @@
-<ul id="buttons" class="content" >
-%for link in links:
-<li class="content">{{! link }}</li>
-%end
+
+<ul id="buttons" class="content" data-bind="foreach: cluster.groups">
+  <li class="content" data-bind="ifnot: items()[0].tag === 'empty'"><button class="button" type="button" data-bind="click: $root.show($index()), text: $index() + '. ' + items()[0].tag + ' (' + items().length + ')'"></button></li>
 </ul>
 
-<ul id="cluster" class="content">
-  <div class="wrapper">
-    <ul id="people" class="content" data-bind="template: { name: 'personTmpl', foreach: group.items }, scrollableOnDragOver: 'scroll-while-dragging'"> 
+<ul id="cluster" class="content" data-bind="foreach: cluster.groups">
+  <div class="wrapper" data-bind="if: $root.showing() === $index()">
+    <ul id="people" class="content" data-bind="template: { name: 'personTmpl', foreach: items }, scrollableOnDragOver: 'scroll-while-dragging'"> 
     </ul>
   </div>
   
@@ -50,7 +49,7 @@
 		//console.log('index: ' + $index());
 		//console.log(ko.dataFor(event.target));
 		ko.dataFor(event.target).move($root.drag_start_index(), $root.drag_target_index());
-		$root.group.post();
+		$root.cluster.post();
        }
 
 }">
@@ -63,10 +62,7 @@
 
 	<div class="wrapper"> 
 	  <div class="wrapper" data-bind="if: image"> 
-	    <a data-bind="attr: { href: '/person/' + tag + '/'}">
-              <!--<img class="lazy thumb" data-bind="lazyImage: imageUrl" />-->
-              <img class="thumb" data-bind="attr: { src: imageThumb }" />
-            </a>
+	    <a data-bind="attr: { href: '/person/' + tag + '/'}"><img class="lazy thumb" data-bind="lazyImage: imageUrl" /></a>
 	  </div>
 	    
 	  <div class="person_name">
@@ -87,9 +83,8 @@
 <script type="text/javascript" src="/js/lib/jquery-1.10.2.min.js"></script>
 
 <script type="text/javascript">
-  var ogroup = {{! group_json }};
-  var oindex = {{! group_number }};
-  //console.log(ogroup);
+  var ogroups = {{! people_json }};
+  //console.log(ogroups);
 </script>
 
 <script type="text/javascript">window.JSON || document.write('<script src="js/lib/json2.js"><\/script>')
@@ -99,7 +94,7 @@
   <script type="text/javascript" src="/js/lib/jquery.viewport.mini.js"></script>
   <script type="text/javascript" src="/js/lib/lodash.js"></script>
   <script type="text/javascript" src="/js/lib/knockout-3.0.0.js"></script>
-  <script type="text/javascript" src="/js/people.js"></script>
+  <script type="text/javascript" src="/js/people_all.js"></script>
 
 
 %rebase layout title="People", active="home"

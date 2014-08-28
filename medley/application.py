@@ -188,7 +188,6 @@ def people_path():
 
 def get_people():
     path = people_path()
-    
     p = People(path, configs['person_term'])
     return p
 
@@ -354,68 +353,44 @@ def person(person_name):
     content_json = json.dumps(p.contents.as_list(include_empty=True))
     return template('person', person=p, related=related, contents=content_json)
 
-@route('/people/tags')
-def people_tags():
-    """
-    the original version that only shows tags
-    """
-    print configs
-    print configs['people_root']
-    print configs['person_term']
+@post('/people/update/:group_number/')
+@post('/people/update/:group_number')
+def people_update_one(group_number=None):
+    group_json = request.forms.get('group')
+    group = json.loads(group_json)
+    #p.update_image(people_path(), force=True, debug=False)
+    #print group
+    #p.save()
 
-    p = get_people()
-    
-    #cs = CollectionSummary(path)
-    #print cs.summary()
-
-    #cluster = cs.load_cluster()
-    #print cluster
-        
-    #return template('collection', summary=summary, c=collection, cluster=cluster)
- 
-    #collections = load_collections(collection_root)
-    #collections = Collections(, configs['collection_list'])
-    #print len(collections)
-    #return template('people', collections=collections)
-    return template('people_tags', cluster=p.cluster)
-
-
-@route('/people/static')
-def people_static():
-    """
-    similar to people
-    but no javascript capabilities for re-ordering...
-    for large data sets, javascript can be slow
-    this may be useful for read only purposes
-    """
     p = get_people()
     p.load()
      
-    #make a cluster-like object here
-    #list of lists
-    #need to distill it to json eventually
-    groups = []
-    for group in p.cluster[:]:
-        #print group
-        new_group = []
+    p.cluster[int(group_number)] = group
+
+    #this will format it as json... not what we want:
+    #p.cluster.save()
+
+    data = ''
+    for group in p.cluster:
         for item in group:
-            person = p.get_first(item)
-            if person:
-                new_group.append(person.to_dict())
-            else:
-                new_group.append({'image':'', 'tag':item})
+            data += item + " "
+        data += "\n"
 
-        groups.append(new_group)
-        
-    #pj = json.dumps(groups)
-    #print "Length: %s" % len(groups)
-    #print pj
-
-    #for person in p:
-    #    print person.image, person.tag
+    #print data
     
-    return template('people_static', people=p, cluster=p.cluster)
+    path = people_path()
+    #TODO:
+    #generalize path creation here:
+    full_path = os.path.join(path, 'meta', 'people.txt')
 
+    if os.path.exists(full_path):
+        os.remove(full_path)
+
+    clouds = Journal(full_path)
+    #make_entry
+    clouds.make(data=data, tags=[ configs['person_term'] ])
+    clouds.save(full_path)
+    
 @post('/people/update')
 def people_update():
     
@@ -446,8 +421,141 @@ def people_update():
     clouds.make(data=data, tags=[ configs['person_term'] ])
     clouds.save(full_path)
 
+@route('/people/static')
+def people_static():
+    """
+    similar to people
+    but no javascript capabilities for re-ordering...
+    for large data sets, javascript can be slow
+    this may be useful for read only purposes
+
+    still shows images though, so it can be a long page
+    see people/tags/ for text only
+    """
+    p = get_people()
+    p.load()
+     
+    #make a cluster-like object here
+    #list of lists
+    #need to distill it to json eventually
+    groups = []
+    for group in p.cluster[:]:
+        #print group
+        new_group = []
+        for item in group:
+            person = p.get_first(item)
+            if person:
+                new_group.append(person.to_dict())
+            else:
+                new_group.append({'image':'', 'tag':item})
+
+        groups.append(new_group)
+        
+    #pj = json.dumps(groups)
+    #print "Length: %s" % len(groups)
+    #print pj
+
+    #for person in p:
+    #    print person.image, person.tag
+    
+    return template('people_static', people=p, cluster=p.cluster)
+
+@route('/people/tags')
+def people_tags():
+    """
+    the original version that only shows tags
+    """
+    print configs
+    print configs['people_root']
+    print configs['person_term']
+
+    p = get_people()
+    
+    #cs = CollectionSummary(path)
+    #print cs.summary()
+
+    #cluster = cs.load_cluster()
+    #print cluster
+        
+    #return template('collection', summary=summary, c=collection, cluster=cluster)
+ 
+    #collections = load_collections(collection_root)
+    #collections = Collections(, configs['collection_list'])
+    #print len(collections)
+    #return template('people', collections=collections)
+    return template('people_tag', cluster=p.cluster)
+
+
+@route('/people/:group_number/')
+@route('/people/:group_number')
 @route('/people')
-def people(): 
+def people(group_number=None):
+    """
+    the new version should just show a textual representation of all groups
+    no tabs needed here
+
+    should still be sortable
+    should also have a filter suggestion search built in
+
+    if a group number is supplied, show details for that group
+    """
+    print "initializing people"
+    p = get_people()
+    print "loading people"
+    p.load()
+
+    print "making json groups"
+    
+    #make a cluster-like object here
+    #list of lists
+    #need to distill it to json eventually
+    groups = []
+    links = []
+    index = 0
+    for group in p.cluster[:]:
+        print group
+        new_group = []
+        for item in group:
+            person = p.get_first(item)
+            if person:
+                new_group.append(person.to_dict())
+            else:
+                new_group.append({'image':'', 'tag':item})
+
+        if (len(new_group) and (new_group[0]['tag'] != 'empty')):
+        #if len(new_group):
+            link = '<a href="/people/%s">%s. %s (%s)</a>' % (index, index, new_group[0]['tag'], len(new_group))
+            links.append(link)
+            
+        groups.append(new_group)
+        index += 1
+
+    if not group_number is None:
+        group = groups[int(group_number)]
+        gj = json.dumps(group)
+        return template('people', people=p, cluster=p.cluster, group_json=gj, group_number=group_number, links=links)
+        
+    else:
+        pj = json.dumps(groups)
+        print "Length: %s" % len(groups)
+        #print pj
+
+        #for person in p:
+        #    print person.image, person.tag
+
+        return template('people_all', people=p, cluster=p.cluster, people_json=pj)
+
+@route('/people_orig')
+def people_orig():
+    """
+    this version shows all clusters as selectable on a single page
+    if there are many groups and many items in the group,
+    it can be cumbersome to switch between the groups in a cluster
+
+    keeping around until something better exists
+
+    this has been kept in people as people_all section
+    """
     p = get_people()
     p.load()
      
@@ -474,7 +582,7 @@ def people():
     #for person in p:
     #    print person.image, person.tag
     
-    return template('people', people=p, cluster=p.cluster, people_json=pj)
+    return template('people_orig', people=p, cluster=p.cluster, people_json=pj)
 
 
 @route('/collection/:collection_name/zip/:content_name#.+#')
@@ -621,10 +729,24 @@ def collections_details():
 
 @route('/')
 def index():
+    p = get_people()
+    p.load()
+
+    index = 0
+    links = []
+    for group in p.cluster[:]:
+        if (len(group) and (group[0] != 'empty')):
+            link = '<a href="/people/%s">%s. %s (%s)</a>' % (index, index, group[0], len(group))
+            links.append(link)
+            
+        index += 1
+
+
+    
     #collections = load_collections(collection_root)
     collections = Collections(configs['root'], configs['collection_list'])
     #print len(collections)
-    return template('main', collections=collections)
+    return template('main', collections=collections, links=links)
 
 
 
