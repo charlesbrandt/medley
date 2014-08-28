@@ -545,46 +545,6 @@ def people(group_number=None):
 
         return template('people_all', people=p, cluster=p.cluster, people_json=pj)
 
-@route('/people_orig')
-def people_orig():
-    """
-    this version shows all clusters as selectable on a single page
-    if there are many groups and many items in the group,
-    it can be cumbersome to switch between the groups in a cluster
-
-    keeping around until something better exists
-
-    this has been kept in people as people_all section
-    """
-    p = get_people()
-    p.load()
-     
-    #make a cluster-like object here
-    #list of lists
-    #need to distill it to json eventually
-    groups = []
-    for group in p.cluster[:]:
-        #print group
-        new_group = []
-        for item in group:
-            person = p.get_first(item)
-            if person:
-                new_group.append(person.to_dict())
-            else:
-                new_group.append({'image':'', 'tag':item})
-
-        groups.append(new_group)
-        
-    pj = json.dumps(groups)
-    print "Length: %s" % len(groups)
-    #print pj
-
-    #for person in p:
-    #    print person.image, person.tag
-    
-    return template('people_orig', people=p, cluster=p.cluster, people_json=pj)
-
-
 @route('/collection/:collection_name/zip/:content_name#.+#')
 def collection_zip(collection_name=None, content_name=None):
     """
