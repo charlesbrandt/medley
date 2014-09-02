@@ -33,9 +33,13 @@ from bottle import get, post, request
 from bottle import route, run
 from bottle import template
 
-#DO NOT USE THIS IN PRODUCTION!!
 import bottle
-bottle.debug(True)
+
+#DO NOT USE THIS IN PRODUCTION!!
+#bottle.debug(True)
+from bottle import debug
+debug(True)
+
 
 import os
 server_root = os.path.dirname(os.path.realpath(__file__))
@@ -795,7 +799,9 @@ def launch():
         print configs
         #exit()
         #run(host='localhost', port=8080)
-        run(host=configs['host'], port=configs['port'])
+        #run(host=configs['host'], port=configs['port'])
+        #reloader=True enables Auto Reloading
+        run(host=configs['host'], port=configs['port'], reloader=True)
 
     else:
         usage()

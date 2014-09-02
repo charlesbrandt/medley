@@ -165,7 +165,7 @@ def load_json(source_file):
         json_file.close()
     return json_objects
 
-def diff_files(fname, path1, path2, indent, use_system_diff=False):
+def diff_files(fname, path1, path2, indent, sync=False, use_system_diff=False):
 
     #until we prove otherwise, we'll assume they're different
     is_difference = True
@@ -231,10 +231,11 @@ def diff_files(fname, path1, path2, indent, use_system_diff=False):
             patch = jsonpatch.make_patch(src, dst)
             print patch
 
-            print "cp %s %s" % (path1, path2)
-            added = path1
-            #WARNING! THIS DOES THE COPY... WILL OVERWRITE!!!!
-            shutil.copy(path1, path2)
+            if sync:
+                print "cp %s %s" % (path1, path2)
+                added = path1
+                #WARNING! THIS DOES THE COPY... WILL OVERWRITE!!!!
+                shutil.copy(path1, path2)
 
         elif (n1.size < n2.size) and (n1.mtime > n2.mtime):
             print "N1 is smaller but newer.  Check what was removed..."
@@ -271,8 +272,9 @@ def diff_files(fname, path1, path2, indent, use_system_diff=False):
             print "cp %s %s" % (path2, path1)
             added = path2
 
-            #WARNING! THIS DOES THE COPY... WILL OVERWRITE!!!!
-            shutil.copy(path1, path2)
+            if sync:
+                #WARNING! THIS DOES THE COPY... WILL OVERWRITE!!!!
+                shutil.copy(path1, path2)
 
         
         if use_system_diff:
@@ -287,7 +289,7 @@ def diff_files(fname, path1, path2, indent, use_system_diff=False):
 
 
 
-def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False ):
+def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False, sync=True ):
     
     is_difference = False
     skipped = []
@@ -324,7 +326,7 @@ def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False ):
 
                     #TODO:
                     #do comparison and merge of json objects here:
-                    (this_diff, this_added, this_skipped) = diff_files(item, n1path, n2path, indent)
+                    (this_diff, this_added, this_skipped) = diff_files(item, n1path, n2path, indent, sync)
                     
                     is_difference |= this_diff
                     if this_diff:
@@ -355,7 +357,7 @@ def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False ):
                 p1 = Path(n1path)
                 if p1.type() == "Directory":
                     if recurse:
-                        (last_difference, last_added, last_skipped) = diff_dirs(n1path, n2path, recurse, indent+1)
+                        (last_difference, last_added, last_skipped) = diff_dirs(n1path, n2path, recurse, indent+1, sync)
                         is_difference |= last_difference
                         added.extend(last_added)
                         skipped.extend(last_skipped)
