@@ -191,6 +191,49 @@ def get_people():
     p = People(path, configs['person_term'])
     return p
 
+def make_links(p):
+    index = 0
+    links = []
+    for group in p.cluster[:]:
+        if (len(group) and (group[0] != 'empty')):
+            link = '<a href="/people/%s">%s. %s (%s)</a>' % (index, index, group[0], len(group))
+            links.append(link)
+            
+        index += 1
+    return links
+    
+
+@route('/search/')
+@route('/search')
+def search():
+    p = get_people()
+    p.load()
+     
+    #make a cluster-like object here
+    #list of lists
+    #need to distill it to json eventually
+    #groups = []
+    #for group in p.cluster[:]:
+
+    all_people = {}
+
+    #this can take a while:
+    for group in p.cluster[:]:
+        for item in group:
+            person = p.get_first(item)
+            if person:
+                all_people[item] = person.to_dict()
+            else:
+                all_people[item] = {'image':'', 'tag':item} 
+
+    all_names = p.cluster.flatten()       
+    
+    names_json = json.dumps(all_names)
+    people_json = json.dumps(all_people)
+
+    #return template('people_all', people=p, cluster=p.cluster, people_json=pj)
+    return template('search', people_json=people_json, names_json=names_json)
+
 @post('/person/:person_name/update')
 def person_update(person_name):
     ppl = get_people()
@@ -402,8 +445,11 @@ def people_update():
 
     data = ''
     for group in cluster:
-        for item in group:
-            data += item + " "
+        if len(group) == 1 and group[0] == 'empty':
+            pass
+        else:
+            for item in group:
+                data += item + " "
         data += "\n"
 
     #print data
@@ -510,8 +556,8 @@ def people(group_number=None):
     #list of lists
     #need to distill it to json eventually
     groups = []
-    links = []
-    index = 0
+    #links = []
+    #index = 0
     for group in p.cluster[:]:
         print group
         new_group = []
@@ -522,14 +568,16 @@ def people(group_number=None):
             else:
                 new_group.append({'image':'', 'tag':item})
 
-        if (len(new_group) and (new_group[0]['tag'] != 'empty')):
-        #if len(new_group):
-            link = '<a href="/people/%s">%s. %s (%s)</a>' % (index, index, new_group[0]['tag'], len(new_group))
-            links.append(link)
+        ## if (len(new_group) and (new_group[0]['tag'] != 'empty')):
+        ## #if len(new_group):
+        ##     link = '<a href="/people/%s">%s. %s (%s)</a>' % (index, index, new_group[0]['tag'], len(new_group))
+        ##     links.append(link)
             
         groups.append(new_group)
-        index += 1
+        #index += 1
 
+    links = make_links(p)
+    
     if not group_number is None:
         group = groups[int(group_number)]
         gj = json.dumps(group)
@@ -692,16 +740,7 @@ def index():
     p = get_people()
     p.load()
 
-    index = 0
-    links = []
-    for group in p.cluster[:]:
-        if (len(group) and (group[0] != 'empty')):
-            link = '<a href="/people/%s">%s. %s (%s)</a>' % (index, index, group[0], len(group))
-            links.append(link)
-            
-        index += 1
-
-
+    links = make_links(p)
     
     #collections = load_collections(collection_root)
     collections = Collections(configs['root'], configs['collection_list'])

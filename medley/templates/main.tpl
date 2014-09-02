@@ -22,6 +22,7 @@
 </ul>
 
 <h3><a href="/people">People</a> </h3>
+<a href="/search">(search)</a> |
 <a href="/people/tags">(tags)</a> |
 | <a href="/people/static">(static, single long page, pictures)</a> |
 

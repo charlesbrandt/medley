@@ -122,6 +122,7 @@ class CollectionSimple(list):
             raise ValueError, "No source file specified: %s" % self.source
 
     #aka walk()
+    #def rescan(self, ignores=['summary.json', 'scenes.json'], debug=False):
     def rescan(self, ignores=[], debug=False):
         """
         look for all json files that describe the content items
