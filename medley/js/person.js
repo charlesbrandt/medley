@@ -62,6 +62,51 @@ var ContentModel = function() {
 	owner: self
     });
 
+
+    self.merged_cutoffs = ko.computed(function () {
+      //combine cutoffs with associated tag for better readability
+      var cots = self.cutoff_tags().split(',');
+      var cos = self.cutoffs().split(',');
+      var combined = '';
+      for (var i = 0; i < cos.length; i++) {
+        combined += cots[i] + ':' + cos[i] + ', ';
+      }
+      return combined;
+    });
+
+
+
+    self._default_cutoff = ko.observable(cur_person.default_cutoff);
+    self.editing_default_cutoff = ko.observable(false);
+    self.edit_default_cutoff = function() { self.editing_default_cutoff(true) };	
+    self.default_cutoff = ko.computed({
+	read: function () {
+	    return self._default_cutoff();
+	},
+	write: function (value) {
+	    self._default_cutoff(value);
+	    self.post();
+	},
+	owner: self
+    });
+
+    self._default_cutoff_tag = ko.observable(cur_person.default_cutoff_tag);
+    self.editing_default_cutoff_tag = ko.observable(false);
+    self.edit_default_cutoff_tag = function() { self.editing_default_cutoff_tag(true) };	
+    self.default_cutoff_tag = ko.computed({
+	read: function () {
+	    return self._default_cutoff_tag();
+	},
+	write: function (value) {
+	    self._default_cutoff_tag(value);
+	    self.post();
+	},
+	owner: self
+    });
+
+  
+
+
     self._links = ko.observable(cur_person.links);
     self.editing_links = ko.observable(false);
     self.edit_links = function() { self.editing_links(true) };	
@@ -124,7 +169,7 @@ var ContentModel = function() {
 	};
     });
 
-    console.log(self.similar_links());
+    //console.log(self.similar_links());
 
     //console.log(self.editing_cutoffs());
     //console.log(!self.editing_cutoffs());
@@ -184,6 +229,8 @@ var ContentModel = function() {
 		'contents': JSON.stringify(bases),
 		'cutoffs': JSON.stringify(self.cutoffs()),
 		'cutoff_tags': JSON.stringify(self.cutoff_tags()),
+		'default_cutoff_tag': JSON.stringify(self.default_cutoff_tag()),
+		'default_cutoff': JSON.stringify(self.default_cutoff()),
 		'links': JSON.stringify(self.links()),
 		'notes': JSON.stringify(self.notes()),
 		'similar': JSON.stringify(self.similar()),

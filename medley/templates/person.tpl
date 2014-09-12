@@ -1,5 +1,16 @@
 <div class="leftcolumn">
 
+<p class="expand-one"><a href="#">Similar names:</a> ({{len(related)}})</p>
+<div class="content-one">
+    %include people_block people=related
+</div>
+
+<p>Similar to:
+<span data-bind="visible: !editing_similar(), html: similar_links, click: edit_similar"></span>
+<input data-bind="visible: editing_similar(), value: similar, hasFocus: editing_similar">
+<img src="/img/edit.png" class="icon" data-bind="visible: !editing_similar(), click: edit_similar">
+</p>
+
 <h3 class="main_tag">{{ person.tag }} (<b>{{ len(person.contents) }}</b> items)</h3>
 
 % other_tags = person.tags[:]
@@ -9,16 +20,6 @@
 %include tag_block tags=other_tags
 %end
 
-<p>Similar to:
-<span data-bind="visible: !editing_similar(), html: similar_links, click: edit_similar"></span>
-<input data-bind="visible: editing_similar(), value: similar, hasFocus: editing_similar">
-<img src="/img/edit.png" class="icon" data-bind="visible: !editing_similar(), click: edit_similar">
-</p>
-
-<p class="expand-one"><a href="#">Similar names:</a> ({{len(related)}})</p>
-<div class="content-one">
-    %include people_block people=related
-</div>
 
 </div>
 
@@ -31,22 +32,32 @@
 <textarea data-bind="visible: editing_links(), value: links, hasFocus: editing_links" rows="4" cols="50"></textarea>
 <img src="/img/edit.png" class="icon" data-bind="visible: !editing_links(), click: edit_links">
 <a href="http://www.google.com/search?q={{ person.split_tag() }}">google</a>
-</p>
 
-<p>Notes:
+Notes:
 <b data-bind="visible: !editing_notes(), text: notes, click: edit_notes"></b>
 <textarea data-bind="visible: editing_notes(), value: notes, hasFocus: editing_notes" rows="4" cols="50"></textarea>
 <img src="/img/edit.png" class="icon" data-bind="visible: !editing_notes(), click: edit_notes">
 </p>
 
-<p>Cutoffs: <b data-bind="visible: !editing_cutoffs(), text: cutoffs, click: edit_cutoffs"></b>
+<p>Cutoffs: 
 <input data-bind="visible: editing_cutoffs(), value: cutoffs, hasFocus: editing_cutoffs">
 <img src="/img/edit.png" class="icon" data-bind="visible: !editing_cutoffs(), click: edit_cutoffs">
-</p>
-
-<p>Cutoff tags: <b data-bind="visible: !editing_cutoff_tags(), text: cutoff_tags, click: edit_cutoff_tags"></b>
+Cutoff tags: 
 <input data-bind="visible: editing_cutoff_tags(), value: cutoff_tags, hasFocus: editing_cutoff_tags">
 <img src="/img/edit.png" class="icon" data-bind="visible: !editing_cutoff_tags(), click: edit_cutoff_tags">
+Default tag: 
+<input data-bind="visible: editing_default_cutoff_tag(), value: default_cutoff_tag, hasFocus: editing_default_cutoff_tag">
+<b data-bind="visible: !editing_default_cutoff_tag(), text: default_cutoff_tag, click: edit_default_cutoff_tag"></b>
+<img src="/img/edit.png" class="icon" data-bind="visible: !editing_default_cutoff_tag(), click: edit_default_cutoff_tag">
+Default cutoff: 
+<input data-bind="visible: editing_default_cutoff(), value: default_cutoff, hasFocus: editing_default_cutoff">
+<b data-bind="visible: !editing_default_cutoff(), text: default_cutoff, click: edit_default_cutoff"></b>
+<img src="/img/edit.png" class="icon" data-bind="visible: !editing_default_cutoff(), click: edit_default_cutoff">
+</p>
+
+<b data-bind="visible: !editing_cutoffs() && !editing_cutoff_tags(), text: merged_cutoffs"></b>
+
+<p>
 </p>
 
 </div>

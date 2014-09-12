@@ -80,6 +80,13 @@ class Person(object):
         self.cutoffs = ''
         self.cutoff_tags = ''
 
+        #will use these to automatically set the cutoff from the lists above
+        #this can be customized more easily on a group by group basis
+        #and then can stay up to date based on the above settings
+        self.default_cutoff_tag = ''
+        self.default_cutoff = ''
+        
+
         #will depend on content type:
         #e.g. sounds like, looks like, etc...
         self.similar_to = ''

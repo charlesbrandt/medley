@@ -3,6 +3,9 @@
 python /c/mindstream/mindstream/launch.py -c /c/medley code
 
 echo "
+cd /c/medley/medley/less 
+lessc style.less > ../css/style.css
+
 to launch a server:
 cd /c/medley/medley 
 python application.py /c/podcasts

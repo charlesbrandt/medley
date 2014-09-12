@@ -228,8 +228,11 @@ def diff_files(fname, path1, path2, indent, sync=False, use_system_diff=False):
             import jsonpatch
             src = load_json(path2)
             dst = load_json(path1)
-            patch = jsonpatch.make_patch(src, dst)
-            print patch
+            try:
+                patch = jsonpatch.make_patch(src, dst)
+                print patch
+            except:
+                print "couldn't compare jsons with jsonpatch... continuing"
 
             if sync:
                 print "cp %s %s" % (path1, path2)

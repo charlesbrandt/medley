@@ -259,6 +259,12 @@ def person_update(person_name):
     cutoff_tag_json = request.forms.get('cutoff_tags')
     p.cutoff_tags = json.loads(cutoff_tag_json)
 
+    default_cutoff_tag_json = request.forms.get('default_cutoff_tag')
+    p.default_cutoff_tag = json.loads(default_cutoff_tag_json)
+
+    default_cutoff_json = request.forms.get('default_cutoff')
+    p.default_cutoff = json.loads(default_cutoff_json)
+
     link_json = request.forms.get('links')
     p.links = json.loads(link_json)
 

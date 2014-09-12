@@ -155,6 +155,8 @@ class CollectionSimple(list):
         self_root_path = Path(self.root)
         parent = self_root_path.parent()
         if not os.path.isdir(self.root):
+            print "Looking for path of root: %s" % self.root
+            print "(is the drive mounted???)"
             self.root = os.path.dirname(self.root)
             #if we still don't have a directory, something is wrong with root
             assert os.path.isdir(self.root)
