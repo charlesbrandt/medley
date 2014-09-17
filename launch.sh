@@ -2,6 +2,9 @@
 
 python /c/mindstream/mindstream/launch.py -c /c/medley code
 
+#not used:
+#python /c/mindstream/mindstream/launch.py -c /c/medley todo
+
 echo "
 cd /c/medley/medley/less 
 lessc style.less > ../css/style.css
@@ -27,11 +30,10 @@ touch /c/medley/medley/application.py
 python /c/mindstream/mindstream/launch.py -c /c/medley blank
 python /c/mindstream/mindstream/launch.py -c /c/medley layout
 
-python /c/mindstream/mindstream/launch.py -c /c/medley todo
-
-python /c/mindstream/mindstream/launch.py -c /c/music/medley todo
 python /c/mindstream/mindstream/launch.py -c /c/medley player
 
+python /c/mindstream/mindstream/launch.py -c /c/music/medley todo
+python /c/mindstream/mindstream/launch.py -c /c/medley start
 
 "
 

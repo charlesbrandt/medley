@@ -1,3 +1,18 @@
+*2014.09.15 18:14:59 start
+/c/medley/instances.txt
+/c/medley/launch.sh
+/c/medley/docs/index.txt
+/c/medley/README.txt
+
+*2014.09.15 18:10:26 start
+/c/medley/instances.txt
+/c/medley/README.txt
+/c/medley/launch.sh
+
+*2014.09.15 18:07:12 blank
+/c/medley/instances.txt
+/c/medley/launch.sh
+
 *2014.01.29 12:15:54 layout_simple
 /c/medley/instances.txt
 /c/medley/medley/less/style.less

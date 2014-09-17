@@ -1,15 +1,15 @@
 Installation
 ====================
 
-The best way to get moments is to clone the mercurial repository:
+The best way to get medley is to clone the mercurial repository:
 ::
 
-  hg clone http://bitbucket.org/cbrandt/moments
-  cd moments
+  hg clone http://bitbucket.org/cbrandt/medley
+  cd medley
   sudo python setup.py install
 
-Another way to get moments is via easy_install. This version is not always the latest and greatest:
+Another way to get medley is via easy_install. This version is not always the latest and greatest:
 ::
 
-  sudo easy_install moments
+  sudo easy_install medley
 
