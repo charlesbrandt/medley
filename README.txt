@@ -15,6 +15,9 @@ The easiest place to start is with the Medley Player.
 cd /path/to/medley/player
 for example:
 cd /c/medley/player/
+#make sure it's a blank start
+cp blank.json configs.json
+./player-vlc.py 
 
 
 

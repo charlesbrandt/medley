@@ -396,13 +396,7 @@ def person(person_name):
         else:
             #content.available = False
             content.remainder['available'] = False
-
-
             
-    #TODO:
-    #default external links (search concerts, etc)
-    #these should be configured based on collection (not hard coded here)
-    
     content_json = json.dumps(p.contents.as_list(include_empty=True))
     return template('person', person=p, related=related, contents=content_json)
 
