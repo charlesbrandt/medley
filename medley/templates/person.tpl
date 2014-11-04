@@ -28,12 +28,11 @@
 <div class="rightcolumn">
 
 <p>Links:
-<b data-bind="visible: !editing_links(), text: links, click: edit_links"></b>
-<textarea data-bind="visible: editing_links(), value: links, hasFocus: editing_links" rows="4" cols="50"></textarea>
+<a href="http://www.google.com/search?q={{ person.split_tag() }}">google</a><span data-bind="visible: !editing_links(), html: links, click: edit_links"></span>
+<textarea data-bind="visible: editing_links(), value: _links, hasFocus: editing_links" rows="4" cols="50"></textarea>
 <img src="/img/edit.png" class="icon" data-bind="visible: !editing_links(), click: edit_links">
-<a href="http://www.google.com/search?q={{ person.split_tag() }}">google</a>
 
-Notes:
+<br>Notes:
 <b data-bind="visible: !editing_notes(), text: notes, click: edit_notes"></b>
 <textarea data-bind="visible: editing_notes(), value: notes, hasFocus: editing_notes" rows="4" cols="50"></textarea>
 <img src="/img/edit.png" class="icon" data-bind="visible: !editing_notes(), click: edit_notes">

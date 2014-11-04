@@ -94,7 +94,15 @@ class Person(object):
         #correspond to main cluster group?
         self.rating = ''
         self.quote = ''
+
+        #this is a good place to store content / collection specific data
+        #just put everything in a dictionary,
+        #then json.dumps value before saving
         self.notes = ''
+
+        #place to keep track of play counts, last visit, etc
+        #use similar to notes?
+        self.history = ''
 
         #verified links only
         self.links = ''
@@ -248,6 +256,23 @@ class Person(object):
         #update the count:
         self.count = len(self.contents)
         self.save()
+
+    def apply_cutoffs(self):
+        """
+        make a new attribute, self.cutoff_groups
+        and use self.cutoffs to create the groups
+        """
+        cur_pos = 0
+        self.cutoff_groups = {}
+        #without both of these, can't make groups:
+        if self.cutoffs and self.cutoff_tags:
+            cutoffs = self.cutoffs.split(',')
+            cutoff_tags = self.cutoff_tags.split(',')
+            for index, item in enumerate(cutoffs):
+                tag = cutoff_tags[index]
+                self.cutoff_groups[tag] = self.contents[cur_pos:int(item)]
+                cur_pos = int(item)
+            #print self.cutoff_groups
         
     def update_default(self, new_tag):
         """
