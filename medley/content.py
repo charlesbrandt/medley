@@ -108,15 +108,15 @@ class Mark(object):
         return self.position
 
     def _get_hours(self):
-        return self.as_hms[0]
+        return self.as_hms()[0]
     hours = property(_get_hours)
 
     def _get_minutes(self):
-        return self.as_hms[1]
+        return self.as_hms()[1]
     minutes = property(_get_minutes)
 
     def _get_seconds(self):
-        return self.as_hms[2]
+        return self.as_hms()[2]
     def _set_seconds(self, seconds):
         self.position = seconds * 1000
     seconds = property(_get_seconds, _set_seconds)
