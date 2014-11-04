@@ -40,6 +40,19 @@ def handle_skips(source, destination):
     root = os.path.dirname(destination)
     print root
     
+    destination_json = destination + '.json'
+    if os.path.exists(destination_json):
+        #get rid of it...
+        #don't want to load it 
+        os.remove(destination_json)
+
+    final_dest = "%s.total.%s" % (destination, suffix)
+    if os.path.exists(final_dest):
+        #get rid of it...
+        #don't want to load it 
+        os.remove(final_dest)
+
+    
     jfile = find_json(source)
     print jfile
     content = Content(jfile)
@@ -61,7 +74,15 @@ def handle_skips(source, destination):
         #(and then update all of the timestamps)
 
         if re.search('skip', segment.title):
+            #this is the duration of all of the segments that we are keeping!!
             duration = 0
+
+            #TODO:
+            ## if end is none 
+            ## find end of the track, use that position (trim the end)
+            if not segment.end:
+                pass
+            
             if segment.start == keep_start:
                 #nothing to keep here... just update the keep_start and move on
                 keep_start = segment.end.total_seconds()
@@ -79,29 +100,51 @@ def handle_skips(source, destination):
                 command = "avconv -i %s -ss %s -t %s -vcodec copy -acodec copy %s" % (source, keep_start, duration, dest_part)
                 process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 print command
-                #print process.communicate()[0]
+                print process.communicate()[0]
 
+                
                 #update these values
                 keep_start = segment.end.total_seconds()
                 keep_end = None
 
+                
+            skip_duration = segment.end.total_seconds() - segment.start.total_seconds()
+            
             #make a copy of Content object
             #update the position for all subsequent segments and marks
             matched_current = False
             for copy_segment in content_copy.segments[:]:
+                #this only updates the segments... 
+                #not the mark_list or the title_list
+                copy_segment.json_source = destination_json
+                copy_segment.filename = os.path.basename(final_dest)
                 if (copy_segment.title == segment.title):
+                    print "Matched: ", copy_segment.title
                     matched_current = True
                     content_copy.segments.remove(copy_segment)
                 elif matched_current:
-                    new_start = copy_segment.start.total_seconds() - duration
+                    print "Updating: ", copy_segment.title, " Removing: ", skip_duration
+                    print "Original start: ", copy_segment.start.position
+                    new_start = copy_segment.start.total_seconds() - skip_duration
                     copy_segment.start.position = new_start * 1000
+                    print "New start: ", copy_segment.start.position
                     if copy_segment.end:
-                        new_end = copy_segment.end.total_seconds() - duration
+                        new_end = copy_segment.end.total_seconds() - skip_duration
                         copy_segment.end.position = new_end * 1000
-                    
+
+            print ""
             part += 1
 
     #now join all of the parts back together:
+
+    #update the new content's filename
+    content_copy.filename = os.path.basename(final_dest)
+    content_copy.media = [final_dest]
+    content_copy.split_segments()
+    #save the new corresponding json file
+    content_copy.save(destination_json)
+
+    print "All dest parts: ", dest_parts
 
     #ffmpeg seems more versatile than avconv for joining files:
     #https://trac.ffmpeg.org/wiki/How%20to%20concatenate%20(join,%20merge)%20media%20files
@@ -110,47 +153,27 @@ def handle_skips(source, destination):
     for dest_part in dest_parts:
         f.write("file '" + dest_part + "'\n")
     f.close()
-    final_dest = "%s.total.%s" % (destination, suffix)
     command = "ffmpeg -f concat -i %s -c copy %s" % (file_list, final_dest)
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print command
-    #print process.communicate()[0]
+    print process.communicate()[0]
     #unfortunately, this creates a segmentation fault
+    #Segmentation fault (core dumped)
+    #this was caused by no files being listed in temp.txt
+    print
 
-    #update the new content's filename
+    ## file_list = ''
+    ## for dest_part in dest_parts:
+    ##     file_list += dest_part + '\|'
+
+    ## #get rid of last '|'
+    ## file_list = file_list[:-2]
+    ## print file_list
+
+    ## command = "avconv -i concat:%s -codec copy %s" % (file_list, final_dest)
+    ## process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    print command
     
-    #save the new corresponding json file
-    destination_json = destination + '.json'
-    content_copy.save(destination_json)
-
-        ## #this won't work, but need a way to check
-        ## skip_found = False
-        ## if re.search('skip', segment.title):
-        ##     skip_found = True
-        ##     #ok... we have a skip request...
-        ##     #TODO:
-        ##     #describe process
-        ##     #ensure that we have both a start and end
-        ##     # if end is none 
-        ##     #  find end of the track, use that position (trim the end)
-        ##     # all changes should be made to a temporary version
-        ##     # both wav
-        ##     # and json
-        ##     # generate avconv command
-        ##     # then adjust all subsequent segment times by the time being removed
-        ##     # run avconv command
-        ##     # save both
-        ##     # use while loop to repeat until no skip requests found
-        ##     # while skip_found:
-        ##     #     (this is needed to get the latest version of segments)
-            
-            
-        ##     print segment.title
-        ##     print segment.start
-        ##     print segment.end
-        ##     #print segment.__dict__.keys()
-        ##     print
-
         
 if __name__ == '__main__':
     source = None
@@ -175,14 +198,4 @@ if __name__ == '__main__':
     #TODO:
     #handle 'silence' tags (replace with silence)
 
-
-
-    ## #to require that at least one argument is passed in to the script itself
-    ## #(through sys.argv)
-    ## #comment previous merge_logs call, then uncomment:
-    ##     merge_logs(source, destination)
-
-    ## else:
-    ##     usage()
-    ##     exit()
 
