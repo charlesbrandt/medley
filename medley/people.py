@@ -85,6 +85,17 @@ class Person(object):
         #and then can stay up to date based on the above settings
         self.default_cutoff_tag = ''
         self.default_cutoff = ''
+
+        #path, should be locally available
+        #used as default image
+        self.image = ''
+
+        #not sure the best way to represent photos or a gallery
+        #will want to associate tags, so just a list of paths is not sufficient
+        #maybe a new type of Content
+        #but don't need all of the associated nesting / trees
+        #also much overlap with moments.path.Image object
+        self.photos = []
         
 
         #will depend on content type:
@@ -106,9 +117,6 @@ class Person(object):
 
         #verified links only
         self.links = ''
-
-        #path, should be locally available
-        self.image = ''
 
         if source:
             #drive dir
