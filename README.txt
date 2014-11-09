@@ -6,10 +6,11 @@ I was going to call this package Collections, but that conflicts with the standa
 
 Medley helps sort through collections or medleys of content.
 
-DOCS
----------
-Complete documentation can be found in:
-docs/
+
+- Make sure that the media you want to sort is available locally somehow (mount the drive, connect to the shared repository, etc).
+Ideally this location is the same on all machines to make playlists compatible.
+
+
 
 To generate the documentation, you will need Sphinx:
 sudo easy_install sphinx
