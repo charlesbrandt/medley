@@ -85,6 +85,17 @@ class Person(object):
         #and then can stay up to date based on the above settings
         self.default_cutoff_tag = ''
         self.default_cutoff = ''
+
+        #path, should be locally available
+        #used as default image
+        self.image = ''
+
+        #not sure the best way to represent photos or a gallery
+        #will want to associate tags, so just a list of paths is not sufficient
+        #maybe a new type of Content
+        #but don't need all of the associated nesting / trees
+        #also much overlap with moments.path.Image object
+        self.photos = []
         
 
         #will depend on content type:
@@ -94,13 +105,18 @@ class Person(object):
         #correspond to main cluster group?
         self.rating = ''
         self.quote = ''
+
+        #this is a good place to store content / collection specific data
+        #just put everything in a dictionary,
+        #then json.dumps value before saving
         self.notes = ''
+
+        #place to keep track of play counts, last visit, etc
+        #use similar to notes?
+        self.history = ''
 
         #verified links only
         self.links = ''
-
-        #path, should be locally available
-        self.image = ''
 
         if source:
             #drive dir
@@ -248,6 +264,23 @@ class Person(object):
         #update the count:
         self.count = len(self.contents)
         self.save()
+
+    def apply_cutoffs(self):
+        """
+        make a new attribute, self.cutoff_groups
+        and use self.cutoffs to create the groups
+        """
+        cur_pos = 0
+        self.cutoff_groups = {}
+        #without both of these, can't make groups:
+        if self.cutoffs and self.cutoff_tags:
+            cutoffs = self.cutoffs.split(',')
+            cutoff_tags = self.cutoff_tags.split(',')
+            for index, item in enumerate(cutoffs):
+                tag = cutoff_tags[index]
+                self.cutoff_groups[tag] = self.contents[cur_pos:int(item)]
+                cur_pos = int(item)
+            #print self.cutoff_groups
         
     def update_default(self, new_tag):
         """

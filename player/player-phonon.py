@@ -18,9 +18,6 @@ Medley
 
 Tree of Lists
 
-also [2014.10.08 12:34:24]
-migrating this version to use VLC wrapper directly, rather than phonon layer.
-difficulty getting phonon to use VLC back end.
 
 """
 
@@ -29,8 +26,7 @@ import platform
 
 import PySide
 from PySide import QtGui, QtCore
-#from PySide.phonon import Phonon
-import vlc
+from PySide.phonon import Phonon
     
 from medley.helpers import load_json, save_json
 
@@ -57,33 +53,12 @@ class PlayerWidget(QtGui.QWidget):
         #should not start out in full
         self.fullscreen = False
 
-        # creating a basic vlc instance
-        self.Instance = vlc.Instance()
-        # creating an empty vlc media player
-        self.MediaPlayer = self.Instance.media_player_new()
+        self.audio = Phonon.AudioOutput(Phonon.MusicCategory, self)
+        self.player = Phonon.MediaObject(self)
+        Phonon.createPath(self.player, self.audio)
 
-        #self.audio = Phonon.AudioOutput(Phonon.MusicCategory, self)
-        #self.player = Phonon.MediaObject(self)
-        #Phonon.createPath(self.player, self.audio)
-
-        #not sure if VLC library sends regular tick signals:
-        #self.player.setTickInterval(1000)
-        #self.connect(self.player, QtCore.SIGNAL("tick(qint64)"), self.tick)
-
-        #so try this:
-        #http://srinikom.github.io/pyside-docs/PySide/QtCore/QTimer.html#PySide.QtCore.QTimer
-        ## timer = QtCore.QTimer(self)
-        ## self.connect(timer, QtCore.SIGNAL("tick(qint64)"), self.tick)
-        ## #check every second:
-        ## timer.start(1000)
-
-        #yup... this is how the sample does it too:
-        self.Timer = QtCore.QTimer(self)
-        self.Timer.setInterval(200)
-        self.connect(self.Timer, QtCore.SIGNAL("timeout()"),
-                     self.updateUI)
-
-        
+        self.player.setTickInterval(1000)
+        self.connect(self.player, QtCore.SIGNAL("tick(qint64)"), self.tick)
     
         #self.prev_button = QtGui.QPushButton("Prev", self)
         self.prev_button = QtGui.QPushButton("", self)
@@ -120,14 +95,7 @@ class PlayerWidget(QtGui.QWidget):
         row1.addWidget(self.play_button)
         row1.addWidget(self.next_button)
 
-        #self.seek_bar = Phonon.SeekSlider(self.player, self)
-
-        self.seek_bar = QtGui.QSlider(QtCore.Qt.Horizontal, self)
-        self.seek_bar.setToolTip("Position")
-        self.seek_bar.setMaximum(1000)
-        self.connect(self.seek_bar,
-                     QtCore.SIGNAL("sliderMoved(int)"), self.setPosition)
-        
+        self.seek_bar = Phonon.SeekSlider(self.player, self)
 
         row2 = QtGui.QHBoxLayout()
         row2.addWidget(self.seek_bar)
@@ -135,15 +103,7 @@ class PlayerWidget(QtGui.QWidget):
         self.time_passed = QtGui.QLabel("00:00", self)
         self.time_remain = QtGui.QLabel("-00:00", self)
 
-        #self.volume_slider = Phonon.VolumeSlider(self.audio, self)
-
-        self.volume_slider = QtGui.QSlider(QtCore.Qt.Horizontal, self)
-        self.volume_slider.setMaximum(100)
-        self.volume_slider.setValue(self.MediaPlayer.audio_get_volume())
-        self.volume_slider.setToolTip("Volume")
-        self.connect(self.volume_slider,
-                     QtCore.SIGNAL("valueChanged(int)"),self.set_volume)
-
+        self.volume_slider = Phonon.VolumeSlider(self.audio, self)
 
         row3 = QtGui.QHBoxLayout()
         row3.addWidget(self.time_passed)
@@ -177,7 +137,6 @@ class PlayerWidget(QtGui.QWidget):
         self.selected_playlist = None
 
         self.play_state = "paused"
-        self.rate = 1.0
 
 
     def open_window(self):
@@ -254,13 +213,6 @@ class PlayerWidget(QtGui.QWidget):
         ## nextAction.setIconVisibleInMenu(False)
         ## #playbackMenu.addAction(nextAction)
 
-        slower = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+,'),
-                                 self.video_window, self.slower)
-
-        faster = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+.'),
-                                 self.video_window, self.faster)
-
-
         nexts = QtGui.QShortcut(QtGui.QKeySequence('Alt+Down'),
                                 self.video_window, self.next)
         nexts = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Down'),
@@ -285,25 +237,10 @@ class PlayerWidget(QtGui.QWidget):
 
 
 
-        #self.video = QtGui.QWidget(self)
-        #self.setCentralWidget(self.Widget)
+        self.video = Phonon.VideoWidget(self.video_window)
+        Phonon.createPath(self.player, self.video)
 
-        self.VideoFrame = QtGui.QFrame()
-        self.Palette = self.VideoFrame.palette()
-        self.Palette.setColor (QtGui.QPalette.Window,
-                               QtGui.QColor(0,0,0))
-        self.VideoFrame.setPalette(self.Palette)
-        self.VideoFrame.setAutoFillBackground(True)
-
-        #self.VBoxLayout = QtGui.QVBoxLayout()
-        #self.VBoxLayout.addWidget(self.VideoFrame)
-        #self.video.setLayout(self.VBoxLayout)
-
-        #self.video = Phonon.VideoWidget(self.video_window)
-        #Phonon.createPath(self.player, self.video)
-
-        #self.video_window.setCentralWidget(self.video)
-        self.video_window.setCentralWidget(self.VideoFrame)
+        self.video_window.setCentralWidget(self.video)
 
         #self.video_window.resize(840, 525)
         self.video_window.resize(960, 540)
@@ -390,13 +327,6 @@ class PlayerWidget(QtGui.QWidget):
         ##     make_title = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
         ##                                  self.video_window, titles_col.new_title)
 
-        print "Play() called. Received:"
-        print "Content: ", content
-        print "Playlist: ", playlist
-        print "Marks_col: ", marks_col
-        print "Titles_col: ", titles_col
-        
-
         #incase it was disabled:
         self.play_button.setEnabled(True)
         #incase play was not called by self.play_toggle()
@@ -411,9 +341,6 @@ class PlayerWidget(QtGui.QWidget):
             self.start = content.start.total_seconds() * 1000
             if content.end:
                 self.end = content.end.total_seconds() * 1000
-
-            #print "updating content with: ", content, " and start to: ", self.start
-
 
         if not playlist is None:
             self.cur_playlist = playlist
@@ -454,90 +381,41 @@ class PlayerWidget(QtGui.QWidget):
 
 
             print "making path"
-            print "Cur_content.path: ", self.cur_content.path
-            print "Cur_content.filename: ", self.cur_content.filename
             path = os.path.join(self.cur_content.path, self.cur_content.filename)
             print "Playing: %s" % path
 
-            #player_path = self.player.currentSource().fileName()
-            if hasattr(self, 'Media') and self.Media:
-                player_path = self.Media.get_mrl()
-                player_path = player_path.replace("file://", "")
-            else:
-                player_path = None
-                
+            player_path = self.player.currentSource().fileName()
             if path != player_path:
-                print "MEDIA PATH: %s != %s" % (path, player_path)
+                #print "%s != %s" % (path, player_path)
                 #get rid of everything already played:
-                #self.player.clear()
-                #self.player.setCurrentSource(Phonon.MediaSource(path))
-
-                self.Media = self.Instance.media_new(path)
-                #print "Setting media for media player: %s" % (str(self.Media))
-                # put the media in the media player
-                self.MediaPlayer.set_media(self.Media)
-
-                # parse the metadata of the file
-                self.Media.parse()
-                # set the title of the track as window title
-                #self.setWindowTitle(self.Media.get_meta(0))
-
-                # the media player has to be 'connected' to the QFrame
-                # (otherwise a video would be displayed in it's own window)
-                # this is platform specific!
-                # you have to give the id of the QFrame (or similar object) to
-                # vlc, different platforms have different functions for this
-                if sys.platform == "linux2": # for Linux using the X Server
-                    self.MediaPlayer.set_xwindow(self.VideoFrame.winId())
-                elif sys.platform == "win32": # for Windows
-                    self.MediaPlayer.set_hwnd(self.VideoFrame.winId())
-                elif sys.platform == "darwin": # for MacOS
-                    self.MediaPlayer.set_nsobject(self.VideoFrame.winId())
-
-                
+                self.player.clear()
+                self.player.setCurrentSource(Phonon.MediaSource(path))
             else:
                 #no need to reset here, we're already playing the current item
                 pass
 
-
-            #self.player.play()
-
-            ## if self.MediaPlayer.is_playing():
-            ##     self.MediaPlayer.pause()
-            ##     self.PlayButton.setText("Play")
-            ##     self.isPaused = True
-            ## else:
-            ##     if self.MediaPlayer.play() == -1:
-            ##         self.OpenFile()
-            ##         return
-
-            self.rate = 1.0
-            self.MediaPlayer.play()
-            self.MediaPlayer.set_rate(self.rate)
-            #self.PlayButton.setText("Pause")
-            self.Timer.start()
-            self.isPaused = False            
+            self.player.play()
 
             if self.start:
                 #keep trying to update position until it works:
-                ## start_text = 'a'
-                ## cur_text = 'b'
-                ## while start_text != cur_text:
 
-                #time = self.player.currentTime()
-                time = self.MediaPlayer.get_position() * 1000
-                cur_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
-                cur_text = cur_time.toString('mm:ss')
+                #!!!!!!
+                #TODO: this may be causing seek to next to hang:
+                #!!!!!!
 
-                start_time = QtCore.QTime((self.start / 3600000), (self.start / 60000) % 60, (self.start / 1000) % 60)
-                start_text = start_time.toString('mm:ss')
+                start_text = 'a'
+                cur_text = 'b'
+                while start_text != cur_text:
+                    time = self.player.currentTime()
+                    cur_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
+                    cur_text = cur_time.toString('mm:ss')
 
-                #tried to trigger this
-                #self.update_position()
-                #print "start:", self.start, type(self.start)
-                #length = self.MediaPlayer.get_length()
-                
-                self.seek(self.start)
+                    start_time = QtCore.QTime((self.start / 3600000), (self.start / 60000) % 60, (self.start / 1000) % 60)
+                    start_text = start_time.toString('mm:ss')
+
+                    #tried to trigger this
+                    self.update_position()
+            
 
             print "Playing: %s" % path
             print self.cur_content.title
@@ -547,20 +425,6 @@ class PlayerWidget(QtGui.QWidget):
         #this doesn't work after all
         #raise ValueError, "Raising error to prevent segfault. Ignore this one."
 
-    def setPosition(self, Position):
-        """Set the position
-        """
-        # setting the position to where the slider was dragged
-        self.MediaPlayer.set_position(Position / 1000.0)
-        # the vlc MediaPlayer needs a float value between 0 and 1, Qt
-        # uses integer variables, so you need a factor; the higher the
-        # factor, the more precise are the results
-        # (1000 should be enough)
-
-    def seek(self, position):
-        ratio = self.get_ratio(position)
-        self.MediaPlayer.set_position(ratio)
-        
 
     def update_position(self):
 
@@ -584,20 +448,7 @@ class PlayerWidget(QtGui.QWidget):
             
     def pause(self):
         #pass it on
-        #self.player.pause()            
-
-        if self.MediaPlayer.is_playing():
-            self.MediaPlayer.pause()
-            #self.PlayButton.setText("Play")
-            self.isPaused = True
-
-    def stop(self):
-        """Stop player
-        """
-        print "Stopping"
-        self.MediaPlayer.stop()
-        #self.PlayButton.setText("Play")
-
+        self.player.pause()            
 
     def next(self):
         if self.cur_playlist and len(self.cur_playlist):
@@ -612,120 +463,34 @@ class PlayerWidget(QtGui.QWidget):
         print "Go Previous"
 
     def forward(self):
-        #time = self.player.currentTime()
-        time = self.get_position()
+        time = self.player.currentTime()
         #go 5 seconds
         time += 5000
-        #self.player.seek(time)
-        self.seek(time)
+        self.player.seek(time)
         #print "Scan Forward"
 
     def back(self):
-        #time = self.player.currentTime()
-        time = self.get_position()
+        time = self.player.currentTime()
         #go 5 seconds
         time -= 5000
-        #self.player.seek(time)
-        self.seek(time)
+        self.player.seek(time)
         #print "Scan Backward"
 
     def jumpf(self):
-        #time = self.player.currentTime()
-        time = self.get_position()
+        time = self.player.currentTime()
         #go 60 seconds
         time += 60000
-        self.seek(time)
-        #self.player.seek(time)
+        self.player.seek(time)
         #print "Jump Forward"
 
     def jumpb(self):
-        #time = self.player.currentTime()
-        time = self.get_position()
+        time = self.player.currentTime()
         #go 60 seconds
         time -= 60000
-        #self.player.seek(time)
-        self.seek(time)
+        self.player.seek(time)
         #print "Jump Backward"
 
-    def slower(self):
-        """Slow down playback rate
-        """
-        #print dir(self.MediaPlayer)
-        if self.rate > .1:
-            self.rate = self.rate - .1
-        print self.rate
-        self.MediaPlayer.set_rate(self.rate)
-
-    def faster(self):
-        """Speed up playback rate
-        """
-        #print dir(self.MediaPlayer)
-        if self.rate > .1:
-            self.rate = self.rate + .1
-        print self.rate
-        self.MediaPlayer.set_rate(self.rate)
-
-    def set_volume(self, Volume):
-        """Set the volume
-        """
-        self.MediaPlayer.audio_set_volume(Volume)
-
-    def get_ratio(self, position):
-        """
-        position should be position in ms
-        """
-        length = self.Media.get_duration()
-        #print "length:", length
-        ratio = (position * 1.0) / length
-        #print "ratio:", ratio
-        return ratio
-
-    def get_position(self):
-        """
-        helper to get current position
-        """
-        pos = self.MediaPlayer.get_position()
-
-        length = self.Media.get_duration()
-
-        time = length * pos
-
-        return time
-
-    def get_remainder(self):
-        time = self.get_position()
-        length = self.Media.get_duration()
-        remain = length - time
-        return remain
-
-    #def tick(self, time):
-    def updateUI(self):
-        """updates the user interface"""
-        time = self.get_position()
-        remain = self.get_remainder()
-        
-        #print "length:", length
-        #ratio = (self.start * 1.0) / length
-        #print "ratio:", ratio
-
-        #self.MediaPlayer.set_position(ratio)
-
-
-
-        #print "Updating UI: ", time
-        
-        # setting the slider to the desired position
-        self.seek_bar.setValue(self.MediaPlayer.get_position() * 1000)
-
-        if not self.MediaPlayer.is_playing():
-            # no need to call this function if nothing is played
-            self.Timer.stop()
-            if not self.isPaused:
-                # after the video finished, the play button stills shows
-                # "Pause", not the desired behavior of a media player
-                # this will fix it
-                self.stop()
-
+    def tick(self, time):
         if self.cur_content and self.cur_content.end and time > self.cur_content.end.position:
             print "AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
             self.next()
@@ -736,9 +501,7 @@ class PlayerWidget(QtGui.QWidget):
         else:
             self.time_passed.setText(display_time.toString('mm:ss'))
 
-        #time = self.player.remainingTime()
-        #time = self.MediaPlayer.get_length() - (self.MediaPlayer.get_position() * 1000)
-        time = remain
+        time = self.player.remainingTime()
         remain_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
         hours = time / 3600000
         remain_string = ''
@@ -777,12 +540,8 @@ class PlayerWidget(QtGui.QWidget):
 
         PlayerWidget is often named player externally
         so it seems like this should be possible
-
-        this is also used by marks widget
         """
-        #return self.player.currentTime()
-        #return self.MediaPlayer.get_time() * 1000
-        return self.get_position()
+        return self.player.currentTime()
 
     
 class LeftNavWidget(QtGui.QWidget):
@@ -1019,22 +778,6 @@ class AppWindow(QtGui.QMainWindow):
         jumpbAction.triggered.connect(self.widget.left_nav.player.jumpb)
         #jumpbAction.triggered.connect(main_player.jumpb)
         playbackMenu.addAction(jumpbAction)
-
-        slowerAction = QtGui.QAction('Slower', self)
-        slowerAction.setShortcut('Ctrl+,')
-        slowerAction.setStatusTip('Slow playback speed')        
-        slowerAction.triggered.connect(self.widget.left_nav.player.slower)
-        #slowerAction.triggered.connect(main_player.slower)
-        playbackMenu.addAction(slowerAction)
-
-        fasterAction = QtGui.QAction('Faster', self)
-        fasterAction.setShortcut('Ctrl+.')
-        fasterAction.setStatusTip('Increase playback speed')        
-        fasterAction.triggered.connect(self.widget.left_nav.player.faster)
-        #fasterAction.triggered.connect(main_player.faster)
-        playbackMenu.addAction(fasterAction)
-
-
 
         nextAction = QtGui.QAction('Next', self)
         nextAction.setShortcut('Alt+Down')

@@ -652,7 +652,8 @@ class PlaylistView(QtGui.QTableView):
                     drive_dir = configs.get('default_drive_dir')
                     if not drive_dir:
                         print "WARNING: No path prefix set: %s" % drive_dir
-                        content.base_dir = content_path
+                        #need to use drive_dir here... base_dir is not enough
+                        content.drive_dir = content_path
                     else:
                         dd_path = Path(drive_dir)
                         content.base_dir = dd_path.to_relative(content_path)
@@ -1256,7 +1257,9 @@ class TitlesWidget(QtGui.QWidget):
         in the console
         """
         if self.content:
-            print self.content.to_dict()
+            #TODO:
+            #print json instead of dict()
+            print json.dumps(self.content.to_dict())
             print self.content.debug()
         else:
             print "NO CONTENT assigned to self: %s" % self.content

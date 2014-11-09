@@ -108,15 +108,15 @@ class Mark(object):
         return self.position
 
     def _get_hours(self):
-        return self.as_hms[0]
+        return self.as_hms()[0]
     hours = property(_get_hours)
 
     def _get_minutes(self):
-        return self.as_hms[1]
+        return self.as_hms()[1]
     minutes = property(_get_minutes)
 
     def _get_seconds(self):
-        return self.as_hms[2]
+        return self.as_hms()[2]
     def _set_seconds(self, seconds):
         self.position = seconds * 1000
     seconds = property(_get_seconds, _set_seconds)
@@ -1034,10 +1034,16 @@ class Content(object):
                     if not bd_option:
                         #print "Incomplete base_dir: %s (base_dir).  Could not find base_dir anywhere: %s" % (self.base_dir, self.root.to_dict())
                         #return ''
+                        bd_option = ''
 
                         #seems like if you're asking for a path
                         #and the parts aren't there, that's an error
-                        raise ValueError, "Incomplete base_dir: %s (base_dir).  Could not find base_dir anywhere: %s" % (self.base_dir, self.root.to_dict())
+                        
+                        #but if we're not using *both* basedir *and* drive_dir
+                        #then this is overkill
+                        
+                        #will keep error on drive dir... do need something.
+                        #raise ValueError, "Incomplete base_dir: %s (base_dir).  Could not find base_dir anywhere: %s" % (self.base_dir, self.root.to_dict())
             else:
                 bd_option = self.base_dir
 
@@ -1106,7 +1112,23 @@ class Content(object):
 
             #print "found the following ids for segment path: %s" % path
 
-            return cur_segment            
+            return cur_segment
+
+    def split_segments(self):
+        """
+        this is the opposite of MarkList.make_segments...
+        go through our list of segments and regenerate the corresponding
+        mark_list and titles list
+
+        this is useful when working on segments directly, (like slice_media)
+        but then want to apply changes to MarkList and titles
+        """
+        self.marks = MarkList()
+        self.titles = []
+        for segment in self.segments:
+            self.titles.append(segment.title)
+            self.marks.append(segment.start)
+        
 
     def load(self, source=None, debug=False):
         """

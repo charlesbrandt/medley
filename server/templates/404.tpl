@@ -1,4 +1,4 @@
 
 {{ message }}
 
-%rebase layout title=title
+%rebase layout title="404"
