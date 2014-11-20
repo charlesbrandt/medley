@@ -76,7 +76,11 @@ var SearchViewModel = function() {
   self.cutoff = 50;
   self.names = onames;
   self.search = ko.observable('');
-  
+
+  self.clear_search = function() {
+    self.search('');
+  };
+
   self.number = ko.observable();
   self.results = ko.observableArray();
 

@@ -11,6 +11,14 @@
 <img src="/img/edit.png" class="icon" data-bind="visible: !editing_similar(), click: edit_similar">
 </p>
 
+<div><p>Download photos:
+<img src="/img/edit.png" class="icon" data-bind="click: toggle_downloads">
+</p>
+<textarea placeholder="urls" data-bind="visible: editing_downloads(), value: photo_urls"></textarea>
+<input placeholder="tags" data-bind="visible: editing_downloads(), value: photo_tags">
+<button data-bind="visible: editing_downloads(), click: do_download">Download</button>
+</div>
+
 <h3 class="main_tag">{{ person.tag }} (<b>{{ len(person.contents) }}</b> items)</h3>
 
 % other_tags = person.tags[:]
@@ -61,12 +69,34 @@ Default cutoff:
 
 </div>
 
+<span id="toggle-layout">Column direction</span>
+<span id="show-photos">Toggle Photos</span>
+<span id="show-media">Toggle Content</span>
 <div class="row"></div>
 
-<ul id="people" class="content" data-bind='template: { name: "personTmpl", foreach: contents }'>
+<div class="scroll-while-dragging" data-bind="with: scrollWhileDragging">
+  <ul id="photos" class="content top-bottom-columns" data-bind="foreach: items, scrollableOnDragOver: 'scroll-while-dragging'">
+    <li data-bind="
+                   css: { dragging: dragging },
+                   dragZone: { name: 'scroll-while-dragging',
+                   dragStart: $parent.dragStart,
+                   dragEnd: $parent.dragEnd
+                   },
+                   dragEvents: {
+                   name: 'scroll-while-dragging',
+                   dragOver: $parent.reorder,
+                   data: { items: $parent.items, item: $data }
+                   }">
+      <img data-bind="attr: { src: '/path/' + value.drive_dir + '/' + value.base_dir + '/' + value.filename }" class="thumb"></a>
+    </li>
+  </ul>
+</div>
+
+
+<ul id="content" class="content top-bottom-columns" data-bind='template: { name: "contentTmpl", foreach: contents }'>
 </ul>
 
-<script id="personTmpl" type="text/html">
+<script id="contentTmpl" type="text/html">
     <li class="draggable summary content" draggable="true" data-bind="css: { available: available}, event:{
        dragstart:   function(data, event){ 
                     $(event.target).addClass('dragSource')
@@ -115,10 +145,10 @@ Default cutoff:
 
 	<div class="wrapper"> 
 	  <div class="wrapper" data-bind="if: image"> 
-	    <a data-bind="attr: { href: '/collection/' + collection + '/content/' + content_base }"><img data-bind="attr: { src: '/path/' + image }" class="thumb"></a>
+	    <a data-bind="attr: { href: '/collection/' + collection + '/content/' + base_dir }"><img data-bind="attr: { src: '/path/' + image }" class="thumb"></a>
 	  </div>
 	    
-	  <a data-bind="attr: { href: '/collection/' + collection + '/content/' + content_base }"><b data-bind='text: title'></b></a>
+	  <a data-bind="attr: { href: '/collection/' + collection + '/content/' + base_dir }"><b data-bind='text: title'></b></a>
 	</div>
 
 
@@ -142,24 +172,15 @@ Default cutoff:
 
 <script type="text/javascript">
   var contents = {{! contents }};
+  var photos = {{! photos }};
   var cur_person = {{! person.as_json() }};
 </script>
 
-  <script type="text/javascript">window.JSON || document.write('<script src="js/lib/json2.js"><\/script>')</script>
-    
-    <script type="text/javascript" src="/js/lib/require.js"></script>
-    <script type="text/javascript">
-      //this allows require.js to be in a different directory (lib)
-      //than main custom code
-      require.config({
-		baseUrl: '/js',
-		paths: {
-			'jquery' : 'lib/jquery-2.0.3',
-	                'lodash' : 'lib/lodash',
-	                'ko'     : 'lib/knockout-3.0.0'
-		}
-      });
-      require(['person'], function(person) {});
-    </script>
+
+<script type="text/javascript" src="/js/lib/jquery-1.10.2.js"></script>
+<script type="text/javascript" src="/js/lib/lodash.js"></script>
+<script type="text/javascript" src="/js/lib/knockout-3.0.0.js"></script>
+<script type="text/javascript" src="/js/lib/knockout.dragdrop.js"></script>
+<script type="text/javascript" src="/js/person.js"></script>
 
 %rebase layout title=str(person.tag), active="home"

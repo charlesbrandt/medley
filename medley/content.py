@@ -582,8 +582,583 @@ class MarkList(list):
 
         return (len(common), response)
 
+class SimpleContent(object):
+    """
+    Object to hold details of a particular piece of content (media)
 
-class Content(object):
+    This type of content should never have a nested structure.
+    The best example is a photo. Maybe there will be other types too.
+    
+    """
+    def __init__(self, source=None, content={}, base_dir='', debug=False):
+
+        #everything leading up to the base_dir 
+        #this is the start of the collection (collection root path)
+        self.drive_dir = ''
+
+        #aka path from collection root
+        #relative path for other content
+        #might want to pass this in if creating a new Content object
+        #so that drive_dir will get initialized correctly too
+        self.base_dir = base_dir
+
+        #keep track of where this object's meta data is stored:
+        self._json_source = ''
+        
+        #the default content/media related filename associated with the content
+        #moving this to a property (like path), to assist with searching
+        self._filename = ''
+
+        #the md5 checksum hash for the main file
+        self.hash = ''
+        #this might help locate previously generated meta data
+        #without knowing anything else about the file
+        #similar to MuzicBrainz?
+
+        #our title
+        #not to be confused with titles, which are used with segments and marks
+        self.title = ''
+        self.description = ''
+        #when content was created or published (according to publisher)
+        self.timestamp = None
+
+        self.added = ''
+        self.visited = ''
+
+        #aka sources?
+        self.sites = []
+
+        self.people = []
+        self.tags = []
+
+        #keep a log of when actions happened:
+        #used to do this with Moment logs to track media plays
+        #not processing log (e.g. loading into a Journal)
+        #self.history = ""
+        #to make this easier, use a Journal to help with formatting:
+        self.history = Journal()
+        self.history.make("Created", ["created"])
+
+        #keep track of anything from the json file that is not applied here:
+        self.remainder = {}
+
+        #deal with what was passed in now:
+        #i.e. autoload!
+
+        if content and source:
+            raise ValueError, "Cannot initialize Content object with both source and dictionary: %s, %s" % (source, content) 
+
+        elif content:
+            #what was passed in for manual initialization:
+            #store this for subsequent call to load:
+            self.content = content
+            self.load()
+
+        elif source:
+            
+            #we might not have self.json_source yet,
+            #but we know we have source
+            #source_dir = os.path.dirname(self.json_source)
+            source_dir = os.path.dirname(source)
+
+            # json file to save and load from
+            #this is the best way to initialize previous Content object:
+            #ok to include full path here...
+            self.json_source = find_json(source)
+            #print "FOUND SOURCE: %s" % self.json_source
+            #make sure something was found:
+            if self.json_source:
+                self.load(self.json_source)
+            else:
+                #json_source does not exist yet
+                #set up some default destinations for json_source
+                spath = Path(source)
+                json_name = spath.name + ".json"
+                self.json_source = os.path.join(source_dir, json_name)
+
+            #check if what is stored in file is out of date
+            #based on json_source location ...
+
+            if self.json_source != source:
+                #must have been passed something besides a json path
+                #do some checks to see if there is anything we can use:
+                # - updated filename
+                new_name = os.path.basename(source)
+                if new_name and new_name != self.filename:
+                    print "Updating self.filename: ->%s<- (type: %s) with new name: ->%s<- (type: %s)" % (self.filename, type(self.filename), new_name, type(new_name))
+                    self.filename = new_name
+
+            #base_dir will only be set if it already exists in the loaded json
+            #print self.base_dir
+            if len(self.base_dir):
+                if re.search(self.base_dir, source_dir):
+                    base_len = len(self.base_dir) * -1
+                    new_drive = source_dir[:base_len]
+
+                    if self.drive_dir != new_drive:
+                        #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), new_drive, type(new_drive))
+                        pass
+
+                    self.drive_dir = new_drive
+                        
+                else:
+                    #base_dir didn't match our source_path
+                    #this could happen in the case of copied content
+                    #to people indexes
+                    #update both in that case
+                    #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), source_dir, type(source_dir))
+                    self.base_dir = ''
+                    self.drive_dir = source_dir
+
+            else:
+                if self.drive_dir != source_dir:
+                    #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), source_dir, type(source_dir))
+                    self.drive_dir = source_dir
+                    
+
+
+    def _get_filename(self):
+        return self._filename
+            
+    def _set_filename(self, name):
+        self._filename = name            
+
+    filename = property(_get_filename, _set_filename)
+
+    def _get_path(self):
+        """
+        simple version... no searching content tree for this:
+        """
+        return os.path.join(self.drive_dir, self.base_dir)
+
+    path = property(_get_path)
+
+    def _get_json_source(self):
+        return self._json_source
+            
+    def _set_json_source(self, name):
+        self._json_source = name            
+
+    json_source = property(_get_json_source, _set_json_source)
+
+    def load(self, source=None, debug=False):
+        """
+        filename attribute should be unique
+        this solves the issue with multiple files in the same directory
+        """
+        if source:
+            #if it's a path, scan for json:
+            #content = find_and_load_json(source)
+            self.json_source = find_json(source)
+            #json = find_json(source)
+            content = load_json(self.json_source)
+        else:
+            content = self.content
+
+        #if we're trying to create a new Content object from scratch,
+        #we don't want to raise this error.
+        #if not content:
+        #    raise ValueError, "No Content!"
+
+        if debug:
+            print content
+
+        if not isinstance(content, dict):
+            #print "%s" % content
+            print ""
+            print content
+            print self.json_source
+            raise ValueError, "Unknown type of content: %s" % type(content)
+
+        #start keeping track of ultimate source for this content
+        #if it ends up as part of another list, this is the way to get back
+        if content.has_key('json_source'):
+            option = content['json_source']
+            if self.json_source and self.json_source != option:
+                #print "WARNING: over-writing old source."
+                #print "keeping initial source: %s and skipping found source: %s" % (self.json_source, option)
+                #print ""
+                pass
+            else:
+                self.json_source = option
+            del content['json_source']
+
+        if content.has_key('timestamp'):
+            self.timestamp = Timestamp(content['timestamp'])
+            del content['timestamp']
+        if content.has_key('date'):
+            self.timestamp = Timestamp(content['date'])
+            del content['date']
+            
+        if content.has_key('title'):
+            self.title = content['title']
+            del content['title']
+            
+        if content.has_key('description'):
+            self.description = content['description']
+            del content['description']            
+
+        if content.has_key('sites'):
+            self.sites = content['sites']
+            del content['sites']
+
+        if content.has_key('people'):
+            for person in content['people']:
+                self.people.append(to_tag(person))
+            del content['people']
+            
+        if content.has_key('tags'):
+            for tag in content['tags']:
+                self.tags.append(to_tag(tag))
+            del content['tags']
+
+        if content.has_key('history'):
+            history = content['history']
+            l = Log()
+            l.from_string(history)
+
+            #shouldn't need to add any tags here
+            #entries = l.to_entries(add_tags)
+            entries = l.to_entries()
+            #print "%s entries loaded from file" % len(entries)
+            #print "%s entries in self before merging in entries" % len(self)
+            journal = Journal()
+            journal.update_many(entries)
+            #print "%s entries in self after merging in entries" % len(self)
+
+            #if l.has_entries:
+            #found_entries = len(entries)
+
+            l.close()
+
+            #return found_entries
+            self.history = journal
+            
+            del content['history']
+
+        #deprecated: root is ambiguous here
+        #will continue to load for older jsons
+        if content.has_key('root'):
+            self.base_dir = content['root']
+            del content['root']
+        if content.has_key('content_base'):
+            self.base_dir = content['content_base']
+            del content['content_base']
+        if content.has_key('base_dir'):
+            self.base_dir = content['base_dir']
+            del content['base_dir']
+
+        if content.has_key('drive_dir'):
+            self.drive_dir = content['drive_dir']
+            del content['drive_dir']
+
+        #no path here! filename only!
+        if content.has_key('filename'):
+            self.filename = content['filename']
+            del content['filename']
+
+        if content.has_key('hash'):
+            self.hash = content['hash']
+            del content['hash']
+
+        if debug:
+            print "didn't convert the following keys for content: %s" % content.keys()
+            print content
+            print
+
+        #keep everything left over so we have it later for storing
+        self.remainder = content
+
+
+    def to_dict(self, include_empty=False):
+        """
+        the order specified here is generally the order that gets printed(?)
+        (maybe not)
+        """
+        #deep copy was crashing on pretty small track lists (<150 in length)
+        #using a manual alternative instead
+        #snapshot = copy.deepcopy(self.remainder)
+
+        #print self.remainder
+        snapshot = {}
+        for key, value in self.remainder.items():
+            if isinstance(value, list):
+                snapshot[key] = value[:]
+            elif isinstance(value, str) or isinstance(value, unicode):
+                snapshot[key] = value
+            else:
+                #shouldn't be too many of these
+                #print "deep copy for type: %s : %s" % (type(value), value)
+                snapshot[key] = copy.deepcopy(value)
+
+        #check to make sure we have values...
+        #no need to clutter up json with empty values
+        if self.tags or include_empty:
+            snapshot['tags'] = self.tags
+        if self.people or include_empty:
+            snapshot['people'] = self.people
+        if self.sites or include_empty:
+            snapshot['sites'] = self.sites
+        if self.description or include_empty:
+            snapshot['description'] = self.description
+        if self.title or include_empty:
+            snapshot['title'] = self.title
+        if self.timestamp or include_empty:
+            if self.timestamp: 
+                snapshot['timestamp'] = self.timestamp.compact()
+            else:
+                snapshot['timestamp'] = ''
+                
+        if self.base_dir or include_empty:
+            snapshot['base_dir'] = self.base_dir
+        if self.filename or include_empty:
+            snapshot['filename'] = self.filename
+        if self.hash or include_empty:
+            snapshot['hash'] = self.hash
+        if self.drive_dir or include_empty:
+            snapshot['drive_dir'] = self.drive_dir
+
+        if self.json_source or include_empty:
+            snapshot['json_source'] = self.json_source            
+
+        if self.history or include_empty:
+            l = Log()
+            l.from_entries(self.history.sort())
+            snapshot['history'] = l.to_string()
+            l.close()
+            
+            #snapshot['history'] = self.history
+
+        return snapshot
+
+    def save(self, destination=None):
+        """
+        now that self.json_source is a property
+        that automatically seeks up for the correct file name,
+        we need to make sure the a sub segment of a content
+        does not clobber the main content object data stored in the file
+        by only saving the segment data to json_source
+
+        should be *VERY* careful if a child segment is ever initialized
+        outside and independent of the main Content that contains it...
+        if no root is set, then it could over write parent Content data
+        """
+        if hasattr(self, 'root') and (self.root != self):
+            self.root.save(destination)
+        else:
+            if not destination:
+                if self.json_source:
+                    destination = self.json_source
+                else:
+                    raise ValueError, "unknown destination: %s and unknown source: %s" % (destination, self.json_source)
+
+            d = self.to_dict()
+
+            if d.has_key('json_source') and d['json_source'] != destination:
+                print "UPDATING json_source from: %s to %s" % (d['json_source'], destination)
+                d['json_source'] = destination
+
+            save_json(destination, d)
+
+    def find_media(self, location=None, kind="Movie", relative=True,
+                   ignores=[], limit_by_name=False, debug=False):
+        """
+        ideally we just use self.path as the location to look in
+        might be nice to pass it in though
+
+        using moments.path.Path.type() here
+        kind can be either "Movie", "Image", or "Sound"
+
+        relative will determine if self.drive_dir is included in prefix...
+        usually it's better not to include that
+        """
+        if location is None:
+            location = self.path
+        
+        extensions = {}
+
+        if debug:
+            print "Looking at Location: %s" % location
+
+        if location and os.path.exists(location) and os.path.isdir(location):
+            if debug: 
+                print "Location Available!: %s" % location
+            for root,dirs,files in os.walk(location):
+                for f in files:
+                    ignore = False
+                    for i in ignores:
+                        if re.search(i, f):
+                            ignore = True
+                    if not ignore:
+                        media = os.path.join(root, f)
+                        mpath = Path(media)
+                        #if debug:
+                        #    print "looking at: %s" % media
+                        if mpath.type() == kind:
+                            if debug:
+                                print "Found %s: %s" % (kind, f)
+                            if extensions.has_key(mpath.extension):
+                                extensions[mpath.extension].append(media)
+                            else:
+                                extensions[mpath.extension] = [ media ]
+                        else:
+                            #this can be *very* verbose...
+                            #probably want to keep it commented out,
+                            #even for debugging!
+                            ## if debug:
+                            ##     #print "Skipping %s: %s" % (mpath.type(), media)
+                            ##     print "Skipping %s: %s" % (mpath.type(), f)
+                            pass
+
+        #if debug:
+        #    print "found the following:"
+
+        if len(extensions.keys()) > 1:
+            #more than one extension...
+            #check for duplicate versions of the same file
+
+            #could order some how... just sorting for now
+            filenames = []
+            sorted_keys = extensions.keys()
+            sorted_keys.sort()
+            if debug:
+                print "SORTED KEYS: %s" % sorted_keys
+            for ext in sorted_keys:
+                for media in extensions[ext][:]:
+                    mpath = Path(media)
+                    if mpath.name in filenames:
+                        extensions[ext].remove(media)
+                        print "REMOVING DUPE: %s" % media
+                    else:
+                        filenames.append(mpath.name)
+                    
+                
+
+        combined = []
+        for key in extensions.keys():
+            combined.extend(extensions[key])
+
+            if debug:
+                print "%s %ss" % (len(extensions[key]), key)
+
+        if debug:
+            print "Found %s media files" % (len(combined))
+            #print combined
+
+
+        if debug:
+            print "LIMIT BY NAME: %s, FILENAME: %s" % (limit_by_name, self.filename)
+        if limit_by_name and self.filename:
+            if debug:
+                print "using filename: %s to filter list" % self.filename
+
+            accepted = []
+            for item in combined:
+                if re.search(self.filename, item):
+                    accepted.append(item)
+
+            if debug:
+                print "The following items match: %s" % accepted
+            combined = accepted
+
+        shorts = []
+        if relative:
+            for item in combined:
+                path = Path(item)
+                shorts.append(path.to_relative(self.drive_dir))
+
+            combined = shorts
+            
+        #at this point, could store result
+        #or could look for sizes
+        #or could generate generic summary files based on what we do know
+
+        return combined
+
+    def make_hash(self, filename=None):
+        """
+        via this excellent thread:
+        http://stackoverflow.com/questions/1131220/get-md5-hash-of-big-files-in-python        
+        """
+
+        if filename:
+            self.filename = filename
+
+        path = os.path.join(self.path, self.filename)
+
+        if not os.path.exists(path) or os.path.isdir(path):
+            print "Skipping Hash: File not found: %s" % path
+            return None
+        else:
+            md5 = hashlib.md5()
+            with open(path, 'rb') as f: 
+                for chunk in iter(lambda: f.read(8192), b''): 
+                     md5.update(chunk)
+
+            self.hash = md5.hexdigest()
+            return self.hash
+
+    def equal(self, content):
+        """
+        take another content object
+
+        TODO: test different approaches to find optimal way for comparing
+        if two content objects are the same, even if they're loaded from
+        different sources
+
+        ideally, the hash was computed at some point and we can just use that
+        """
+        if not self.hash or not content.hash:
+            if not self.filename or not content.filename:
+                print self.debug()
+                print content.debug()
+                #may not be able to calculate hash if media file is not local:
+                #raise ValueError, "Cannot compare unless hash / filename exists"
+                print "Cannot compare unless hash / filename exists"
+                #assume they're not equal
+                return False
+            else:
+                if self.filename == content.filename:
+                    return True
+                else:
+                    return False
+        else:
+            #could just return the result of comparison directly,
+            #but this is a bit more readable IMO
+            if self.hash == content.hash:
+                return True
+            else:
+                return False
+
+    def as_moment(self, use_file_created=True, new_entry=False):
+        moment = Moment()
+        if self.entry and not new_entry:
+            moment.tags = self.entry.tags
+            moment.created = self.entry.created
+        elif new_entry:
+            #want to keep the file the same, but nothing else
+            moment.tags = Tags()
+            
+        else:
+            moment.tags = Tags()
+            
+            created = self.path.created()
+            if created and use_file_created:
+                moment.created = created
+                #otherwise we just want to stick with 'now' default of init
+
+        if self.jumps:
+            moment.data = "# -sl %s %s" % (self.jumps.to_comma(), self.path)
+        else:
+            moment.data = str(self.path)
+
+
+        return moment
+
+
+    
+#aka NestedContent, or ContentTree
+class Content(SimpleContent):
     """
     Object to hold details of a particular piece of content (media)
 
@@ -621,35 +1196,6 @@ class Content(object):
         if content is passed in, it will be modified,
         which will modify source object
         """
-        #root is no longer used for this purpose:
-        #"the root location relative to collection base"
-        #now it is a reference to the top most Content object in which
-        #this Content object is contained.
-        #self.root = root
-
-        #everything leading up to the base_dir 
-        #this is the start of the collection (collection root path)
-        self.drive_dir = ''
-
-        #aka path from collection root
-        #relative path for other content
-        #might want to pass this in if creating a new Content object
-        #so that drive_dir will get initialized correctly too
-        self.base_dir = base_dir
-
-        #keep track of where this object's meta data is stored:
-        self._json_source = ''
-        
-        #the default content/media related filename associated with the content
-        #moving this to a property (like path), to assist with searching
-        self._filename = ''
-
-        #the md5 checksum hash for the main file
-        self.hash = ''
-        #this might help locate previously generated meta data
-        #without knowing anything else about the file
-        #similar to MuzicBrainz?
-
         # store a list of local media files,
         # along with dimensions if we calculate those
         # (could be other properties of the media to store)
@@ -659,22 +1205,6 @@ class Content(object):
         # if there are multiple media files that comprise a single Content
         # object, those might be better represented in self.segments
         self.media = []
-
-
-        #our title
-        #not to be confused with titles, which are used with segments and marks
-        self.title = ''
-        self.description = ''
-        #when content was created or published (according to publisher)
-        self.timestamp = None
-
-        self.added = ''
-        self.visited = ''
-
-        self.sites = []
-
-        self.people = []
-        self.tags = []
 
         #seeing more applications for this
         #aka thumbnail
@@ -738,18 +1268,14 @@ class Content(object):
         #can be customized based on process used to add/update meta data
         self.status = 'new'
 
-        self.remainder = {}
-
-        #keep a log of when actions happened:
-        #used to do this with Moment logs to track media plays
-        #not processing log (e.g. loading into a Journal)
-        #self.history = ""
-        #to make this easier, use a Journal to help with formatting:
-        self.history = Journal()
-        self.history.make("Created", ["created"])
-
         #these attributes are generated and assigned later
         #no need to store them with a json file / dict
+
+        #root is no longer used for this purpose:
+        #"the root location relative to collection base"
+        #now it is a reference to the top most Content object in which
+        #this Content object is contained.
+        #self.root = root
 
         #these should be used for segements and sub-segments
         #in order to load and save changes to segments
@@ -760,103 +1286,9 @@ class Content(object):
         else:
             self.root = root
 
+        SimpleContent.__init__(self, source, content, base_dir, debug)
 
 
-        #deal with what was passed in now:
-        #i.e. autoload!
-
-        if content and source:
-            raise ValueError, "Cannot initialize Content object with both source and dictionary: %s, %s" % (source, content) 
-
-        elif content:
-            #what was passed in for manual initialization:
-            #store this for subsequent call to load:
-            self.content = content
-            self.load()
-
-        elif source:
-            
-            #we might not have self.json_source yet,
-            #but we know we have source
-            #source_dir = os.path.dirname(self.json_source)
-            source_dir = os.path.dirname(source)
-
-
-            # json file to save and load from
-            #this is the best way to initialize previous Content object:
-            #ok to include full path here...
-            self.json_source = find_json(source)
-            #print "FOUND SOURCE: %s" % self.json_source
-            #make sure something was found:
-            if self.json_source:
-                self.load(self.json_source)
-            else:
-                #json_source does not exist yet
-                #set up some default destinations for json_source
-                spath = Path(source)
-                json_name = spath.name + ".json"
-                self.json_source = os.path.join(source_dir, json_name)
-
-            #check if what is stored in file is out of date
-            #based on json_source location ...
-
-            if self.json_source != source:
-                #must have been passed something besides a json path
-                #do some checks to see if there is anything we can use:
-                # - updated filename
-                new_name = os.path.basename(source)
-                if new_name and new_name != self.filename:
-                    print "Updating self.filename: ->%s<- (type: %s) with new name: ->%s<- (type: %s)" % (self.filename, type(self.filename), new_name, type(new_name))
-                    self.filename = new_name
-
-            #update paths if any are incomplete:
-            # - updated drive_dir ?
-
-            #not sure what this check accomplishes...
-            #maybe it doesn't update drive_dir and base_dir if nothing
-            #has changed
-            #
-            #but sometimes drive_dir was not set correctly to begin with
-            #(includes base_dir)
-            #
-            #seems ok to always check
-            #drive_dir_matches = False
-            #if self.drive_dir and re.match(self.drive_dir, source_dir):
-            #    drive_dir_matches = True
-
-            #if not re.search(self.base_dir, source_dir):
-            #    print "WARNING: could not find base_dir (%s) in source_dir (%s)" % (self.base_dir, source_dir)
-            #else:
-
-
-            #base_dir will only be set if it already exists in the loaded json
-            #print self.base_dir
-            if len(self.base_dir):
-                if re.search(self.base_dir, source_dir):
-                    base_len = len(self.base_dir) * -1
-                    new_drive = source_dir[:base_len]
-
-                    if self.drive_dir != new_drive:
-                        #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), new_drive, type(new_drive))
-                        pass
-
-                    self.drive_dir = new_drive
-                        
-                else:
-                    #base_dir didn't match our source_path
-                    #this could happen in the case of copied content
-                    #to people indexes
-                    #update both in that case
-                    #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), source_dir, type(source_dir))
-                    self.base_dir = ''
-                    self.drive_dir = source_dir
-
-
-            else:
-                if self.drive_dir != source_dir:
-                    #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), source_dir, type(source_dir))
-                    self.drive_dir = source_dir
-                    
 
     #having trouble getting this:
     #going back to ids for now
@@ -1052,10 +1484,10 @@ class Content(object):
         else:
             return os.path.join(self.drive_dir, self.base_dir)
         
-    path = property(_get_path)
-    #def _set_path(self, name):
-    #    self.parse_name(name)
-    #path = property(_get_path, _set_path)
+    def _set_path(self, name):
+        self.parse_name(name)
+        
+    path = property(_get_path, _set_path)
 
     def add_segment(self, segment):
         """
@@ -1382,7 +1814,7 @@ class Content(object):
 
         #segments don't need content_base to be set if root has it:
         if self.base_dir or include_empty:
-            snapshot['content_base'] = self.base_dir
+            snapshot['base_dir'] = self.base_dir
         if self.media or include_empty:
             snapshot['media'] = self.media
         if self.filename or include_empty:
@@ -1445,34 +1877,6 @@ class Content(object):
 
         return snapshot
 
-    def save(self, destination=None):
-        """
-        now that self.json_source is a property
-        that automatically seeks up for the correct file name,
-        we need to make sure the a sub segment of a content
-        does not clobber the main content object data stored in the file
-        by only saving the segment data to json_source
-
-        should be *VERY* careful if a child segment is ever initialized
-        outside and independent of the main Content that contains it...
-        if no root is set, then it could over write parent Content data
-        """
-        if self.root != self:
-            self.root.save(destination)
-        else:
-            if not destination:
-                if self.json_source:
-                    destination = self.json_source
-                else:
-                    raise ValueError, "unknown destination: %s and unknown source: %s" % (destination, self.json_source)
-
-            d = self.to_dict()
-
-            if d.has_key('json_source') and d['json_source'] != destination:
-                print "UPDATING json_source from: %s to %s" % (d['json_source'], destination)
-                d['json_source'] = destination
-
-            save_json(destination, d)
 
     def find_extension(self, search_for, location=None, ignores=[], debug=False):
         """
@@ -1508,6 +1912,10 @@ class Content(object):
         return options
 
     def find_image(self, ignores=[], debug=False):
+        """
+        assumes that this content object is not an image itself...
+        looks for an image to associate with content
+        """
         images = self.find_media(kind="Image", relative=False, debug=debug)
         if images:
             #clear out anything that should be removed first
@@ -1527,120 +1935,6 @@ class Content(object):
         else:
             self.image = ''
         
-    def find_media(self, location=None, kind="Movie", relative=True,
-                   ignores=[], limit_by_name=False, debug=False):
-        """
-        ideally we just use self.path as the location to look in
-        might be nice to pass it in though
-
-        using moments.path.Path.type() here
-        kind can be either "Movie", "Image", or "Sound"
-
-        relative will determine if self.drive_dir is included in prefix...
-        usually it's better not to include that
-        """
-        if location is None:
-            location = self.path
-        
-        extensions = {}
-
-        if debug:
-            print "Looking at Location: %s" % location
-
-        if location and os.path.exists(location) and os.path.isdir(location):
-            if debug: 
-                print "Location Available!: %s" % location
-            for root,dirs,files in os.walk(location):
-                for f in files:
-                    ignore = False
-                    for i in ignores:
-                        if re.search(i, f):
-                            ignore = True
-                    if not ignore:
-                        media = os.path.join(root, f)
-                        mpath = Path(media)
-                        #if debug:
-                        #    print "looking at: %s" % media
-                        if mpath.type() == kind:
-                            if debug:
-                                print "Found %s: %s" % (kind, f)
-                            if extensions.has_key(mpath.extension):
-                                extensions[mpath.extension].append(media)
-                            else:
-                                extensions[mpath.extension] = [ media ]
-                        else:
-                            #this can be *very* verbose...
-                            #probably want to keep it commented out,
-                            #even for debugging!
-                            ## if debug:
-                            ##     #print "Skipping %s: %s" % (mpath.type(), media)
-                            ##     print "Skipping %s: %s" % (mpath.type(), f)
-                            pass
-
-        #if debug:
-        #    print "found the following:"
-
-        if len(extensions.keys()) > 1:
-            #more than one extension...
-            #check for duplicate versions of the same file
-
-            #could order some how... just sorting for now
-            filenames = []
-            sorted_keys = extensions.keys()
-            sorted_keys.sort()
-            print "SORTED KEYS: %s" % sorted_keys
-            for ext in sorted_keys:
-                for media in extensions[ext][:]:
-                    mpath = Path(media)
-                    if mpath.name in filenames:
-                        extensions[ext].remove(media)
-                        print "REMOVING DUPE: %s" % media
-                    else:
-                        filenames.append(mpath.name)
-                    
-                
-
-        combined = []
-        for key in extensions.keys():
-            combined.extend(extensions[key])
-
-            if debug:
-                print "%s %ss" % (len(extensions[key]), key)
-
-        if debug:
-            print "Found %s media files" % (len(combined))
-            #print combined
-
-
-        if debug:
-            print "LIMIT BY NAME: %s, FILENAME: %s" % (limit_by_name, self.filename)
-        if limit_by_name and self.filename:
-            if debug:
-                print "using filename: %s to filter list" % self.filename
-
-            accepted = []
-            for item in combined:
-                if re.search(self.filename, item):
-                    accepted.append(item)
-
-            if debug:
-                print "The following items match: %s" % accepted
-            combined = accepted
-
-        shorts = []
-        if relative:
-            for item in combined:
-                path = Path(item)
-                shorts.append(path.to_relative(self.drive_dir))
-
-            combined = shorts
-            
-        #at this point, could store result
-        #or could look for sizes
-        #or could generate generic summary files based on what we do know
-
-        return combined
-
     def check_new(self):
         """
         look at our own status
@@ -1662,61 +1956,6 @@ class Content(object):
         #if we make it here, it should be new
         assert all_new == True
         return all_new        
-
-    def make_hash(self, filename=None):
-        """
-        via this excellent thread:
-        http://stackoverflow.com/questions/1131220/get-md5-hash-of-big-files-in-python        
-        """
-
-        if filename:
-            self.filename = filename
-
-        path = os.path.join(self.path, self.filename)
-
-        if not os.path.exists(path) or os.path.isdir(path):
-            print "Skipping Hash: File not found: %s" % path
-            return None
-        else:
-            md5 = hashlib.md5()
-            with open(path, 'rb') as f: 
-                for chunk in iter(lambda: f.read(8192), b''): 
-                     md5.update(chunk)
-
-            self.hash = md5.hexdigest()
-            return self.hash
-
-    def equal(self, content):
-        """
-        take another content object
-
-        TODO: test different approaches to find optimal way for comparing
-        if two content objects are the same, even if they're loaded from
-        different sources
-
-        ideally, the hash was computed at some point and we can just use that
-        """
-        if not self.hash or not content.hash:
-            if not self.filename or not content.filename:
-                print self.debug()
-                print content.debug()
-                #may not be able to calculate hash if media file is not local:
-                #raise ValueError, "Cannot compare unless hash / filename exists"
-                print "Cannot compare unless hash / filename exists"
-                #assume they're not equal
-                return False
-            else:
-                if self.filename == content.filename:
-                    return True
-                else:
-                    return False
-        else:
-            #could just return the result of comparison directly,
-            #but this is a bit more readable IMO
-            if self.hash == content.hash:
-                return True
-            else:
-                return False
 
     def update_dimensions(self, options, force=False, debug=False):
         """
@@ -1768,31 +2007,6 @@ class Content(object):
         self.media = matches
 
         return self.media
-
-    def as_moment(self, use_file_created=True, new_entry=False):
-        moment = Moment()
-        if self.entry and not new_entry:
-            moment.tags = self.entry.tags
-            moment.created = self.entry.created
-        elif new_entry:
-            #want to keep the file the same, but nothing else
-            moment.tags = Tags()
-            
-        else:
-            moment.tags = Tags()
-            
-            created = self.path.created()
-            if created and use_file_created:
-                moment.created = created
-                #otherwise we just want to stick with 'now' default of init
-
-        if self.jumps:
-            moment.data = "# -sl %s %s" % (self.jumps.to_comma(), self.path)
-        else:
-            moment.data = str(self.path)
-
-
-        return moment
 
     def debug(self, indent=0, recurse=True):
         """

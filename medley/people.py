@@ -12,11 +12,14 @@ might be good to have some qualities of Content referenced locally
 
 see also people_create.py 
 """
-import os, re, copy, json
+import os, re, copy, json, urllib
 
 from collector import Cluster, CollectionSimple
+from content import SimpleContent
 from helpers import save_json, load_json
+
 from moments.tag import to_tag
+from moments.timestamp import Timestamp
 
 class ContentPointer(object):
     """
@@ -90,13 +93,14 @@ class Person(object):
         #used as default image
         self.image = ''
 
-        #not sure the best way to represent photos or a gallery
-        #will want to associate tags, so just a list of paths is not sufficient
-        #maybe a new type of Content
-        #but don't need all of the associated nesting / trees
-        #also much overlap with moments.path.Image object
+        #similar to self.content
+        #want to load the SimpleContent meta data objects here
         self.photos = []
-        
+
+        #have separated Content and SimpleContent for this purpose
+        #this can be a list of jsons (or image paths)
+        #also much overlap with moments.path.Image object
+        self.photo_order = []
 
         #will depend on content type:
         #e.g. sounds like, looks like, etc...
@@ -175,6 +179,7 @@ class Person(object):
         temp_d = copy.copy(self.__dict__)
         #make sure to ignore loaded/scanned contents on a save
         temp_d.pop("contents", None)
+        temp_d.pop("photos", None)
         temp_d.pop("matches", None)
             
         #getting rid of old format... could convert, but nothing has this set:
@@ -230,7 +235,7 @@ class Person(object):
         #scan for local content directories here
         self.contents = CollectionSimple(root=md)
         #ok to use collection for walking here.
-        self.contents.rescan(debug=debug)
+        self.contents.rescan(ignores=['photos'], debug=debug)
 
         #check self.content_order
         #apply order to contents
@@ -263,6 +268,48 @@ class Person(object):
 
         #update the count:
         self.count = len(self.contents)
+
+
+        #similar process for photos:
+        #print "Looking for photos:"
+        photo_dir = os.path.join(self.main_dir(), 'photos')
+        self.photos = CollectionSimple(root=photo_dir)
+        #this is customized for content being in subdirs
+        #self.photos.rescan(debug=True)
+
+        json_check = re.compile('.*\.json$')
+        for root,dirs,files in os.walk(photo_dir):
+            for f in files:
+                if json_check.search(f):
+                    json_file = os.path.join(root, f)
+                    photo = SimpleContent(json_file)
+                    self.photos.append(photo)
+
+                    
+        #photos = self.photos.apply_order(self.photo_order, debug=debug)
+        new_group = []
+        for item in self.photo_order:
+            for content in self.photos:
+                content_path = os.path.join(content.base_dir, content.filename)
+                if content_path == item:
+                    if debug:
+                        print "adding %s to new list" % item
+                    if not content in new_group:
+                        new_group.append(content)
+                    self.photos.remove(content)
+
+        #anything not in order list should be added to the beginning
+        #which means adding the new_group to the end of anything that is left
+        self.photos.extend(new_group)
+        
+        #self.photo_order = self.photos.get_order()
+        order = []
+        for item in self.photos:
+            content_path = os.path.join(item.base_dir, item.filename)
+            if not content_path in order:
+                order.append(content_path)
+        self.photo_order = order
+
         self.save()
 
     def apply_cutoffs(self):
@@ -331,7 +378,11 @@ class Person(object):
                 print self.to_dict()
                 
             #can only do something if we have some content
-            if len(self.contents):
+            if len(self.photos):
+                first = self.photos[0]
+                self.image = os.path.join(first.drive_dir, first.base_dir, first.filename)
+                
+            elif len(self.contents):
                 first = self.contents[0]
                 if not first.image or force:
                     #if force set, look again
@@ -359,6 +410,129 @@ class Person(object):
         else:
             if debug:
                 print "Not updating: %s" % self.tag
+
+    def download_photos(self, urls, tags=[]):
+        """
+        take a list of urls
+        must be the image only (won't search a page)
+        download the image
+        create a SimpleContent representation for the image
+        save both local to the person's meta data directory (/photos)
+
+        using urllib.urlretrieve directly
+        see also scraper.Scraper.download()
+        """
+        photos_path = os.path.join(self.root, 'photos')
+        if not os.path.exists(photos_path):
+            os.makedirs(photos_path)
+
+        #for url in urls[:1]:
+        for url in urls:
+            if url:
+                print
+                print url
+                #find original filename... should be in the url
+                path_parts = url.split('/')
+                suffix_parts = path_parts[-1].split('?')
+                more_parts = suffix_parts[0].split(':')
+                file_name = more_parts[0]
+                
+                file_name = file_name.replace(' ', '_')
+                file_name = file_name.replace('%20', '_')
+                file_name = file_name.replace('(', '')
+                file_name = file_name.replace(')', '')
+                
+                #print file_name
+                name_parts = file_name.split('.')
+
+                #if the name is generic, at least name it for the person:
+                generics = ['original', 'temp', 'photo', 'image', 'picture']
+                for option in generics:
+                    if re.match(option, name_parts[0], re.I):
+                        print "Updating: %s to %s" % (file_name, self.tag)
+                        name_parts[0] = self.tag
+
+                extension = name_parts[-1].lower()
+                if not extension in [ 'jpg', 'jpeg', 'png', 'gif', 'tif' ]:
+                    #just give it something
+                    print "Unrecognized extension: %s, adding .jpg" % (extension)
+                    name_parts.append('jpg')
+
+                file_name = '.'.join(name_parts)
+
+                download = os.path.join(photos_path, "temp.image")
+                if os.path.exists(download):
+                    print
+                    print url
+                    print download
+                    raise ValueError, "Temp image already exists. Not overwriting"
+
+                #print download
+
+                #go ahead and download it now:
+                urllib.urlretrieve(url, download)
+
+                download_size = os.path.getsize(download)
+
+                #now move the downloaded file into place...
+                cur_name = file_name
+                existing = True
+                duplicate = False
+                index = 1
+                #loop until we figure out if we already have it,
+                #or find a valid new file name
+                while existing:
+                    new_dest = os.path.join(photos_path, cur_name)
+                    if os.path.exists(new_dest):
+                        #if the file_name already exists,
+                        #check if it is the same (compare file size)
+                        dest_size = os.path.getsize(new_dest)
+                        if download_size == dest_size:
+                            #if its the same simply delete the temp one...
+                            print "Already had: %s" % url
+                            os.remove(download)
+                            existing = False
+                            duplicate = True
+                        else:
+                            #if not, create a new name for it (and try again)
+                            prefix = "%s-%04d" % (self.tag, index)
+                            name_parts[0] = prefix
+                            cur_name = '.'.join(name_parts)
+                            index += 1
+                    else:
+                        #found one that will work
+                        existing = False
+
+                if not duplicate:
+                    #otherwise
+                    #move to safe filename,
+                    os.rename(download, new_dest)
+
+                #then create appropriate json file for meta data
+                content = SimpleContent()
+                content.drive_dir = self.root
+                content.base_dir = 'photos'
+                content.filename = cur_name
+                content.added = Timestamp()
+                content.tags = tags
+                content.sites.append(url)
+                content.people.append(self.tag)
+                content.make_hash()
+
+                #make sure we have an extension:
+                if len(name_parts) > 1:
+                    name_parts[-1] = 'json'
+                else:
+                    name_parts.append('json')
+                json_file = '.'.join(name_parts)
+                content.json_source = os.path.join(self.root, 'photos', json_file)
+                content.save()
+
+                #don't forget to add the photo to our collection
+                relative = os.path.join('photos', cur_name)
+                if not relative in self.photo_order:
+                    self.photo_order.append(relative)
+                    self.save()
 
 class People(list):
     """

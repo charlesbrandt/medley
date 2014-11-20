@@ -291,9 +291,12 @@
                 var name = options.name;
                 eventZones[name] = eventZones[name] || [];
 
+                var data = options.data ||
+                    (bindingContext && bindingContext.$data);
+
                 var zone = new Zone({
                     element: element,
-                    data: bindingContext && bindingContext.$data,
+                    data: data,
                     dragEnter: options.dragEnter,
                     dragOver: options.dragOver,
                     dragLeave: options.dragLeave
@@ -311,10 +314,12 @@
             init: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
                 var options = ko.utils.unwrapObservable(valueAccessor());
                 var name = options.name;
+                var dragDistance = options.dragDistance || 10;
                 dropZones[name] = dropZones[name] || [];
                 eventZones[name] = eventZones[name] || [];
 
-                var data = bindingContext && bindingContext.$data;
+                var data = options.data ||
+                    (bindingContext && bindingContext.$data);
 
                 var draggable = new Draggable({
                     name: name,
@@ -336,7 +341,10 @@
 
                 function createTemplateProxyElement() {
                     var dragProxy = $('<div>').appendTo('body');
-                    ko.renderTemplate(options.element, bindingContext, {}, dragProxy[0]);
+                    var innerBindingContext = ('data' in options) ?
+                        bindingContext.createChildContext(options.data) :
+                        bindingContext;
+                    ko.renderTemplate(options.element, innerBindingContext, {}, dragProxy[0]);
                     return dragProxy;
                 }
 
@@ -356,14 +364,14 @@
 
                     function startDragging(startEvent) {
                         $(element).off('mouseup.startdrag click.startdrag mouseleave.startdrag mousemove.startdrag');
+                        
+                        if (draggable.startDrag(downEvent) === false) {
+                            return false;
+                        }
 
                         var dragElement = null;
                         if (!options.element) {
                             dragElement = new DragElement(createCloneProxyElement());
-                        }
-
-                        if (draggable.startDrag(downEvent) === false) {
-                            return false;
                         }
 
                         var $overlay = $('<div class="drag-overlay" unselectable="on">');
@@ -453,7 +461,7 @@
 
                         var distance = Math.sqrt(Math.pow(downEvent.pageX - event.pageX, 2) +
                                                  Math.pow(downEvent.pageY - event.pageY, 2));
-                        if (distance > 10) {
+                        if (distance > dragDistance) {
                             startDragging(event);
                         }
                     });

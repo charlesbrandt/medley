@@ -3,15 +3,15 @@
 <li class="content">{{! link }}</li>
 %end
 </ul>
+<span id="toggle-layout">Column direction</span>
 
-<ul id="cluster" class="content">
-  <div class="wrapper">
-    <ul id="people" class="content" data-bind="template: { name: 'personTmpl', foreach: group.items }, scrollableOnDragOver: 'scroll-while-dragging'"> 
+<ul id="cluster">
+    <ul id="people" class="top-bottom-columns" data-bind="template: { name: 'personTmpl', foreach: group.items }, scrollableOnDragOver: 'scroll-while-dragging'"> 
     </ul>
-  </div>
-  
-
+  <div class="wrapper">
+  </div>  
 </ul>
+
 
 <script id="personTmpl" type="text/html">
     <li class="draggable summary content block" draggable="true" data-bind="event:{

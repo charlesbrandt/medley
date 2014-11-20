@@ -49,9 +49,9 @@ bottle.TEMPLATE_PATH.append(template_path)
 
 import sys, codecs, json
 
-from helpers import load_json, find_zips
-from collector import Collections, Collection, CollectionSummary
-from people import People
+from medley.helpers import load_json, find_zips
+from medley.collector import Collections, Collection, CollectionSummary
+from medley.people import People
 
 from moments.path import Path
 from moments.journal import Journal
@@ -186,6 +186,7 @@ def rescan(collection_name=None):
 def people_path():
     path = configs['people_root']
     if re.match('^\.', path):
+        #get rid of \. and make it a full path:
         path = os.path.join(configs['root'], path[2:])
 
     return path
@@ -238,6 +239,24 @@ def search():
     #return template('people_all', people=p, cluster=p.cluster, people_json=pj)
     return template('search', people_json=people_json, names_json=names_json)
 
+@post('/person/:person_name/download_images')
+def person_download_images(person_name):
+    ppl = get_people()
+    ppl.load()
+
+    p_list = ppl.get(person_name)
+    #print "Looked up: %s" % person_name 
+    #print "Received: %s" % p_list
+    p = p_list[0]
+
+    urls = request.forms.get('urls')
+    tag_json = request.forms.get('tags')
+    tags = json.loads(tag_json)
+    #print urls
+    #print tags
+    p.download_photos(urls.split('\n'), tags)
+
+
 @post('/person/:person_name/update')
 def person_update(person_name):
     ppl = get_people()
@@ -252,6 +271,9 @@ def person_update(person_name):
 
     content_json = request.forms.get('contents')
     p.content_order = json.loads(content_json)
+
+    photo_json = request.forms.get('photos')
+    p.photo_order = json.loads(photo_json)
 
     cutoff_json = request.forms.get('cutoffs')
     p.cutoffs = json.loads(cutoff_json)
@@ -308,7 +330,7 @@ def person_update(person_name):
             print "Nothing found for: %s, (%s)" % (item, options)
 
 
-    p.update_image(people_path(), force=True, debug=False)
+    p.update_image(people_path(), force=True, debug=True)
     #print p.content_order
     p.save()
     
@@ -337,6 +359,7 @@ def person(person_name):
     related.sort(key=lambda rel: rel.tag)
 
     #check for available content here (or meta data for content)
+    #p.load_content(debug=True)
     p.load_content()
 
     collections = Collections(configs['root'], configs['collection_list'])
@@ -345,10 +368,15 @@ def person(person_name):
 
     path = people_path()
 
+    print len(p.contents)
+    
     #locate a default image for every content item
     #check for content's collection availability
     for content in p.contents:
 
+        print content.path
+        print 
+        
         #logging.info(path)
         
         #this method works for finding images,
@@ -365,40 +393,52 @@ def person(person_name):
         ##     #logging.info(content.image)
 
 
-        #right now no way to store a default image with content item
-        #because image may be consider a piece of content
+        #there is a way to store the default image with a content item:
+        #content.image
+        #but this is a good chance to update the default        
         #this means lookup for images will happen every time here.
-        #could consider if it is common enough to associate an image (thumb?)
-        #with all content types
+
+        #not sure how this relates to person.update_image... same purpose?
         
         content.drive_dir = path
-        images = content.find_media(kind="Image", relative=False, debug=True)
+        
+        images = content.find_media(kind="Image", relative=False, debug=False)
         if images:
-            print images
+            #print images
             content.image = images[0]
 
-            #since we're using javascript now, need this somewher else
-            #content.remainder['image'] = images[0]
-            
         else:
             content.image = ''
-            #content.remainder['image'] = ''
 
+        #TODO:
+        #rather than looking at the specified collection in a remainder
+        #(which may not exist)
+        #look at what collections are available
+        #then see if the content is available as part of that collection
+        if content.remainder.has_key('collection'):
+            #check if content's collection is available
+            collection_name = content.remainder['collection']
+            collection_summary = collections.get_summary(collection_name)
+            #logging.info("%s available? %s" % (collection_name, collection_summary.available))
 
-        #check if content's collection is available
-        collection_name = content.remainder['collection']
-        collection_summary = collections.get_summary(collection_name)
-        #logging.info("%s available? %s" % (collection_name, collection_summary.available))
-
-        if len(collection_summary.available):
-            #content.available = True
-            content.remainder['available'] = True
+            if len(collection_summary.available):
+                #content.available = True
+                content.remainder['available'] = True
+            else:
+                #content.available = False
+                content.remainder['available'] = False
         else:
-            #content.available = False
-            content.remainder['available'] = False
+            print "No Collection!!!!"
+            print content.to_dict()
             
     content_json = json.dumps(p.contents.as_list(include_empty=True))
-    return template('person', person=p, related=related, contents=content_json)
+    #even though photos is just a list of strings
+    #go through and make it a list of dictionaries
+    #photo_objects = []
+    #photos_json = json.dumps(p.photos)
+    photos_json = json.dumps(p.photos.as_list(include_empty=True))
+
+    return template('person', person=p, related=related, contents=content_json, photos=photos_json)
 
 @post('/people/update/:group_number/')
 @post('/people/update/:group_number')

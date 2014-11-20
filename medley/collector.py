@@ -172,29 +172,32 @@ class CollectionSimple(list):
         #for root,dirs,files in os.walk(self.root):
         subdirs = self_root_path.load().directories
         for subdir in subdirs:
-            for root,dirs,files in os.walk(str(subdir)):
-                for f in files:
+            if check_ignore(str(subdir), ignores):
+                print "Ignoring directory: %s" % (subdir)
+            else:
+                for root,dirs,files in os.walk(str(subdir)):
+                    for f in files:
 
-                    #if json_check.search(f):
-                    if json_check.search(f) and not check_ignore(f, ignores):
-                        json_file = os.path.join(root, f)
-                        p_root = Path(root)
-                        relative_root = p_root.to_relative(str(parent))
-                        #get rid of leading slash
-                        if re.match('/', relative_root):
-                            relative_root = relative_root[1:]
-                        if debug:
-                            print "loading content from: %s" % json_file
-                        #c = Content(json_file, root=relative_root)
-                        c = Content(json_file)
-                        if debug:
-                            print "setting base_dir to: %s" % relative_root
+                        #if json_check.search(f):
+                        if json_check.search(f) and not check_ignore(f, ignores):
+                            json_file = os.path.join(root, f)
+                            p_root = Path(root)
+                            relative_root = p_root.to_relative(str(parent))
+                            #get rid of leading slash
+                            if re.match('/', relative_root):
+                                relative_root = relative_root[1:]
+                            if debug:
+                                print "loading content from: %s" % json_file
+                            #c = Content(json_file, root=relative_root)
+                            c = Content(json_file)
+                            if debug:
+                                print "setting base_dir to: %s" % relative_root
 
-                        #if updating one here, should update the other:
-                        c.base_dir = relative_root
-                        c.drive_dir = str(parent)
-                        
-                        self.append(c)
+                            #if updating one here, should update the other:
+                            c.base_dir = relative_root
+                            c.drive_dir = str(parent)
+
+                            self.append(c)
 
         if debug:
             print "Finished loading %s contents manually" % (len(self))

@@ -9,6 +9,24 @@
 //console.log(vp);
 //console.log("HELLLOOOOO?!?!?!");
 //http://stackoverflow.com/questions/20483627/lazyload-images-with-knockout-jquery
+
+var toggle_state = false;
+
+$('#toggle-layout').click(function(){
+  //$('#cluster').toggleClass('top-bottom-columns');
+  $('#people').toggleClass('top-bottom-columns');
+  if (toggle_state) { 
+    $('#people').css('display', 'block');
+    toggle_state = false;
+  }
+  else {
+    $('#people').css('display', 'inline');
+    toggle_state = true;
+  }
+  $('.draggable').toggleClass('block');
+  $('.draggable').toggleClass('block2');
+});
+
 ko.bindingHandlers.lazyImage = {
   update: function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
     var $element     = $(element);
@@ -84,10 +102,8 @@ var Person = function(position, parent, tag, image, count, cutoffs) {
     //self.items()[to] = fromObj;
     //self.items()[from] = toObj;
     self.parent.update_pos();
-    self.parent.items.valueHasMutated()
-  }
-  
-  
+    self.parent.items.valueHasMutated();
+  };
 };
   
   
@@ -120,21 +136,21 @@ var Group = function(data, index) {
     for (var i = 0, len = self.items().length; i < len; i++) {
       self.items()[i].cur_pos(i);
     };
-  }
+  };
   
   self.move_to_top = function(item) {
     self.items.remove(item);
     self.items.splice(0, 0, item);
     self.update_pos();
     self.post();
-  }
+  };
   
   self.move_to_bottom = function(item) {
     self.items.remove(item);
     self.items.push(item);
     self.update_pos();
     self.post();	
-  }
+  };
   
   self.post = function() {
     var main = [];
@@ -188,7 +204,7 @@ var PeopleModel = function() {
   self.log = function(something) {
     console.log("something: " + something);
     return something;
-  }
+  };
   
   //self.cluster = new Cluster(ogroups);
   //console.log(self.cluster.groups().length);
@@ -198,7 +214,7 @@ var PeopleModel = function() {
   self.show = function(what) {
     //console.log("Switching view to: " + what );
     return (function(){ self.showing(what); });
-  }
+  };
   
   
 };

@@ -1,6 +1,7 @@
 
 <!--<input data-bind="textInput: search"> knockout 3.2-->
 <input data-bind="value: search, valueUpdate: 'afterkeydown'">
+<img src="/img/x.svg" class="icon" data-bind="click: clear_search">
 <span data-bind="text: number"></span><span data-bind="visible: number() > cutoff"> (too many!) </span>
 
 <!--
@@ -11,13 +12,13 @@
 
 <ul id="cluster" class="content">
   <div class="wrapper">
-    <ul id="people" class="content" data-bind="template: { name: 'personTmpl', foreach: results }"> 
+    <ul id="results" class="content" data-bind="template: { name: 'personTmpl', foreach: results }"> 
     </ul>
   </div>
 </ul>
 
 <script id="personTmpl" type="text/html">
-    <li class="summary content block">
+    <li class="summary content block2">
 	<div class="wrapper"> 
 	  <div class="wrapper"> 
 	    <a data-bind="attr: { href: '/person/' + tag + '/'}">

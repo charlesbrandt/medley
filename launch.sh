@@ -10,7 +10,7 @@ cd /c/medley/medley/less
 lessc style.less > ../css/style.css
 
 to launch a server:
-cd /c/medley/medley 
+cd /c/medley/server
 python application.py /c/podcasts
 
 http://localhost:8080/
@@ -31,6 +31,7 @@ python /c/mindstream/mindstream/launch.py -c /c/medley blank
 python /c/mindstream/mindstream/launch.py -c /c/medley layout
 
 python /c/mindstream/mindstream/launch.py -c /c/medley player
+python /c/mindstream/mindstream/launch.py -c /c/medley server
 
 python /c/mindstream/mindstream/launch.py -c /c/music/medley todo
 python /c/mindstream/mindstream/launch.py -c /c/medley start

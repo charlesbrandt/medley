@@ -1,3 +1,33 @@
+*2014.11.12 17:06:12 server
+/c/medley/instances.txt
+/c/medley/launch.sh
+/c/medley/server/less/style.less
+/c/medley/server/js/people.js
+/c/medley/server/templates/people.tpl
+/c/medley/server/templates/person.tpl
+/c/medley/server/js/person.js
+/c/medley/server/application.py
+
+*2014.11.11 14:50:42 server
+/c/medley/instances.txt
+/c/medley/launch.sh
+/c/medley/server/application.py
+
+*2014.11.11 14:49:30 server
+/c/medley/instances.txt
+/c/medley/launch.sh
+
+*2014.11.11 14:48:53 code
+/c/medley/instances.txt
+/c/medley/launch.sh
+/c/medley/medley/scraper.py
+/c/medley/medley/helpers.py
+/c/medley/medley/playlist.py
+/c/medley/medley/formats.py
+/c/medley/medley/collector.py
+/c/medley/medley/content.py
+/c/medley/medley/people.py
+
 *2014.10.08 14:44:18 player
 /c/medley/instances.txt
 /c/medley/player/launch.sh
