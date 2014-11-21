@@ -56,18 +56,23 @@ SortableView.prototype.reorder = function (event, dragData, zoneData) {
 var ContentModel = function() {
   var self = this;
 
+  self.photo_bases = [];
+
   self.scrollWhileDragging = new SortableView(toDraggables(photos));
   self.scrollWhileDragging.dragEnd = function (item) {
     item.dragging(false);
+    self.update_photos();
+    self.post();
+  };
+
+  self.update_photos = function() {
     self.photo_bases = [];
     var cur_photos = self.scrollWhileDragging.items;
     for (i = 0, len = cur_photos().length; i < len; i++) {
       self.photo_bases.push(cur_photos()[i].value.base_dir + '/' + cur_photos()[i].value.filename);
     }
-    self.post();
-
   };
-
+  self.update_photos();
 
   //list of positions that mark different cut off points
   //self._cutoffs = cur_person.cutoffs;
@@ -173,25 +178,31 @@ var ContentModel = function() {
   self.edit_links = function() {
     self.editing_links(true);
   };
+  self.link_lines = ko.computed(function() {
+    //var result = '';
+    var generated = [];
+    var lines = self._links().match(/[^\r\n]+/g);
+    if (lines) {
+      var cur_line;
+      for (var i = 0; i < lines.length; i++) {
+        cur_line = lines[i];
+        //http://stackoverflow.com/questions/8498592/extract-root-domain-name-from-string
+        var matches = cur_line.match(/^https?\:\/\/([^\/?#]+)(?:[\/?#]|$)/i);
+        var domain = matches && matches[1]; // domain will be null if no match is found
+        generated.push('<a href="' + cur_line + '">' + domain + '</a>');
+      }
+    }
+
+    return generated;
+
+  });
   self.links = ko.computed({
     read: function() {
-      var result = '';
-      var lines = self._links().match(/[^\r\n]+/g);
-      if (lines) {
-        var cur_line;
-        for (var i = 0; i < lines.length; i++) {
-          cur_line = lines[i];
-          //http://stackoverflow.com/questions/8498592/extract-root-domain-name-from-string
-          var matches = cur_line.match(/^https?\:\/\/([^\/?#]+)(?:[\/?#]|$)/i);
-          var domain = matches && matches[1]; // domain will be null if no match is found
-          result += ', <a href="' + cur_line + '">' + domain + '</a>';
-        }
-      }
-      //return self._links();
-      return result;
+      return self._links();
     },
     write: function(value) {
       self._links(value);
+      console.log('calling post()');
       self.post();
     },
     owner: self
@@ -378,6 +389,7 @@ var ContentModel = function() {
         'photos': JSON.stringify(self.photo_bases)
       }
     });
+    //console.log('Post Called');
   };
 
   self.update_pos = function() {
@@ -433,4 +445,5 @@ var ContentModel = function() {
 };
 ko.applyBindings(new ContentModel());
 
+//console.log("made it here");
 //});
