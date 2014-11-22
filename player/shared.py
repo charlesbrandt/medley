@@ -19,7 +19,7 @@
         #cumbersome to try to pass this around
         #TODO:
         #commented out all references to passed in 'all_contents'
-        #can go and remove once global appraoch is verified
+        #can go and remove once global approach is verified
 
 
 """

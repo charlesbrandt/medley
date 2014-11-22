@@ -1054,7 +1054,34 @@ class TitleList(QtGui.QListWidget):
             #self.content.remainder['tracks'].sort()
             #for title in self.content.remainder['tracks']:
         self.parent().sync()
-        
+
+class EditTitlesDialog(QtGui.QDialog):
+    """
+    subclass QDialog:
+    http://srinikom.github.io/pyside-docs/PySide/QtGui/QDialog.html#PySide.QtGui.QDialog
+    """
+    def __init__(self, parent=None, contents="test test test\nabcd"):
+        super(EditTitlesDialog, self).__init__(parent)
+        self.setWindowTitle("Bulk edit titles...")
+        self.setModal(True)
+        self.layout = QtGui.QVBoxLayout()
+        self.text = QtGui.QPlainTextEdit()
+        self.text.setPlainText(contents)
+        self.layout.addWidget(self.text)
+
+        self.row = QtGui.QHBoxLayout()
+
+        cancel_button = QtGui.QPushButton("Cancel")
+        self.row.addWidget(cancel_button)
+        ok_button = QtGui.QPushButton("OK")
+        self.row.addWidget(ok_button)
+
+        self.layout.addLayout(self.row)
+
+        self.setLayout(self.layout)
+        ok_button.clicked.connect(self.accept)
+        cancel_button.clicked.connect(self.reject)
+
         
 class TitlesWidget(QtGui.QWidget):
     """
@@ -1109,10 +1136,45 @@ class TitlesWidget(QtGui.QWidget):
         detailsAction.triggered.connect(self.content_details)
         titles_toolbar.addAction(detailsAction)
 
+        editAction = QtGui.QAction(QtGui.QIcon('images/edit.png'), 'Show edit in console', self)
+        editAction.triggered.connect(self.bulk_edit_titles)
+        titles_toolbar.addAction(editAction)
+
         self.layout.addWidget(titles_toolbar)
 
         self.setLayout(self.layout)
 
+    def bulk_edit_titles(self):
+        if self.content:
+            #merge all titles into lines of text
+            combined = ''
+            for title in self.content.titles:
+                combined += title + '\n'
+            #print combined
+            
+            #show those in an edit dialog 
+            edit = EditTitlesDialog(self, combined)
+            #edit.show()
+            #make it blocking:
+            edit.exec_()
+
+            #print "Result = ", edit.text.toPlainText()
+            #print text
+            #print ok
+            #on close, split them back up into separate titles
+
+            updated = []
+            for line in edit.text.toPlainText().splitlines():
+                updated.append(line)
+
+            self.content.titles = updated
+            self.sync()
+
+        else:
+            print "NO CONTENT assigned to self: %s" % self.content
+            print "no titles to edit?"
+            print
+            
     def on_changed(self, item):
         row = self.titles.row(item)
         #if self.content.remainder.has_key('tracks'):
@@ -1257,8 +1319,9 @@ class TitlesWidget(QtGui.QWidget):
         in the console
         """
         if self.content:
-            #TODO:
-            #print json instead of dict()
+            #printing json instead of dict()...
+            #just incase something isn't working as expected...
+            #this can salvage changes
             print json.dumps(self.content.to_dict())
             print self.content.debug()
         else:
