@@ -426,113 +426,124 @@ class Person(object):
         if not os.path.exists(photos_path):
             os.makedirs(photos_path)
 
-        #for url in urls[:1]:
-        for url in urls:
-            if url:
-                print
-                print url
-                #find original filename... should be in the url
-                path_parts = url.split('/')
-                suffix_parts = path_parts[-1].split('?')
-                more_parts = suffix_parts[0].split(':')
-                file_name = more_parts[0]
+        results = download_images(urls, photos_path, tags, self.tag, self.root, 'photos')
+
+        for cur_name in results:
+            #don't forget to add the photo to our collection
+            relative = os.path.join('photos', cur_name)
+            if not relative in self.photo_order:
+                self.photo_order.append(relative)
+                self.save()
+
+        #original: delete after test
+
+        ## #for url in urls[:1]:
+        ## for url in urls:
+        ##     if url:
+        ##         print
+        ##         print url
+        ##         #find original filename... should be in the url
+        ##         path_parts = url.split('/')
+        ##         suffix_parts = path_parts[-1].split('?')
+        ##         more_parts = suffix_parts[0].split(':')
+        ##         file_name = more_parts[0]
                 
-                file_name = file_name.replace(' ', '_')
-                file_name = file_name.replace('%20', '_')
-                file_name = file_name.replace('(', '')
-                file_name = file_name.replace(')', '')
+        ##         file_name = file_name.replace(' ', '_')
+        ##         file_name = file_name.replace('%20', '_')
+        ##         file_name = file_name.replace('(', '')
+        ##         file_name = file_name.replace(')', '')
                 
-                #print file_name
-                name_parts = file_name.split('.')
+        ##         #print file_name
+        ##         name_parts = file_name.split('.')
 
-                #if the name is generic, at least name it for the person:
-                generics = ['original', 'temp', 'photo', 'image', 'picture']
-                for option in generics:
-                    if re.match(option, name_parts[0], re.I):
-                        print "Updating: %s to %s" % (file_name, self.tag)
-                        name_parts[0] = self.tag
+        ##         #if the name is generic, at least name it for the person:
+        ##         generics = ['original', 'temp', 'photo', 'image', 'picture']
+        ##         for option in generics:
+        ##             if re.match(option, name_parts[0], re.I):
+        ##                 print "Updating: %s to %s" % (file_name, self.tag)
+        ##                 name_parts[0] = self.tag
 
-                extension = name_parts[-1].lower()
-                if not extension in [ 'jpg', 'jpeg', 'png', 'gif', 'tif' ]:
-                    #just give it something
-                    print "Unrecognized extension: %s, adding .jpg" % (extension)
-                    name_parts.append('jpg')
+        ##         extension = name_parts[-1].lower()
+        ##         if not extension in [ 'jpg', 'jpeg', 'png', 'gif', 'tif' ]:
+        ##             #just give it something
+        ##             print "Unrecognized extension: %s, adding .jpg" % (extension)
+        ##             name_parts.append('jpg')
 
-                file_name = '.'.join(name_parts)
+        ##         file_name = '.'.join(name_parts)
 
-                download = os.path.join(photos_path, "temp.image")
-                if os.path.exists(download):
-                    print
-                    print url
-                    print download
-                    raise ValueError, "Temp image already exists. Not overwriting"
+        ##         download = os.path.join(photos_path, "temp.image")
+        ##         if os.path.exists(download):
+        ##             print
+        ##             print url
+        ##             print download
+        ##             raise ValueError, "Temp image already exists. Not overwriting"
 
-                #print download
+        ##         #print download
 
-                #go ahead and download it now:
-                urllib.urlretrieve(url, download)
+        ##         #go ahead and download it now:
+        ##         urllib.urlretrieve(url, download)
 
-                download_size = os.path.getsize(download)
+        ##         download_size = os.path.getsize(download)
 
-                #now move the downloaded file into place...
-                cur_name = file_name
-                existing = True
-                duplicate = False
-                index = 1
-                #loop until we figure out if we already have it,
-                #or find a valid new file name
-                while existing:
-                    new_dest = os.path.join(photos_path, cur_name)
-                    if os.path.exists(new_dest):
-                        #if the file_name already exists,
-                        #check if it is the same (compare file size)
-                        dest_size = os.path.getsize(new_dest)
-                        if download_size == dest_size:
-                            #if its the same simply delete the temp one...
-                            print "Already had: %s" % url
-                            os.remove(download)
-                            existing = False
-                            duplicate = True
-                        else:
-                            #if not, create a new name for it (and try again)
-                            prefix = "%s-%04d" % (self.tag, index)
-                            name_parts[0] = prefix
-                            cur_name = '.'.join(name_parts)
-                            index += 1
-                    else:
-                        #found one that will work
-                        existing = False
+        ##         #now move the downloaded file into place...
+        ##         cur_name = file_name
+        ##         existing = True
+        ##         duplicate = False
+        ##         index = 1
+        ##         #loop until we figure out if we already have it,
+        ##         #or find a valid new file name
+        ##         while existing:
+        ##             new_dest = os.path.join(photos_path, cur_name)
+        ##             if os.path.exists(new_dest):
+        ##                 #if the file_name already exists,
+        ##                 #check if it is the same (compare file size)
+        ##                 dest_size = os.path.getsize(new_dest)
+        ##                 if download_size == dest_size:
+        ##                     #if its the same simply delete the temp one...
+        ##                     print "Already had: %s" % url
+        ##                     os.remove(download)
+        ##                     existing = False
+        ##                     duplicate = True
+        ##                 else:
+        ##                     #if not, create a new name for it (and try again)
+        ##                     prefix = "%s-%04d" % (self.tag, index)
+        ##                     name_parts[0] = prefix
+        ##                     cur_name = '.'.join(name_parts)
+        ##                     index += 1
+        ##             else:
+        ##                 #found one that will work
+        ##                 existing = False
 
-                if not duplicate:
-                    #otherwise
-                    #move to safe filename,
-                    os.rename(download, new_dest)
+        ##         if not duplicate:
+        ##             #otherwise
+        ##             #move to safe filename,
+        ##             os.rename(download, new_dest)
 
-                #then create appropriate json file for meta data
-                content = SimpleContent()
-                content.drive_dir = self.root
-                content.base_dir = 'photos'
-                content.filename = cur_name
-                content.added = Timestamp()
-                content.tags = tags
-                content.sites.append(url)
-                content.people.append(self.tag)
-                content.make_hash()
+        ##         #then create appropriate json file for meta data
+        ##         content = SimpleContent()
+        ##         content.drive_dir = self.root
+        ##         content.base_dir = 'photos'
+        ##         content.filename = cur_name
+        ##         content.added = Timestamp()
+        ##         content.tags = tags
+        ##         content.sites.append(url)
+        ##         content.people.append(self.tag)
+        ##         content.make_hash()
 
-                #make sure we have an extension:
-                if len(name_parts) > 1:
-                    name_parts[-1] = 'json'
-                else:
-                    name_parts.append('json')
-                json_file = '.'.join(name_parts)
-                content.json_source = os.path.join(self.root, 'photos', json_file)
-                content.save()
+        ##         #make sure we have an extension:
+        ##         if len(name_parts) > 1:
+        ##             name_parts[-1] = 'json'
+        ##         else:
+        ##             name_parts.append('json')
+        ##         json_file = '.'.join(name_parts)
+        ##         content.json_source = os.path.join(self.root, 'photos', json_file)
+        ##         content.save()
 
-                #don't forget to add the photo to our collection
-                relative = os.path.join('photos', cur_name)
-                if not relative in self.photo_order:
-                    self.photo_order.append(relative)
-                    self.save()
+        ##         #don't forget to add the photo to our collection
+        ##         relative = os.path.join('photos', cur_name)
+        ##         if not relative in self.photo_order:
+        ##             self.photo_order.append(relative)
+        ##             self.save()
 
 class People(list):
     """

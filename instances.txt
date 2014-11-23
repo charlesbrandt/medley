@@ -1,3 +1,26 @@
+*2014.11.22 23:07:10 layout
+/c/medley/instances.txt
+/c/medley/server/templates/collections.tpl
+/c/medley/server/templates/footer.tpl
+/c/medley/server/templates/navigation.tpl
+/c/medley/server/templates/layout.tpl
+/c/medley/server/templates/tag_block.tpl
+/c/medley/server/less/style.less
+/c/medley/server/templates/content_summary.tpl
+/c/medley/server/templates/content.tpl
+/c/medley/server/templates/people_block.tpl
+/c/medley/server/templates/people.tpl
+/c/medley/server/templates/person.tpl
+/c/medley/server/js/people.js
+
+*2014.11.22 23:03:52 scripts
+/c/medley/instances.txt
+/c/medley/launch.sh
+/c/medley/medley/helpers.py
+/c/medley/scripts/diff-playlists.py
+/c/medley/medley/scraper.py
+/c/medley/scripts/download_photos.py
+
 *2014.11.21 16:33:56 player
 /c/medley/instances.txt
 /c/medley/player/launch.sh
@@ -45,7 +68,7 @@
 /c/medley/player/player.py
 /c/medley/player/player-vlc.py
 
-*2014.09.15 18:14:59 start
+*2014.09.15 18:14:59 start_here start
 /c/medley/instances.txt
 /c/medley/launch.sh
 /c/medley/docs/index.txt
