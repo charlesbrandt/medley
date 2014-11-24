@@ -17,9 +17,126 @@ import os, re, copy, json, urllib
 from collector import Cluster, CollectionSimple
 from content import SimpleContent
 from helpers import save_json, load_json
+from scraper import download_images
 
 from moments.tag import to_tag
 from moments.timestamp import Timestamp
+
+
+def create_person(name_tag, people, cluster_pos, root, skipped, ambi, auto_create=True):
+    """
+    a People object is loaded in the caller
+    
+    then this function takes the name_tag
+    look in people to see if there is anything similar
+    if not create it
+    if similar exists, prompt the user for what to do
+
+    there are other checks that could be done, depending on the data set
+    but this is usually a low common denominator
+    """
+
+    dest_path = os.path.join(root, name_tag)
+    
+    #see if there is anything similar:
+    options = people.search(name_tag)
+    if (not options) and auto_create:
+
+        #make a new Person object
+        print "Creating new: %s" % name_tag
+        p = Person(tag=name_tag)
+        p.rating = cluster_pos
+        p.save(dest_path)
+        people.append(p)
+
+    else:
+        #there must be similar options
+        #we should manually review these options
+        #to see if name_tag should be merged with an existing person
+        # (check if it is a better default)
+        #or create a new Person
+        finished = False
+        while not finished:
+            print ""
+            print "%s matched:" % name_tag
+            opt_count = 0
+            for option in options:
+                print "%02d. %s" % (opt_count, option.tag)
+                opt_count += 1
+                #print options
+
+            #http://docs.python.org/2/library/functions.html#raw_input
+            #could also consider:
+            #http://docs.python.org/2/library/cmd.html
+            #via http://stackoverflow.com/questions/70797/python-and-user-input
+            action = raw_input("(M)erge with existing, create (N)ew, mark as (A)mbiguous, or (S)kip? ")
+            number_match = False
+            number = -1
+            try:
+                number = int(action)
+            except:
+                pass
+            else:
+                number_match = True
+
+            if (action.lower() == 'm') or number_match:
+                if len(options) == 1:
+                    number = 0
+                elif not number_match:
+                    numstr = raw_input("Merge with which number? ")
+                    number = int(numstr)
+
+                if number < len(options):
+                    try:
+                        prompt = u"Make '" + name_tag + u"' the default? (y/N) "
+                        primary = raw_input(prompt)
+                    except:
+                        prompt = u"Make '" + u"' the default? (y/N) "
+                        primary = raw_input(prompt)
+
+                    dest = options[number]
+                    dest.tags.append(name_tag)
+                    dest.save()
+
+                    if (not primary) or primary.lower() == 'n':
+                        print "Merged %s to %s tags (%s)" % (name_tag, dest.tag, dest.tags)
+                        finished = True
+                    elif primary.lower() == 'y':
+                        dest.update_default(name_tag)
+                        #dest.tag = name_tag
+                        #TODO:
+                        #move dest to a new directory named name_tag
+                        #remove old directory
+                        finished = True
+                    else:
+                        print "Unknown response: %s" % primary
+                else:
+                    print "Number out of range (%s): %s" % (len(options), number)
+            elif action.lower() == 'n':
+                #make a new Person object
+                p = Person(tag=name_tag)
+                p.rating = cluster_pos
+                p.save(dest_path)
+                people.append(p)
+                finished = True
+                print "Created %s at %s" % (name_tag, dest_path)
+
+            elif action.lower() == 's':
+                skipped.append(name_tag)
+                print "Skipping: %s" % name_tag
+                finished = True
+
+            elif action.lower() == 'a':
+                ambi.add_at(name_tag, cluster_pos)
+                #added ambiguous_file as .source attribute on init
+                #ambi.save(ambiguous_file)
+                ambi.save()
+                print "Marked Ambiguous: %s" % name_tag
+                finished = True
+
+            else:
+                print "Unknown response: %s" % action
+
 
 class ContentPointer(object):
     """
@@ -426,7 +543,10 @@ class Person(object):
         if not os.path.exists(photos_path):
             os.makedirs(photos_path)
 
-        results = download_images(urls, photos_path, tags, self.tag, self.root, 'photos')
+        people = [ self.tag ]
+        alt_name = self.tag
+
+        results = download_images(urls, photos_path, tags, alt_name, people, self.root, 'photos')
 
         for cur_name in results:
             #don't forget to add the photo to our collection
@@ -434,116 +554,6 @@ class Person(object):
             if not relative in self.photo_order:
                 self.photo_order.append(relative)
                 self.save()
-
-        #original: delete after test
-
-        ## #for url in urls[:1]:
-        ## for url in urls:
-        ##     if url:
-        ##         print
-        ##         print url
-        ##         #find original filename... should be in the url
-        ##         path_parts = url.split('/')
-        ##         suffix_parts = path_parts[-1].split('?')
-        ##         more_parts = suffix_parts[0].split(':')
-        ##         file_name = more_parts[0]
-                
-        ##         file_name = file_name.replace(' ', '_')
-        ##         file_name = file_name.replace('%20', '_')
-        ##         file_name = file_name.replace('(', '')
-        ##         file_name = file_name.replace(')', '')
-                
-        ##         #print file_name
-        ##         name_parts = file_name.split('.')
-
-        ##         #if the name is generic, at least name it for the person:
-        ##         generics = ['original', 'temp', 'photo', 'image', 'picture']
-        ##         for option in generics:
-        ##             if re.match(option, name_parts[0], re.I):
-        ##                 print "Updating: %s to %s" % (file_name, self.tag)
-        ##                 name_parts[0] = self.tag
-
-        ##         extension = name_parts[-1].lower()
-        ##         if not extension in [ 'jpg', 'jpeg', 'png', 'gif', 'tif' ]:
-        ##             #just give it something
-        ##             print "Unrecognized extension: %s, adding .jpg" % (extension)
-        ##             name_parts.append('jpg')
-
-        ##         file_name = '.'.join(name_parts)
-
-        ##         download = os.path.join(photos_path, "temp.image")
-        ##         if os.path.exists(download):
-        ##             print
-        ##             print url
-        ##             print download
-        ##             raise ValueError, "Temp image already exists. Not overwriting"
-
-        ##         #print download
-
-        ##         #go ahead and download it now:
-        ##         urllib.urlretrieve(url, download)
-
-        ##         download_size = os.path.getsize(download)
-
-        ##         #now move the downloaded file into place...
-        ##         cur_name = file_name
-        ##         existing = True
-        ##         duplicate = False
-        ##         index = 1
-        ##         #loop until we figure out if we already have it,
-        ##         #or find a valid new file name
-        ##         while existing:
-        ##             new_dest = os.path.join(photos_path, cur_name)
-        ##             if os.path.exists(new_dest):
-        ##                 #if the file_name already exists,
-        ##                 #check if it is the same (compare file size)
-        ##                 dest_size = os.path.getsize(new_dest)
-        ##                 if download_size == dest_size:
-        ##                     #if its the same simply delete the temp one...
-        ##                     print "Already had: %s" % url
-        ##                     os.remove(download)
-        ##                     existing = False
-        ##                     duplicate = True
-        ##                 else:
-        ##                     #if not, create a new name for it (and try again)
-        ##                     prefix = "%s-%04d" % (self.tag, index)
-        ##                     name_parts[0] = prefix
-        ##                     cur_name = '.'.join(name_parts)
-        ##                     index += 1
-        ##             else:
-        ##                 #found one that will work
-        ##                 existing = False
-
-        ##         if not duplicate:
-        ##             #otherwise
-        ##             #move to safe filename,
-        ##             os.rename(download, new_dest)
-
-        ##         #then create appropriate json file for meta data
-        ##         content = SimpleContent()
-        ##         content.drive_dir = self.root
-        ##         content.base_dir = 'photos'
-        ##         content.filename = cur_name
-        ##         content.added = Timestamp()
-        ##         content.tags = tags
-        ##         content.sites.append(url)
-        ##         content.people.append(self.tag)
-        ##         content.make_hash()
-
-        ##         #make sure we have an extension:
-        ##         if len(name_parts) > 1:
-        ##             name_parts[-1] = 'json'
-        ##         else:
-        ##             name_parts.append('json')
-        ##         json_file = '.'.join(name_parts)
-        ##         content.json_source = os.path.join(self.root, 'photos', json_file)
-        ##         content.save()
-
-        ##         #don't forget to add the photo to our collection
-        ##         relative = os.path.join('photos', cur_name)
-        ##         if not relative in self.photo_order:
-        ##             self.photo_order.append(relative)
-        ##             self.save()
 
 class People(list):
     """

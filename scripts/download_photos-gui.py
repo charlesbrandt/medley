@@ -2,17 +2,14 @@
 """
 #
 # By: Charles Brandt [code at charlesbrandt dot com]
-# On: *2013.05.22 20:52:50 
+# On: *2014.11.23 11:22:14 
 # License: MIT 
 
 # Requires:
-# PySide, Pillow, Moments, Mako
-# cxfreeze for packaging as a stand alone executable
+# PySide, Medley
 
 # Description:
 #
-# adapted from:
-# /c/gallery_generator/generate.py
 
 """
 
@@ -22,12 +19,17 @@ import os
 from medley.scraper import download_images, download_image
 
 from PySide import QtCore, QtGui
-    
+
+#for about:
+import platform
+import PySide
+__version__ = '0.0.1'
+
 class Grabber(QtGui.QWidget):
     """
     """
  
-    def __init__(self):
+    def __init__(self, parent=None):
         """Constructor"""
         super(Grabber, self).__init__()
  
@@ -81,11 +83,12 @@ class Grabber(QtGui.QWidget):
         grab_button = QtGui.QPushButton('Grab em!', self)
         grab_button.clicked.connect(self.grab_em)
         grid.addWidget(grab_button, 8, 1)
+
+        about_button = QtGui.QPushButton('About', self)
+        about_button.clicked.connect(self.about)
+        grid.addWidget(about_button, 8, 0)
         
         self.setLayout(grid)
- 
-        self.setWindowTitle("Grab Images")
-
  
     def openDirectoryDialog(self):
         """
@@ -176,9 +179,58 @@ class Grabber(QtGui.QWidget):
             self.status.setText("All done!")
             print "All done!"
         
+
+## class AppWindow(QtGui.QMainWindow):
+##     def __init__(self, parent=None):
+##         super(AppWindow, self).__init__(parent)
+
+##         self.widget = Grabber(self)
+
+##         self.setCentralWidget(self.widget)
+
+##         aboutMenu = self.menuBar().addMenu("&About")
+
+##         infoAction = QtGui.QAction('Info', self)
+##         infoAction.setStatusTip('Information about Medley')        
+##         infoAction.triggered.connect(self.about)
+##         aboutMenu.addAction(infoAction)
+
+##         self.setWindowTitle("Grab Images")
+
+    def about(self):
+        """
+        Popup a box with about message.
+
+        via:
+        http://qt-project.org/wiki/PySideSimplicissimus_Module_3_AboutBox
+        """
+        QtGui.QMessageBox.about(self, "About Download Photos...",
+                                """<b>Grabber!</b> v %s
+                                <p>
+                                <p>Python %s 
+                                <p>PySide version %s
+                                <p>Qt version %s on %s
+                                """ % (__version__,
+                                       platform.python_version(),
+                                       PySide.__version__,
+                                       PySide.QtCore.__version__,
+                                       platform.system()))
+    
+
+ 
+
                    
 if __name__ == "__main__":
     app = QtGui.QApplication([])
+
     form = Grabber()
+    form.setWindowTitle('Grabber')    
+    form.resize(640, 450)
+
     form.show()
+
+    #this is needed if you want a menu bar:
+    ## window = AppWindow()
+    ## window.show()
+
     app.exec_()

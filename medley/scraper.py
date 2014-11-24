@@ -40,6 +40,8 @@ def download_image(url, destination_path, tags=[], alt_name="image", people=[], 
     
     print
     print url
+    print "drive_dir", drive_dir
+    print "base_dir", base_dir
     #find original filename... should be in the url
     path_parts = url.split('/')
     suffix_parts = path_parts[-1].split('?')

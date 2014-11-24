@@ -1106,9 +1106,15 @@ class Cluster(list):
         clouds = Journal(cloud_file)
 
         if clouds.tag(tag):
-            lines = clouds.tags(tag)[0].data.splitlines()
+            data = clouds.tags(tag)[0].data
+            #if data:
+            lines = data.splitlines()
+            ## else:
+            ##     print "No data for: %s" % clouds.tags(tag)[0]
+            ##     exit()
         else:
             print "no ->%s<- tags found!" % tag
+            exit()
 
         #print len(lines)
         groups = []

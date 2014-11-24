@@ -20,6 +20,7 @@
 /c/medley/scripts/diff-playlists.py
 /c/medley/medley/scraper.py
 /c/medley/scripts/download_photos.py
+/c/medley/scripts/download_photos-gui.py
 
 *2014.11.21 16:33:56 player
 /c/medley/instances.txt
