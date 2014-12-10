@@ -947,6 +947,12 @@ class AppWindow(QtGui.QMainWindow):
         saveAction.triggered.connect(self.widget.left_nav.tree_view.save_lists)
         fileMenu.addAction(saveAction)
 
+        importAction = QtGui.QAction('Import State', self)
+        #importAction.setShortcut('Ctrl+S')
+        importAction.setStatusTip('Import playlist structure')        
+        importAction.triggered.connect(self.widget.left_nav.tree_view.import_lists)
+        fileMenu.addAction(importAction)
+
         #metaMenu.addSeparator()
 
         metaMenu = self.menuBar().addMenu("Me&ta")

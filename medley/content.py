@@ -34,6 +34,12 @@ class Mark(object):
 
         #tag is a user specified tag or category ('work', 'chill', 'other')
         #if included as part of a segment, should update the segment.tags too
+        #also [2014.12.10 12:50:57]
+        #this is used as a string for specifying tags... could be more than one
+        #also different ways of splitting tags up...
+        #sometimes only use a space
+        #sometimes use a comma
+        #see self.split_tags()        
         self.tag = tag
         
         #once we've determined the real title of the mark location:
@@ -58,7 +64,31 @@ class Mark(object):
         #these are used in m3u lists
         self.bytes = bytes
         
-
+    def split_tags(self):
+        """
+        many different ways of specifying multiple tags
+        trying to guess approach used here
+        """
+        tags = []
+        #if commas are used anywhere, use those as the delimeter:
+        if re.search(',', self.tag):
+            raw_tags = self.tag.split(',')
+            for tag in raw_tags:
+                clean = tag.strip()
+                #convert spaces to underscore here?
+                #that is typically a requirement for tags:
+                clean = clean.replace(' ', '_')
+                if clean:
+                    tags.append(clean)
+        else:
+            #no commas, assume that the string is space delimited
+            raw_tags = self.tag.split(' ')
+            for tag in raw_tags:
+                if tag:
+                    tags.append(tag)
+            
+        return tags
+    
     def __repr__(self):
         #return "%s, %s, %s, %s\n" % (self.position, self.tag, self.title, self.source)
         return "%s, %s, %s\n" % (self.position, self.tag, self.source)
@@ -135,8 +165,8 @@ class Mark(object):
 
         when storing these with a content item, we already know self.source
         """
-        new_tag = self.tag.replace(',', '_')
-        return (self.total_seconds(), new_tag)
+        #new_tag = self.tag.replace(',', '_')
+        return (self.total_seconds(), self.tag)
 
     # FORMAT SPECIFC CONVERTERS:
     
@@ -332,7 +362,8 @@ class MarkList(list):
             #print next_mark.tag
             if re.search('skip', next_mark.tag) or re.search('Skip', next_mark.tag) or re.search('\+', next_mark.tag):
                 segment.marks.append( next_mark )
-                tags = next_mark.tag.split(' ')
+                #tags = next_mark.tag.split(' ')
+                tags = next_mark.split_tags()
                 if '-' in tags:
                     tags.remove('-')
                 segment.tags.extend(tags)
@@ -418,7 +449,13 @@ class MarkList(list):
             else:
                 #probably just a description of some kind:
                 segment.marks.append(next_mark)
-                segment.tags.extend(next_mark.tag.split(' '))
+                #tags = next_mark.split_tags()
+                #segment.tags.extend(next_mark.tag.split(' '))
+                tags = next_mark.split_tags()
+                for tag in tags:
+                    if not tag in segment.tags:
+                        segment.tags.append(tag)
+
                 print "Unmatched tag: %s" % next_mark.tag
 
             #save the previous item for the next time around

@@ -10,7 +10,7 @@
 //console.log("HELLLOOOOO?!?!?!");
 //http://stackoverflow.com/questions/20483627/lazyload-images-with-knockout-jquery
 
-var toggle_state = false;
+var toggle_state = true;
 
 $('#toggle-layout').click(function(){
   //$('#cluster').toggleClass('top-bottom-columns');
@@ -139,6 +139,7 @@ var Group = function(data, index) {
   };
   
   self.move_to_top = function(item) {
+    console.log('move to top called');
     self.items.remove(item);
     self.items.splice(0, 0, item);
     self.update_pos();

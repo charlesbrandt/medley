@@ -1,3 +1,11 @@
+*2014.12.05 11:45:59 auto_playlist
+/c/medley/instances.txt
+/c/medley/scripts/update_playlist.py
+/c/binaries/podcasts/beats_in_space/make_playlist.py
+/c/medley/medley/helpers.py
+/c/medley/scripts/copy_media.py
+/c/medley/scripts/make_relative_playlist.py
+
 *2014.11.22 23:07:10 layout
 /c/medley/instances.txt
 /c/medley/server/templates/collections.tpl

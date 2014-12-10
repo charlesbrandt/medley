@@ -41,14 +41,18 @@ def load_playlist(fname):
 
 class Node(object):
     """
+    Nodes are used to build tree structures
+    in this case they represent a hierarchy of medley.Playlists
+
+    These Node objects also have methods
+    to allow them to work in a Qt based system.
+    In this case, they are part of a TreeModel,
+    which handles interactions (moving nodes, etc) within the tree.
     """
      
     def __init__( self, name, parent=None ):
         """
         Instantiates a new tree item
-
-        #TODO:
-        adapt to standard tree item interface for consistency
         """
         self._name = name
          
@@ -119,8 +123,6 @@ class Node(object):
         if self._parent is not None:
             return self._parent.children.index(self)
 
-
-
     def as_dict(self):
         """
         return a simple dictionary representation of the node
@@ -169,6 +171,12 @@ class Node(object):
             #TODO:
             #refactor this to be less confusing.
             self.content.save(self.source)
+
+            #TODO:
+            #should check if a Playlist has any changes before saving
+            #also consider setting an option to automatically
+            #increment a date section of a filename if changes occur
+            #(for automated file versions)
         
     def from_json(self, data='', item={}):
         """
@@ -176,8 +184,6 @@ class Node(object):
         data assumed to be a json string
         item assumed to be a simple object (non Node)
         """
-
-        #node = Node("temp")
 
         if data:
             simple = json.loads(data)
@@ -205,12 +211,10 @@ class Node(object):
             else:
                 #no source specified
                 #create an empty Playlist here instead
-                self.content = Playlist()
-                #TODO:
-                #should check if a Playlist has any changes before saving
-                #also consider a setting an option to automatically
-                #increment a date section of a filename if changes occur
-                #(for automated file versions)
+                #self.content = Playlist()
+                #self.content should have already been initialized
+                #with an empty/new Playlist()
+                pass
 
         if simple.has_key('children'):
             for item in simple['children']:
@@ -220,7 +224,7 @@ class Node(object):
 
     def log(self, tabLevel=-1):
 
-        output     = ""
+        output    = ""
         tabLevel += 1
         
         for i in range(tabLevel):
@@ -553,7 +557,6 @@ class PlaylistsTreeView(QtGui.QTreeView):
         #has no effect on trees, but might work in tables
         #self.tree_view.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
 
-
     def load_lists(self, fname):
         """
         for internal calls to load
@@ -725,6 +728,32 @@ class PlaylistsTreeView(QtGui.QTreeView):
         """
         #save_json(self.config_source, self.configs)
         configs.save_configs()
+
+    def import_lists(self):
+        
+        #using self.last_folder to remember previously opened location
+        if self.last_folder:
+            fname, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open file',
+                                                         self.last_folder)
+        else:
+            fname, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open file')
+
+        print "Children pre:"
+        for child in self.playlists.root.children:
+            print child.name
+            
+        items = load_json(fname)
+        #make a new node based on items root:
+        child = Node('new_root')
+        #child.from_json(item=item)
+        self.playlists.root.addChild(child)
+        child.from_json(item=items)
+        self.setModel(self.playlists)
+
+        print "Children post:"
+        for child in self.playlists.root.children:
+            print child.name
+        
 
     def open_lists(self):
         """

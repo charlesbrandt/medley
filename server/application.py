@@ -595,14 +595,21 @@ def people(group_number=None):
     p.load()
 
     print "making json groups"
-    
+
+    limited = []
+
+    if not group_number is None:
+        limited.append(p.cluster[int(group_number)])
+    else:
+        limited.extend(p.cluster[:])
+        
     #make a cluster-like object here
     #list of lists
     #need to distill it to json eventually
     groups = []
     #links = []
     #index = 0
-    for group in p.cluster[:]:
+    for group in limited:
         print group
         new_group = []
         for item in group:
@@ -621,11 +628,15 @@ def people(group_number=None):
         #index += 1
 
     links = make_links(p)
+
+    #print p.cluster[0]
+    first = groups[0][0]['tag']
     
     if not group_number is None:
-        group = groups[int(group_number)]
-        gj = json.dumps(group)
-        return template('people', people=p, cluster=p.cluster, group_json=gj, group_number=group_number, links=links)
+        #group = groups[int(group_number)]
+        #gj = json.dumps(group)
+        gj = json.dumps(groups[0])
+        return template('people', people=p, cluster=p.cluster, group_json=gj, group_number=group_number, links=links, first=first)
         
     else:
         pj = json.dumps(groups)

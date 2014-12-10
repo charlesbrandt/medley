@@ -1,12 +1,16 @@
+<!--
 <ul id="buttons" class="content" >
 %for link in links:
 <li class="content">{{! link }}</li>
 %end
 </ul>
+-->
+
 <span id="toggle-layout">Column direction</span>
 
 <ul id="cluster">
-    <ul id="people" class="top-bottom-columns" data-bind="template: { name: 'personTmpl', foreach: group.items }, scrollableOnDragOver: 'scroll-while-dragging'"> 
+% #<ul id="people" class="top-bottom-columns" data-bind="template: { name: 'personTmpl', foreach: group.items }, scrollableOnDragOver: 'scroll-while-dragging'"> 
+    <ul id="people" data-bind="template: { name: 'personTmpl', foreach: group.items }, scrollableOnDragOver: 'scroll-while-dragging'"> 
     </ul>
   <div class="wrapper">
   </div>  
@@ -14,7 +18,7 @@
 
 
 <script id="personTmpl" type="text/html">
-    <li class="draggable summary content block" draggable="true" data-bind="event:{
+    <li class="draggable summary content block2" draggable="true" data-bind="event:{
        dragstart:   function(data, event){ 
                     $(event.target).addClass('dragSource')
                     $root.drag_start_index($index());
@@ -56,9 +60,9 @@
 }">
 
 	<p class="position">
-	  <img class="icon" data-bind="click: $parent.move_to_top" src="/img/arrow-up.svg" />
+	  <img class="icon" data-bind="click: $data.parent.move_to_top" src="/img/arrow-up.svg" />
 	  <input size="4" data-bind="value: position" />
-	  <img class="icon" data-bind="click: $parent.move_to_bottom" src="/img/arrow-down.svg" />
+	  <img class="icon" data-bind="click: $data.parent.move_to_bottom" src="/img/arrow-down.svg" />
 	</p>
 
 	<div class="wrapper"> 
@@ -101,5 +105,5 @@
   <script type="text/javascript" src="/js/lib/knockout-3.0.0.js"></script>
   <script type="text/javascript" src="/js/people.js"></script>
 
-
-%rebase layout title="People", active="home"
+%cur_title = group_number + '. ' + first + ": people" 
+%rebase layout title=cur_title, active="home"
