@@ -4,9 +4,10 @@ from PySide import QtGui, QtCore
 from shared import all_contents, configs
 #from shared import main_player
 
-from medley.content import Content, Mark
+from medley.content import Content, Mark, import_content
 from medley.playlist import Playlist
-from medley.helpers import find_json, make_json_path, load_json
+from medley.helpers import find_json, load_json
+#from medley.helpers import find_json, make_json_path, load_json
 
 from moments.path import Path
 
@@ -14,6 +15,37 @@ re1='(\\d+)(\.)'	# Integer Number 1
 find_number = re.compile(re1,re.IGNORECASE|re.DOTALL)
 
 
+def find_contents(fname):
+    """
+    helper to take a path (fname)
+    look for the corresponding json file
+    (create one if none exists)
+    and load the Content(s)
+    returns a list of all contents found
+
+    utilized the all_contents global dictionary
+    """
+    contents = []
+    options = []
+    if fname:
+        p = Path(fname)
+        if p.type() == "Directory":
+            d = p.load()
+            d.scan_filetypes()
+            options.extend(d.movies)
+            options.extend(d.sounds)
+        else:
+            #name = p.name
+            #must be some other file type... load the parent directory:
+            #parent = p.parent()
+            #d = parent.load()
+            options.append(p)
+
+        for option in options:
+            drive_dir = configs.get('default_drive_dir')            
+            content = import_content(unicode(option), all_contents, drive_dir)
+            contents.append(content)
+    
 
 class PlaylistModel(QtCore.QAbstractTableModel):
     """
@@ -30,6 +62,8 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         if key_order is None:
             self.key_order = ['up', 'play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
             self.key_order = ['up', 'play', 'open', 'order', 'people', 'filename', 'tags', 'status', 'timestamp', 'title', 'segments', 'marks', 'start', 'end', ]
+            self.key_order = ['up', 'open', 'status', 'tags', 'start', 'play', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', ]
+
         else:
             self.key_order = key_order
         
@@ -396,10 +430,13 @@ class PlaylistWidget(QtGui.QWidget):
         playlist_toolbar = QtGui.QToolBar()
         playlist_toolbar.setIconSize(QtCore.QSize(16, 16))
 
-        addAction = QtGui.QAction(QtGui.QIcon('images/plus.png'), 'Add', self)
-        #addAction.setShortcut('Ctrl+N')
-        addAction.triggered.connect(self.add_item)
-        playlist_toolbar.addAction(addAction)
+        #TODO:
+        #action is not yet implemented
+        #
+        ## addAction = QtGui.QAction(QtGui.QIcon('images/plus.png'), 'Add', self)
+        ## #addAction.setShortcut('Ctrl+N')
+        ## addAction.triggered.connect(self.add_item)
+        ## playlist_toolbar.addAction(addAction)
 
         removeAction = QtGui.QAction(QtGui.QIcon('images/minus.png'), 'Remove', self)
         removeAction.triggered.connect(self.remove_item)
@@ -612,60 +649,9 @@ class PlaylistView(QtGui.QTableView):
     def add_media(self, fname):
         all_results = True
         contents = []
-        options = []
-        if fname:
-            p = Path(fname)
-            if p.type() == "Directory":
-                d = p.load()
-                d.scan_filetypes()
-                options.extend(d.movies)
-                options.extend(d.sounds)
-            else:
-                #name = p.name
-                #must be some other file type... load the parent directory:
-                #parent = p.parent()
-                #d = parent.load()
-                options.append(p)
 
-            for option in options:
-                json_source = find_json(unicode(option))
-                if not json_source:
-                    json_source = make_json_path(unicode(option))
-
-                #won't need json_objects, but need to create the json file if new
-                json_objects = load_json(json_source, create=True)
-
-                if all_contents.has_key(json_source):
-                    #print "Matched existing Content object with path: %s" % json_source
-                    content = all_contents[json_source]
-                else:
-                    content = Content(json_source)
-                    if not unicode(option) in content.media:
-                        content.media.append(unicode(option))
-                    content.filename = option.filename
-
-                    #set content_base here too
-                    #ideally find the path prefix where binary data (media) is
-                    #(based on local machine)
-                    #then find a unique suffix for specific content
-                    content_path = os.path.dirname(unicode(option))
-                    drive_dir = configs.get('default_drive_dir')
-                    if not drive_dir:
-                        print "WARNING: No path prefix set: %s" % drive_dir
-                        #need to use drive_dir here... base_dir is not enough
-                        content.drive_dir = content_path
-                    else:
-                        dd_path = Path(drive_dir)
-                        content.base_dir = dd_path.to_relative(content_path)
-                        print "SETTING content.base_dir TO: %s" % content.base_dir
-                        content.drive_dir = drive_dir
-
-                        
-                    all_contents[json_source] = content
-                    content.save()
-
-                contents.append(content)
-
+        contents = find_contents(fname)
+        
         print "CONTENTS DURING LOAD: %s" % contents
         result = self.add_contents(contents)
             
@@ -1420,6 +1406,7 @@ class ContentWindow(QtGui.QMainWindow):
         playlist = Playlist(self.content.segments)
 
         key_order = ['open', 'order', 'tags', 'start', 'play', 'title', 'status', 'timestamp', 'people', 'segments', 'marks', 'end', 'up', ]
+        key_order = ['open', 'status', 'tags', 'start', 'play', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', 'up', ]
 
         subtree = PlaylistModel(playlist, key_order=key_order)
 

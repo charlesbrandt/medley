@@ -11,7 +11,7 @@ Song, Podcast, Album, Image, Book, Movie, Scene,
 import os, re, copy
 import hashlib
 
-from helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties
+from helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties, make_json_path
 
 from moments.path import Path
 from moments.timestamp import Timestamp
@@ -618,6 +618,59 @@ class MarkList(list):
             response = 'different'
 
         return (len(common), response)
+
+#aka create_or_load_content
+def import_content(source, all_contents={}, drive_dir=None):
+    """
+    sometimes it's not known if there is a Content object for a given path
+    and sometimes we want there to be one, if there is not already
+
+    many of these checks need to happen before initializing the Content object
+    
+    """
+    content = None
+    
+    option = source
+    json_source = find_json(unicode(option))
+    if not json_source:
+        json_source = make_json_path(unicode(option))
+
+    #won't need json_objects, but need to create the json file if new
+    json_objects = load_json(json_source, create=True)
+
+    if all_contents.has_key(json_source):
+        #print "Matched existing Content object with path: %s" % json_source
+        content = all_contents[json_source]
+    else:
+        content = Content(json_source)
+        if ( (unicode(option) != json_source) and
+             (not unicode(option) in content.media) ):
+            content.media.append(unicode(option))
+
+        #this only works if source is a moments.Path object:
+        #content.filename = option.filename
+        
+        content.filename = os.path.basename(unicode(option))
+
+        #set content_base here too
+        #ideally find the path prefix where binary data (media) is
+        #(based on local machine)
+        #then find a unique suffix for specific content
+        content_path = os.path.dirname(unicode(option))
+        if not drive_dir:
+            print "WARNING: No path prefix set: %s" % drive_dir
+            #need to use drive_dir here... base_dir is not enough
+            content.drive_dir = content_path
+        else:
+            dd_path = Path(drive_dir)
+            content.base_dir = dd_path.to_relative(content_path)
+            print "SETTING content.base_dir TO: %s" % content.base_dir
+            content.drive_dir = drive_dir
+
+        all_contents[json_source] = content
+        content.save()
+
+    return content
 
 class SimpleContent(object):
     """

@@ -42,6 +42,11 @@ from medley.playlist import Playlist
 def usage():
     print __doc__
 
+
+#place to keep track of all loaded Content objects
+#keyed by json_source path
+all_contents = {}
+
 def parse_tags(source):
     """
     extract any substring enclosed in parenthesis
@@ -248,7 +253,7 @@ def scan_content(content, cur_lists):
     print
     #print content.debug(recurse=False)
 
-def find_all_jsons(source, cur_lists, type=None):
+def find_jsons_and_update_lists(source, cur_lists, type=None):
     """
     look in the specified source directory
     (or the parent directory, if source is a file)
@@ -273,8 +278,14 @@ def find_all_jsons(source, cur_lists, type=None):
                 if isinstance(result, dict) and result.has_key('segments'):
                     #going to assume this is a content object...
                     #reload it that way:
-                    content = Content(current_file)
-                    scan_content(content, cur_lists)
+                    if not current_file in all_contents.keys():
+                        content = Content(current_file)
+                        scan_content(content, cur_lists)
+                        all_contents[current_file] = content
+                    else:
+                        #shouldn't get this here:
+                        print "Duplicate json found: %s" % current_file
+
                 else:
                     print "Skipping: %s... not a Content object" % current_file
 
@@ -307,56 +318,111 @@ if __name__ == '__main__':
             print "Couldn't find path: %s" % source
             exit()
 
-        #TODO
-        #would be nice to have a config file
-        #for scanning multiple source directories
-
-        #TODO:
-        #then merge all of those lists together into combined versions of each
-        #also [2014.12.08 18:50:00]
-        #not sure that we really want to do that...
-        #could get very big an unweildy
-        #should instead, come up with ways to skim the cream of the crop
 
         cur_lists, main_tags = make_empty_lists(tags)
         print main_tags
-        
-        find_all_jsons(source, cur_lists)
 
+        #do the main scan here:
+        find_jsons_and_update_lists(source, cur_lists)
 
         source_name = os.path.basename(source)
+        #just incase there is a trailing slash:
+        if not source_name:
+            source_name = os.path.basename(os.path.dirname(source))
+            
         lists_index = { 'source':'', 'name':source_name, 'children':[] }
         #lists_index = { 'source':'', 'name':source_dirname, 'children':[] }
 
         #save all lists:
-        for tag in main_tags:
-            cur_list = cur_lists[tag]
+        for main_tag in main_tags:
+            cur_list = cur_lists[main_tag]
             if len(cur_list):
-                pl = Playlist(cur_list)
-                name = "%s.json" % tag
+                name = "%s.json" % main_tag
                 dest = os.path.join(source, name)
-                if os.path.exists(dest):
-                    print "WARNING: path exists! ", dest
 
-                #TODO:
                 #before applying order of previous list
                 #first sort by the number of "+" tags
                 #that way new items show up sorted by rating
 
-                #TODO:
+                ordered_plusses = {}
+                for item in cur_list:
+                    #print
+                    #print item.json_source
+                    #print item.segment_id
+                    #print item.tags
+                    max_plus = 0
+                    for tag in item.tags:
+                        plus_count = tag.count('+')
+                        if plus_count > max_plus:
+                            max_plus = plus_count
+
+                    key = '%02d' % max_plus
+                    if ordered_plusses.has_key(key):
+                        ordered_plusses[key].append(item)
+                    else:
+                        ordered_plusses[key] = [ item ]
+
+                #now re-combine everything back to one list:
+                keys = ordered_plusses.keys()
+                keys.sort()
+                keys.reverse()
+                print keys
+                ordered_list = []
+                for key in keys:
+                    ordered_list.extend(ordered_plusses[key])
+
+                #ok... all sorted now.
+                cur_list = ordered_list[:]
+
                 #check for existing / previous playlists
                 #apply the order of those lists to newly generated list
                 #anything new to the list should be added to the top
                 #anything on old list that is not on new list should be kept off
 
+                if os.path.exists(dest):
+                    print "WARNING: path exists! ", dest
+
+                    ojson = load_json(dest)
+                    original = Playlist()
+                    original.load(dest, all_contents)
+                    ordered_list = []
+
+                    original_pre = len(original)
+                    #print "Length of old list: %s" % len(original)
+                    for item in original[:]:
+                        if item in cur_list:
+                            #print "matched cur_list"
+                            #print item.json_source
+                            #print item.segment_id
+                            ordered_list.append(item)
+                            cur_list.remove(item)
+                            original.remove(item)
+                        else:
+                            #print "not in cur_list"
+                            pass
+
+                    print "matched: %s (of %s) previously sorted items" % (len(ordered_list), original_pre)
+                    if len(original):
+                        print "%s items on old list are not on new list (untagged)" % len(original)
+                    if len(cur_list):
+                        print "ADDING: %s new items" % len(cur_list)
+
+                    #add the ordered items to the end:
+                    cur_list.extend(ordered_list)
+                            
+                pl = Playlist(cur_list)
+                    
                 #TODO:
                 #consider saving everything to a subdirectory with today's date
                 #that way changes can be tracked more easily
                 #(or could just rely on version control for that too)
+                #
+                #the downside is this requires updating any medley states
+                #that reference the corresponding (old) list tree.
 
                 print "saving to: ", dest
                 pl.save(dest)
-                lists_index['children'].append( { 'source':dest, 'name':tag, 'children':[] } )
+                lists_index['children'].append( { 'source':dest, 'name':main_tag, 'children':[] } )
 
 
         index_name = source_name + '.json'
@@ -364,13 +430,6 @@ if __name__ == '__main__':
         print "saving index to: %s" % index_dest
         save_json(index_dest, lists_index)
 
-
-
-        #TODO:
-        #handle a list for all top level content items ('everything')
-        #although this is often handled (and customized)
-        #when downloading and initially scanning / adding contents
-        
         #print parse_tags("tag1 tag2 (group1 group2 group3) tag3 (groupx (groupy) groupz) tag4")
         
     else:

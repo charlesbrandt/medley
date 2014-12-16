@@ -1,5 +1,6 @@
 import os, codecs, re
-from helpers import save_json
+from helpers import save_json, load_json
+from content import Content
 
 class Position(object):
     """
@@ -266,7 +267,10 @@ class PositionList(list):
         """
         self[int(self._position)] = item
     
-
+    def clear(self):
+        del self[:]
+        self.update_length()
+        
     ## def sort(self, *args, **kwargs):
     ##     ## The sort() method takes optional arguments
     ##     ## for controlling the comparisons.
@@ -402,6 +406,51 @@ class Playlist(PositionList):
             items.append( [json_path, content.segment_id] )
 
         save_json(destination, items)
+
+    #def load_playlist(fname):
+    def load(self, fname, all_contents={}):
+        """
+        if you want to keep track of all contents loaded,
+        pass in a dictionary of all_contents...
+        load will update that with any new Content objects,
+        and reuse any existing objects from there
+        
+        originally from medley.player.list_tree.load_playlist(fname)
+        
+        expects the playlist to hold:
+           - the content source path
+           - the segment id
+
+        then loads the content from the source, and selects the correct segment
+        """
+        self.clear()
+        
+        items = load_json(fname)
+        #print items
+        contents = []
+        for item in items:
+            #print item
+            #print ""
+            (json_source, segment_id) = item
+            if all_contents.has_key(json_source):
+                #print "Matched existing Content object with path: %s" % json_source
+                content = all_contents[json_source]
+            else:
+                print "loading: %s" % json_source
+                content = Content(json_source)
+                all_contents[json_source] = content
+
+            #print json_source
+            segment = content.get_segment(segment_id)
+            #print segment.to_dict()
+            #print ""
+            #print ""
+            contents.append(segment)
+            
+        #return Playlist(contents)
+        self.extend(contents)
+        #update position_list so it knows
+        self.update_length()
 
     def sort_path(self):
         #self.sort(key=lambda source: str(source.path))

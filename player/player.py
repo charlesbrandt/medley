@@ -390,11 +390,11 @@ class PlayerWidget(QtGui.QWidget):
         ##     make_title = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+N'),
         ##                                  self.video_window, titles_col.new_title)
 
-        print "Play() called. Received:"
-        print "Content: ", content
-        print "Playlist: ", playlist
-        print "Marks_col: ", marks_col
-        print "Titles_col: ", titles_col
+        ## print "Play() called. Received:"
+        ## print "Content: ", content
+        ## print "Playlist: ", playlist
+        ## print "Marks_col: ", marks_col
+        ## print "Titles_col: ", titles_col
         
 
         #incase it was disabled:
@@ -453,9 +453,9 @@ class PlayerWidget(QtGui.QWidget):
                 self.video_window.setWindowTitle(title)
 
 
-            print "making path"
-            print "Cur_content.path: ", self.cur_content.path
-            print "Cur_content.filename: ", self.cur_content.filename
+            #print "making path"
+            #print "Cur_content.path: ", self.cur_content.path
+            #print "Cur_content.filename: ", self.cur_content.filename
             path = os.path.join(self.cur_content.path, self.cur_content.filename)
             print "Playing: %s" % path
 
@@ -702,21 +702,13 @@ class PlayerWidget(QtGui.QWidget):
     def updateUI(self):
         """updates the user interface"""
         time = self.get_position()
+
+        #in ms:
         remain = self.get_remainder()
-        
-        #print "length:", length
-        #ratio = (self.start * 1.0) / length
-        #print "ratio:", ratio
 
-        #self.MediaPlayer.set_position(ratio)
-
-
-
-        #print "Updating UI: ", time
-        
-        # setting the slider to the desired position
-        self.seek_bar.setValue(self.MediaPlayer.get_position() * 1000)
-
+        #check this at the beginning...
+        #otherwise some calls (like next() )
+        #may make it look like things have stopped, but they haven't
         if not self.MediaPlayer.is_playing():
             # no need to call this function if nothing is played
             self.Timer.stop()
@@ -726,9 +718,29 @@ class PlayerWidget(QtGui.QWidget):
                 # this will fix it
                 self.stop()
 
-        if self.cur_content and self.cur_content.end and time > self.cur_content.end.position:
+
+        
+        #print "length:", length
+        #ratio = (self.start * 1.0) / length
+        #print "ratio:", ratio
+
+        #self.MediaPlayer.set_position(ratio)
+
+        #print "Updating UI: ", time
+        
+        # setting the slider to the desired position
+        self.seek_bar.setValue(self.MediaPlayer.get_position() * 1000)
+
+        #print remain
+
+        if self.cur_content and self.cur_content.end and time >= self.cur_content.end.position:
             print "AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
             self.next()
+
+        elif remain <= 2000:
+            print "Reaching the end of a track, moving on."
+            self.next()
+            
         display_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
         hours = time / 3600000
         if hours:
@@ -748,9 +760,9 @@ class PlayerWidget(QtGui.QWidget):
             remain_string = remain_time.toString('mm:ss')
         self.time_remain.setText("-%s" % remain_string)
 
-        if remain_string == "00:01" or remain_string == "00:00" and self.cur_content:
-            print "END OF TRACK: AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
-            self.next()
+        ## if remain_string == "00:01" or remain_string == "00:00" and self.cur_content:
+        ##     print "END OF TRACK: AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
+        ##     self.next()
 
 
     def change_selection(self, playlist, content=None):
@@ -955,13 +967,7 @@ class AppWindow(QtGui.QMainWindow):
 
         #metaMenu.addSeparator()
 
-        metaMenu = self.menuBar().addMenu("Me&ta")
-
-        openMetaAction = QtGui.QAction('Open Content Json', self)
-        #openMetaAction.setShortcut('Ctrl+O')
-        openMetaAction.setStatusTip('Add content to current playlist')        
-        openMetaAction.triggered.connect(self.widget.table.playlist_view.add_content_dialog)
-        metaMenu.addAction(openMetaAction)
+        #metaMenu = self.menuBar().addMenu("Me&ta")
 
         ## openFolderAction = QtGui.QAction('Open Folder', self)
         ## #openFolderAction.setShortcut('Ctrl+O')
@@ -972,18 +978,30 @@ class AppWindow(QtGui.QMainWindow):
 
         mediaMenu = self.menuBar().addMenu("&Media")
 
-        openMediaAction = QtGui.QAction('Open Media', self)
+        openMediaAction = QtGui.QAction('Add Media', self)
         #openMediaAction.setShortcut('Ctrl+O')
         openMediaAction.setStatusTip('Add media to current playlist')        
         openMediaAction.triggered.connect(self.widget.table.playlist_view.add_media_dialog)
         mediaMenu.addAction(openMediaAction)
 
 
-        openFolderAction = QtGui.QAction('Open Folder', self)
+        openFolderAction = QtGui.QAction('Add Folder', self)
         #openFolderAction.setShortcut('Ctrl+O')
         openFolderAction.setStatusTip('Add folder to current playlist')        
         openFolderAction.triggered.connect(self.widget.table.playlist_view.add_folder_dialog)
         mediaMenu.addAction(openFolderAction)
+
+        openContentAction = QtGui.QAction('Add Content Json', self)
+        #openContentAction.setShortcut('Ctrl+O')
+        openContentAction.setStatusTip('Add content to current playlist')
+        openContentAction.triggered.connect(self.widget.table.playlist_view.add_content_dialog)
+        mediaMenu.addAction(openContentAction)
+
+        openPlaylistAction = QtGui.QAction('Open Playlist', self)
+        #openPlaylistAction.setShortcut('Ctrl+O')
+        openPlaylistAction.setStatusTip('Open a single JSON or M3U playlist')
+        openPlaylistAction.triggered.connect(self.widget.left_nav.tree_view.open_list)
+        mediaMenu.addAction(openPlaylistAction)
 
 
 
@@ -1091,7 +1109,7 @@ def main():
     app.setApplicationName("Medley")
     main_window = AppWindow()
     #main_window.resize(900, 600)
-    main_window.resize(640, 350)
+    main_window.resize(960, 350)
     main_window.show()
     app.exec_()
 

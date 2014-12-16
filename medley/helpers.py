@@ -94,7 +94,7 @@ def make_json_path(item):
 
     json_name = "%s.json" % name
     print json_name
-    return os.path.join(str(parent), json_name)
+    return os.path.join(unicode(parent), json_name)
 
 def find_json(item, limit_by_name=True, debug=False):
     """

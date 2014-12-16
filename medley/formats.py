@@ -20,7 +20,8 @@ import logging
 from moments.timestamp import Timestamp
 from moments.path import Path
 
-from content import Mark, Content, MarkList
+from content import Mark, Content, MarkList, import_content
+from helpers import make_json_path
 
 def usage():
     print __doc__
@@ -117,26 +118,31 @@ class M3U(list):
                 #must have a filename here
                 #now we can process mark options
                 location = line.strip()
-                content = Content()
-                content.media.append(location)
+                #content = Content()
+                #content.media.append(location)
+                if os.path.exists(location):
+                    #import_content will take care of:
+                    #look for json data and load it if available.
+                    #update Content filename and root with location data
+                    content = import_content(location)
 
-                #TODO:
-                #update Content filename and root with location data
+                    #TODO
+                    #could also look at ID3 tag data here
 
-                #could also look for json data and load it if available.
-                
-                marks_options.sort()
-                for mo in marks_options:
-                    #TODO:
-                    #could check for duplicate marks here
-                    ms, name, bytes = mo
-                    length_ms = int(length) * 1000
-                    details = Mark(name, ms, location, length_ms, bytes=bytes)
-                    content.marks.append(details)
-                self.append(content)
+                    marks_options.sort()
+                    for mo in marks_options:
+                        #TODO:
+                        #could check for duplicate marks here
+                        ms, name, bytes = mo
+                        length_ms = int(length) * 1000
+                        details = Mark(name, ms, location, length_ms, bytes=bytes)
+                        content.marks.append(details)
+                    self.append(content)
 
-                if look_for_meta:
-                    content.load()
+                    if look_for_meta:
+                        content.load()
+                else:
+                    print "Skipping: %s" % location
                     
         f.close()
 

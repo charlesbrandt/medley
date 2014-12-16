@@ -38,5 +38,8 @@ python /c/mindstream/mindstream/launch.py -c /c/medley blank
 python /c/mindstream/mindstream/launch.py -c /c/medley start_here
 python /c/mindstream/mindstream/launch.py -c /c/music/medley todo
 
+python /c/mindstream/mindstream/launch.py -c /c/medley people
+python /c/mindstream/mindstream/launch.py -c /c/medley people_web
+
 "
 

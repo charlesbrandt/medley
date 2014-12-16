@@ -1,43 +1,15 @@
-import os, json
+import os, json, re
 
 from PySide import QtGui, QtCore
 
 from medley.helpers import load_json, save_json
 from medley.playlist import Playlist
+from medley.formats import M3U
 from medley.content import Content
 
 from shared import all_contents, configs
-from playlist_view import PlaylistModel
+from playlist_view import PlaylistModel, find_contents
 
-def load_playlist(fname):
-    """
-    expects the playlist to hold:
-       - the content source path
-       - the segment id
-
-    then loads the content from the source, and selects the correct segment
-    """
-    items = load_json(fname)
-    #print items
-    contents = []
-    for item in items:
-        #print item
-        #print ""
-        (json_source, segment_id) = item
-        if all_contents.has_key(json_source):
-            #print "Matched existing Content object with path: %s" % json_source
-            content = all_contents[json_source]
-        else:
-            content = Content(json_source)
-            all_contents[json_source] = content
-
-        print json_source
-        segment = content.get_segment(segment_id)
-        #print segment.to_dict()
-        #print ""
-        #print ""
-        contents.append(segment)
-    return Playlist(contents)
 
 class Node(object):
     """
@@ -206,7 +178,9 @@ class Node(object):
             print "loading playlist: %s" % self.source
             if self.source:
                 #load self.source into self.content here
-                playlist = load_playlist(self.source)
+                #playlist = load_playlist(self.source)
+                playlist = Playlist()
+                playlist.load(self.source, all_contents)
                 self.content = playlist
             else:
                 #no source specified
@@ -656,6 +630,43 @@ class PlaylistsTreeView(QtGui.QTreeView):
             fname, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open Playlist')
 
 
+        playlist = Playlist()
+
+        json_check = re.compile('.*\.json$')    
+        m3u_check = re.compile('.*\.m3u$')    
+
+        #check if fname is a .json playlist
+        if json_check.search(fname):
+            #open fname here and assign Playlist object as child.content
+            #playlist = load_playlist(fname)
+            playlist.load(fname, all_contents)
+
+        #or a .m3u playlist
+        elif m3u_check.search(fname):
+            #open m3u:
+            m3u = M3U()
+            #TODO: consider 'look_for_meta'... what to do if content exists?
+            m3u.load(fname)
+            
+            playlist.extend(m3u[:])
+            
+            #start by converting to to a standard .json list
+            #will need to make sure each referenced media
+            #has a corresponding Content object
+            #playlist_view.find_contents(media_path) should take care of that
+
+            #then create a new fname with a json destination
+            #for automatic saving of updates in the future
+            m3u_name_only = os.path.basename(fname)
+            parts = m3u_name_only.split('.')
+            parts[-1] = 'json'
+            json_name = '.'.join(parts)
+            fname = os.path.join(os.path.dirname(fname), json_name)
+            print fname
+
+        else:
+            print "UNKNOWN PLAYLIST FORMAT: %s" % fname
+            
         #def insertRows(self, row, count, parentIndex=QtCore.QModelIndex()):
         
         parent = self.model.getNode(self.cur_index)
@@ -669,9 +680,6 @@ class PlaylistsTreeView(QtGui.QTreeView):
             name_only = os.path.basename(fname)
             child = Node(name_only)
             child.source = fname
-
-            #open fname here and assign Playlist object as child.content
-            playlist = load_playlist(fname)
             child.content = playlist
             #add Node to tree of playlists:
             success = parent.insertChild(child_count, child)
