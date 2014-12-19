@@ -921,6 +921,12 @@ class MainWidget(QtGui.QSplitter):
         self.table = PlaylistWidget()
         self.addWidget(self.table)
 
+        #window resizer:
+        #this makes it show up, but the behavior is strange...
+        #not recommended
+        #resizer = QtGui.QSizeGrip(self)
+        #self.addWidget(resizer)
+
         #http://srinikom.github.io/pyside-docs/PySide/QtGui/QSplitter.html#PySide.QtGui.PySide.QtGui.QSplitter.setSizes
         self.setStretchFactor(0, 25)
         self.setStretchFactor(1, 75)

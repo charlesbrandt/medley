@@ -790,6 +790,9 @@ class SimpleContent(object):
                         pass
 
                     self.drive_dir = new_drive
+                    #update segments too... make sure everything is in sync:
+                    #for segment in self.segments:
+                    #    segment
                         
                 else:
                     #base_dir didn't match our source_path
@@ -1759,6 +1762,9 @@ class Content(SimpleContent):
         if content.has_key('segments'):
             #segments = []
             for seg in content['segments']:
+                #clear out drive_dir for sub-segments...
+                #should rely on main one to get updated
+                seg['drive_dir'] = ''
                 sub_c = Content(content=seg, root=self.root)
                 self.add_segment(sub_c)
 

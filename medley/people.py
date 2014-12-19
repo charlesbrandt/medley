@@ -322,6 +322,11 @@ class Person(object):
         dest_file = self.make_path(self.root)
         #print dest_file
         temp_d = self.to_dict()
+
+        print
+        print "save:"
+        print temp_d['photo_order']
+        print
         
         #save_json(dest_file, self.__dict__)
         #print "Saving: %s to %s" % (temp_d, dest_file)
@@ -407,7 +412,12 @@ class Person(object):
         new_group = []
         for item in self.photo_order:
             for content in self.photos:
-                content_path = os.path.join(content.base_dir, content.filename)
+                #when sending from javascript,
+                #always includes a '/' between the two,
+                #even if base_dir is empty... os.path.join won't...
+                #going manual here so things match
+                #content_path = os.path.join(content.base_dir, content.filename)
+                content_path = content.base_dir + '/' + content.filename
                 if content_path == item:
                     if debug:
                         print "adding %s to new list" % item
@@ -422,7 +432,8 @@ class Person(object):
         #self.photo_order = self.photos.get_order()
         order = []
         for item in self.photos:
-            content_path = os.path.join(item.base_dir, item.filename)
+            #content_path = os.path.join(item.base_dir, item.filename)
+            content_path = item.base_dir + '/' + item.filename
             if not content_path in order:
                 order.append(content_path)
         self.photo_order = order

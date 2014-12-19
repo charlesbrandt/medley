@@ -62,7 +62,8 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         if key_order is None:
             self.key_order = ['up', 'play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
             self.key_order = ['up', 'play', 'open', 'order', 'people', 'filename', 'tags', 'status', 'timestamp', 'title', 'segments', 'marks', 'start', 'end', ]
-            self.key_order = ['up', 'open', 'status', 'tags', 'start', 'play', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', ]
+            self.key_order = ['up', 'open', 'play', 'status', 'tags', 'start', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', ]
+            #see also ContentWindow for other common key_order 
 
         else:
             self.key_order = key_order
@@ -610,7 +611,8 @@ class PlaylistView(QtGui.QTableView):
         self.content_view = ContentWindow(self.player, self)
         #self.content_view = ContentWindow(self)
         #self.content_view.resize(840, 400)
-        self.content_view.resize(640, 250)
+        #self.content_view.resize(640, 250)
+        self.content_view.resize(960, 350)
         self.content_view.show()
 
     def add_contents(self, contents):
@@ -1405,9 +1407,10 @@ class ContentWindow(QtGui.QMainWindow):
         self.setWindowTitle(content.filename)
         playlist = Playlist(self.content.segments)
 
-        key_order = ['open', 'order', 'tags', 'start', 'play', 'title', 'status', 'timestamp', 'people', 'segments', 'marks', 'end', 'up', ]
-        key_order = ['open', 'status', 'tags', 'start', 'play', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', 'up', ]
-
+        #key_order = ['open', 'order', 'tags', 'start', 'play', 'title', 'status', 'timestamp', 'people', 'segments', 'marks', 'end', 'up', ]
+        key_order = ['open', 'play', 'status', 'tags', 'start', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', 'up', ]
+        #key_order = None
+        
         subtree = PlaylistModel(playlist, key_order=key_order)
 
         self.table.playlist_view.setModel(subtree)

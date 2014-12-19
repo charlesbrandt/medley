@@ -70,6 +70,7 @@ var ContentModel = function() {
     var cur_photos = self.scrollWhileDragging.items;
     for (i = 0, len = cur_photos().length; i < len; i++) {
       self.photo_bases.push(cur_photos()[i].value.base_dir + '/' + cur_photos()[i].value.filename);
+      //self.photo_bases.push(cur_photos()[i].value.filename);
     }
   };
   self.update_photos();

@@ -274,6 +274,10 @@ def person_update(person_name):
 
     photo_json = request.forms.get('photos')
     p.photo_order = json.loads(photo_json)
+    ## print photo_json
+    ## print
+    ## print
+    ## print
 
     cutoff_json = request.forms.get('cutoffs')
     p.cutoffs = json.loads(cutoff_json)
@@ -330,8 +334,17 @@ def person_update(person_name):
             print "Nothing found for: %s, (%s)" % (item, options)
 
 
+    #print p.photo_order
+    #print
+    #save here, just incase update image changes order:
+    p.save()
+    
     p.update_image(people_path(), force=True, debug=True)
     #print p.content_order
+
+    #print
+    #print p.photo_order
+
     p.save()
     
 
@@ -437,6 +450,7 @@ def person(person_name):
     #photo_objects = []
     #photos_json = json.dumps(p.photos)
     photos_json = json.dumps(p.photos.as_list(include_empty=True))
+    #print photos_json
 
     return template('person', person=p, related=related, contents=content_json, photos=photos_json)
 
