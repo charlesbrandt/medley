@@ -612,7 +612,7 @@ class PlaylistView(QtGui.QTableView):
         #self.content_view = ContentWindow(self)
         #self.content_view.resize(840, 400)
         #self.content_view.resize(640, 250)
-        self.content_view.resize(960, 350)
+        self.content_view.resize(960, 300)
         self.content_view.show()
 
     def add_contents(self, contents):
