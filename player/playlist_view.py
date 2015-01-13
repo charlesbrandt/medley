@@ -14,6 +14,26 @@ from moments.path import Path
 re1='(\\d+)(\.)'	# Integer Number 1
 find_number = re.compile(re1,re.IGNORECASE|re.DOTALL)
 
+def make_media_file_list(media):
+    """
+    accepts a list of media options from a content object
+    converts it to just a list of files
+    """
+    
+    items = []
+
+    for item in media:
+        if isinstance(item, list):
+            #print item[0]
+            fname = os.path.basename(item[0])
+            #print fname
+            items.append(fname)
+        else:
+            fname = os.path.basename(item)
+            #print fname
+            items.append(fname)
+            
+    return items
 
 def find_contents(fname):
     """
@@ -63,6 +83,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
             self.key_order = ['up', 'play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
             self.key_order = ['up', 'play', 'open', 'order', 'people', 'filename', 'tags', 'status', 'timestamp', 'title', 'segments', 'marks', 'start', 'end', ]
             self.key_order = ['up', 'open', 'play', 'status', 'tags', 'start', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', ]
+            self.key_order = ['up', 'open', 'play', 'media', 'status', 'tags', 'start', 'order', 'title', 'people', 'timestamp', 'segments', 'marks', 'end', ]
             #see also ContentWindow for other common key_order 
 
         else:
@@ -130,6 +151,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole:
 
             key = self.key_order[index.column()]
+            #print key
 
             #could check for special keys here:
             if key == 'order':
@@ -150,6 +172,12 @@ class PlaylistModel(QtCore.QAbstractTableModel):
                     return str(ts)
                 else:
                     return ''
+            ## elif key == 'media':
+            ##     #just return this one the way it is
+            ##     return getattr(content, key)                
+            elif key == 'media':
+                 #just return this one the way it is
+                 return json.dumps(getattr(content, key))
             elif key == 'play' or key == 'open' or key == 'up':
                 #TODO: check main playing status to see
                 #if this is currently playing item
@@ -256,6 +284,29 @@ class PlaylistModel(QtCore.QAbstractTableModel):
                 elif key in ['title', 'status']:
                     setattr(content, key, value)
                     content.save()
+
+                elif key in ['media']:
+                    #content = index.internalPointer()
+
+                    #key = self.key_order[index.column()]
+                    #could check for special keys here:
+                    #assert key == 'media'
+                    items = make_media_file_list(content.media)        
+
+                    ## print items
+                    ## print "filename pre:", content.filename
+                    ## print value
+                    new_name = items[value]
+                    
+                    setattr(content, 'filename', new_name)
+                    if hasattr(content, 'segments'):
+                        for segment in content.segments:
+                            setattr(segment, 'filename', new_name)
+                            
+                    setattr(content, 'filename', new_name)
+                    content.save()
+                    #print "filename post:", content.filename
+                    
                 
                 return True
 
@@ -412,59 +463,83 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         return True        
 
 
-class PlaylistWidget(QtGui.QWidget):
+#http://stackoverflow.com/questions/17615997/pyqt-how-to-set-qcombobox-in-a-table-view-using-qitemdelegate
+class MediaComboDelegate(QtGui.QItemDelegate):
     """
-    combine PlaylistView with a toolbar to facilitate deleting and adding items
+    A delegate that places a fully functioning QComboBox in every
+    cell of the column to which it's applied
     """
-    def __init__(self, parent=None, table=None, marks_col=None, titles_col=None):
-        super(PlaylistWidget, self).__init__(parent)
+    def __init__(self, parent):
+        QtGui.QItemDelegate.__init__(self, parent)
         
-        #should work the same:
-        #self.layout = QtGui.QGridLayout()
-        self.layout = QtGui.QVBoxLayout()
-        self.layout.setContentsMargins(0,0,0,0)
-        self.layout.setSpacing(0)
+    def createEditor(self, parent, option, index):
+        self.combo = QtGui.QComboBox(parent)
 
-        self.playlist_view = PlaylistView(self, marks_col=marks_col, titles_col=titles_col)
-        self.layout.addWidget(self.playlist_view)
+        media_json = index.model().data(index, QtCore.Qt.EditRole)
+        media = json.loads(media_json)
+        #print media
 
-        playlist_toolbar = QtGui.QToolBar()
-        playlist_toolbar.setIconSize(QtCore.QSize(16, 16))
+        self.items = make_media_file_list(media)        
+            
+        self.combo.addItems(self.items)
 
-        #TODO:
-        #action is not yet implemented
-        #
-        ## addAction = QtGui.QAction(QtGui.QIcon('images/plus.png'), 'Add', self)
-        ## #addAction.setShortcut('Ctrl+N')
-        ## addAction.triggered.connect(self.add_item)
-        ## playlist_toolbar.addAction(addAction)
-
-        removeAction = QtGui.QAction(QtGui.QIcon('images/minus.png'), 'Remove', self)
-        removeAction.triggered.connect(self.remove_item)
-        playlist_toolbar.addAction(removeAction)
-
-
-        self.row = QtGui.QHBoxLayout()
-        self.row.addWidget(playlist_toolbar)
-
-        ## self.row.addWidget(self.player.time_passed)
-        ## self.row.addWidget(self.player.time_remain)
-        ## self.row.insertStretch(2, 50)
-
-        #self.layout.addWidget(playlist_toolbar)
-        self.layout.addLayout(self.row)
-
-        self.setLayout(self.layout)
-
-
-    def add_item(self, name=''):
-        print "ADD ITEM from PlaylistWidget"
+        self.connect(self.combo, QtCore.SIGNAL("currentIndexChanged(int)"), self, QtCore.SLOT("currentIndexChanged()"))
+        return self.combo
         
-    def remove_item(self, row=None):
-        if row is None:
-            row = self.playlist_view.cur_index.row()
+    def setEditorData(self, editor, index):
+        content = index.internalPointer()
+        cur_index = 0
+        if content.filename in self.items:
+            cur_index = self.items.index(content.filename)
+            
+        #print content
+        #index.model().key_order.index('media')
+        editor.blockSignals(True)
+        #print self.items[int(index)]
+        #editor.setCurrentIndex(int(index.model().data(index)))
+        editor.setCurrentIndex(cur_index)
+        #print "editor index: ", editor.currentIndex()
+        editor.blockSignals(False)
+        
+    def setModelData(self, editor, model, index):
+        ## content = index.internalPointer()
 
-        self.playlist_view.model().removeRows(row)
+        ## #key = self.key_order[index.column()]
+        ## #could check for special keys here:
+        ## #assert key == 'media'
+
+        ## print self.items
+        ## print "filename pre:", content.filename
+        ## print editor.currentIndex()
+        ## setattr(content, 'filename', self.items[editor.currentIndex()])
+        ## content.save()
+        ## print "filename post:", content.filename
+
+        
+        model.setData(index, editor.currentIndex())
+
+        ## print "Editor:"
+        ## print dir(editor)
+        ## print type(editor)
+        ## print editor
+        ## print
+
+        ## print "Model:"
+        ## print dir(model)
+        ## print type(model)
+        ## print model
+        ## print
+
+        ## print "Index:"
+        ## print dir(index)
+        ## print type(index)
+        ## print index
+        ## print
+
+        
+    @QtCore.Slot()
+    def currentIndexChanged(self):
+        self.commitData.emit(self.sender())
 
 
 class PlaylistView(QtGui.QTableView):
@@ -541,6 +616,13 @@ class PlaylistView(QtGui.QTableView):
         self.resizeColumnToContents(status_index)
         self.resizeColumnToContents(start_index)
 
+        if 'media' in self.model().key_order:
+            media_index = self.model().key_order.index('media')
+            print media_index
+            self.setItemDelegateForColumn(self.model().key_order.index('media'), MediaComboDelegate(self))
+            for row in range(0, self.model().rowCount(self)):
+                self.openPersistentEditor(self.model().index(row, media_index, self))
+                
 
     def store_current_selection(self, newSelection, oldSelection):
         """
@@ -722,6 +804,61 @@ class PlaylistView(QtGui.QTableView):
 
         result = self.add_media(fname)
         return result
+
+class PlaylistWidget(QtGui.QWidget):
+    """
+    combine PlaylistView with a toolbar to facilitate deleting and adding items
+    """
+    def __init__(self, parent=None, table=None, marks_col=None, titles_col=None):
+        super(PlaylistWidget, self).__init__(parent)
+        
+        #should work the same:
+        #self.layout = QtGui.QGridLayout()
+        self.layout = QtGui.QVBoxLayout()
+        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setSpacing(0)
+
+        self.playlist_view = PlaylistView(self, marks_col=marks_col, titles_col=titles_col)
+        self.layout.addWidget(self.playlist_view)
+
+        playlist_toolbar = QtGui.QToolBar()
+        playlist_toolbar.setIconSize(QtCore.QSize(16, 16))
+
+        #TODO:
+        #action is not yet implemented
+        #
+        ## addAction = QtGui.QAction(QtGui.QIcon('images/plus.png'), 'Add', self)
+        ## #addAction.setShortcut('Ctrl+N')
+        ## addAction.triggered.connect(self.add_item)
+        ## playlist_toolbar.addAction(addAction)
+
+        removeAction = QtGui.QAction(QtGui.QIcon('images/minus.png'), 'Remove', self)
+        removeAction.triggered.connect(self.remove_item)
+        playlist_toolbar.addAction(removeAction)
+
+
+        self.row = QtGui.QHBoxLayout()
+        self.row.addWidget(playlist_toolbar)
+
+        ## self.row.addWidget(self.player.time_passed)
+        ## self.row.addWidget(self.player.time_remain)
+        ## self.row.insertStretch(2, 50)
+
+        #self.layout.addWidget(playlist_toolbar)
+        self.layout.addLayout(self.row)
+
+        self.setLayout(self.layout)
+
+
+    def add_item(self, name=''):
+        print "ADD ITEM from PlaylistWidget"
+        
+    def remove_item(self, row=None):
+        if row is None:
+            row = self.playlist_view.cur_index.row()
+
+        self.playlist_view.model().removeRows(row)
+
 
 class MarksWidget(QtGui.QWidget):
     """
@@ -1438,3 +1575,4 @@ class ContentWindow(QtGui.QMainWindow):
     ##     event.accept()
         
     ##     super(ContentWindow, self).closeEvent(event)
+

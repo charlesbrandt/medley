@@ -102,7 +102,7 @@ class Mark(object):
     def from_time(self, text):
         parts = text.split(':')
         if len(parts) == 3:
-            self.from_hms(int(parts[0]), int(parts[1]), int(parts[2]))
+            self.from_hms(int(parts[0]), int(parts[1]), int(float(parts[2])))
         elif len(parts) == 2:
             self.from_hms(minutes=int(parts[0]), seconds=int(parts[1]))
         else:

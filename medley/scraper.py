@@ -257,7 +257,7 @@ def download(url, dest):
     urllib.urlretrieve(url, dest)
 
 
-def download_with_browser(driver, link, browser_root='/Users/user/Downloads/', filename=None):
+def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloads/', filename=None, ping_page=None, ping_interval=None):
     """
     specialized download routine to use the browser to save files
     then poll for the file to be complete before moving on
@@ -273,7 +273,7 @@ def download_with_browser(driver, link, browser_root='/Users/user/Downloads/', f
     browser_root is the default location that browser is configured
     to download to
     browser should be set to automatically download files
-    of the type you are downloading in order to speed up the process
+    of the type you are downloading in order to automate the process
     """
     skipped = False
 
@@ -314,6 +314,8 @@ def download_with_browser(driver, link, browser_root='/Users/user/Downloads/', f
     size = 0
     new_size = -1
 
+    ping_start = Timestamp()
+
     dpartp = Path(dpart)
     #there is a chance it finished downloading if the file was small
     if dpartp.exists():
@@ -322,7 +324,15 @@ def download_with_browser(driver, link, browser_root='/Users/user/Downloads/', f
             #do this before the sleep to make sure it's still there
             new_size = dpartf.check_size()
             time.sleep(10)
+            now = Timestamp()
 
+            if ping_page and ping_interval:
+                if now.datetime > ping_start.future(minutes=ping_interval).datetime:
+                    print "time to ping! %s, %s" % (now, ping_page)
+                    driver.get(ping_page)
+                    ping_start = Timestamp()
+            
+            
             #if the size has changed, something is happening
             #not stalled
             if new_size != size:
@@ -332,13 +342,13 @@ def download_with_browser(driver, link, browser_root='/Users/user/Downloads/', f
 
                 stalled = False
                 size = new_size
+
             #could just be slow to download, but want to at least check
             else:
                 #we've already set it before
                 if stalled:
                     #check if stall_start was 25 minutes ago
 
-                    now = Timestamp()
                     if now.datetime > stall_start.future(minutes=25).datetime:
                         print "stall threshold met. deleting: %s" % dest
                         dpartp.remove()
@@ -378,7 +388,17 @@ def move_download(source, destination):
     mv.wait()
     #print "moved file to: %s" % dest
 
-
+def download_with_browser(driver, link, destination_root, browser_dl_root='/Users/user/Downloads/', ping_page=None, ping_interval=None):
+    filename = download_with_browser_helper(driver, link, browser_dl_root, ping_page=ping_page, ping_interval=ping_interval)
+    if not filename is True:
+        downloaded_item = os.path.join(browser_dl_root, filename)
+        dest = os.path.join(destination_root, filename)
+        print "Moving: %s to %s" % (downloaded_item, dest)
+        move_download(downloaded_item, dest)
+        return dest
+    else:
+        print "No file downloaded: %s" % filename
+        return False
 
 def save_current(driver, destination='./', page_id=1, prefix="site_name"):
     if not os.path.exists(destination):
