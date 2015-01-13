@@ -65,7 +65,8 @@ def find_contents(fname):
             drive_dir = configs.get('default_drive_dir')            
             content = import_content(unicode(option), all_contents, drive_dir)
             contents.append(content)
-    
+
+    return contents
 
 class PlaylistModel(QtCore.QAbstractTableModel):
     """
