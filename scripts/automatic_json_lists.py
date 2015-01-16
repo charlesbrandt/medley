@@ -235,18 +235,29 @@ def scan_content(content, cur_lists):
                 #special cases:        
                 if not matched:
                     for tag in segment.tags:
-                        #sometimes 'skip' may be in the tag... e.g. "skip?"
-                        if re.search("skip", tag):
-                            matched = True
-                        elif re.search("\+", tag):
+                        if re.search("\+", tag):
                             cur_lists['good'].append(segment)
                             matched = True
+                            
+                        #this should be handled by check above now
+                        ## #sometimes 'skip' may be in the tag... e.g. "skip?"
+                        ## elif re.search("skip", tag):
+                        ##     matched = True
                 
                 if not matched:                    
                     print "Couldn't match: ", segment.tags
 
                     #could append to misc, if wanted
                     cur_lists['misc'].append(segment)
+
+
+                else:
+                    #TODO:
+                    #if we put it on a list (not skip),
+                    #that is a good indication that it's worth remembering
+                    #this is a good chance to see
+                    #if any people / group related notes exist for the song
+                    pass
                     
             #print segment.status
 
