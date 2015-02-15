@@ -271,33 +271,6 @@ class PositionList(list):
         del self[:]
         self.update_length()
         
-    ## def sort(self, *args, **kwargs):
-    ##     ## The sort() method takes optional arguments
-    ##     ## for controlling the comparisons.
-
-    ##     ## cmp specifies a custom comparison function of two arguments
-    ##     ## (list items)
-    ##     ## which should return a negative, zero or positive number
-    ##     ## depending on whether the first argument is considered
-    ##     ## smaller than, equal to, or larger than the second argument:
-    ##     ##     "cmp=lambda x,y: cmp(x.lower(), y.lower())"
-
-    ##     ## key specifies a function of one argument
-    ##     ## that is used to extract a comparison key from each list element:
-    ##     ##     "key=str.lower"
-
-    ##     ## reverse is a boolean value.
-    ##     ## If set to True, then the list elements are sorted
-    ##     ## as if each comparison were reversed.
-
-    ##     ## In general, the key and reverse conversion processes
-    ##     ## are much faster than specifying an equivalent cmp function.
-    ##     ## This is because cmp is called multiple times
-    ##     ## for each list element
-    ##     ## while key and reverse touch each element only once.
-        
-    ##     self.sort(*args, **kwargs)
-
 
 #aka
 ## class Sources(Items):
