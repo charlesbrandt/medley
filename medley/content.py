@@ -2079,7 +2079,8 @@ class Content(SimpleContent):
                     #and the size has a value
                     #then no need to rescan. remove it.
                     if item == m[0] and (len(m) > 2) and (m[1]):
-                        print "skipping: %s because it matched %s" % (item, m)
+                        if debug:
+                            print "skipping: %s because it matched %s" % (item, m)
                         matches.append(m)
                         if item in options:
                             options.remove(item)

@@ -257,6 +257,11 @@ def scan_content(content, cur_lists):
                     #that is a good indication that it's worth remembering
                     #this is a good chance to see
                     #if any people / group related notes exist for the song
+                    #TODO:
+                    #or, just open the list
+                    #and apply it from there
+                    #that way the process could work for any list
+                    #(maybe just needs adaptation)
                     pass
                     
             #print segment.status
@@ -395,7 +400,12 @@ if __name__ == '__main__':
 
                     ojson = load_json(dest)
                     original = Playlist()
-                    original.load(dest, all_contents)
+                    try:
+                        original.load(dest, all_contents)
+                    except:
+                        #segment may not exist any longer
+                        print "COULD NOT LOAD PLAYLIST: %s" % dest
+                        print "order may be lost"
                     ordered_list = []
 
                     original_pre = len(original)

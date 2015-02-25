@@ -1,4 +1,6 @@
 """
+thin command line wrapper around medley.people.create_person function
+
 specify name to create as parameter on command line
 
 assumes parent directory and cloud structure are already in place

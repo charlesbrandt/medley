@@ -51,7 +51,8 @@ def update_jsons(source):
                 print
                 print current_file
                 result = load_json(current_file)
-                if isinstance(result, dict) and result.has_key('segments'):
+                #if isinstance(result, dict) and result.has_key('segments'):
+                if isinstance(result, dict) and result.has_key('media'):
                     content = Content(current_file)
                     print content.drive_dir
                     #for segment in content.segments:

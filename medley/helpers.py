@@ -272,8 +272,14 @@ def get_media_properties(movie_p, debug=False):
             pass
 
     if not seconds:
+        print "\n\n"
+        print "Warning! Could not parse output from avconv!!"
+        print "Media file probably corrupt"
         print lines
-        exit()
+
+        #optional to raise an error here:
+        #raise ValueError, "Invalid media. See above output"
+        
     #could return filesize if needed (content.update_dimensions handles this)
     #filesize = os.path.getsize(movie_p)
 
@@ -364,7 +370,7 @@ def load_cloud(cloud_name, cloud_file):
             cur_cloud = clouds.tags(cloud_name)[0].data.split()
         else:
             cur_cloud = []
-            print "no tags found!"    
+            print "no clouds found for tag: %s in %s" % (cloud_name, cloud_file)
     return cur_cloud
 
 
