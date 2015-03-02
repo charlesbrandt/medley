@@ -409,9 +409,12 @@ class Playlist(PositionList):
                 #print "Matched existing Content object with path: %s" % json_source
                 content = all_contents[json_source]
             else:
-                print "loading: %s" % json_source
-                content = Content(json_source)
-                all_contents[json_source] = content
+                try:
+                    #print "loading: %s" % json_source
+                    content = Content(json_source)
+                    all_contents[json_source] = content
+                except:
+                    print "removing item. could not load: %s" % json_source
 
             #print json_source
             segment = content.get_segment(segment_id)
