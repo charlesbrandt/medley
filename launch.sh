@@ -33,6 +33,8 @@ python /c/mindstream/mindstream/launch.py -c /c/medley server
 python /c/mindstream/mindstream/launch.py -c /c/medley player
 
 python /c/mindstream/mindstream/launch.py -c /c/medley scripts
+python /c/mindstream/mindstream/launch.py -c /c/medley auto_playlist
+python /c/mindstream/mindstream/launch.py -c /c/medley extract_playlist
 
 python /c/mindstream/mindstream/launch.py -c /c/medley blank
 python /c/mindstream/mindstream/launch.py -c /c/medley start_here

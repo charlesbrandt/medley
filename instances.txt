@@ -1,5 +1,7 @@
 *2014.12.16 13:30:27 auto_playlist
 /c/medley/instances.txt
+/c/medley/scripts/launch.sh
+/c/medley/launch.sh
 /c/medley/scripts/update_playlist.py
 /c/medley/scripts/make_relative_playlist.py
 /c/medley/scripts/copy_media.py
