@@ -35,7 +35,8 @@ import subprocess
 from moments.journal import Journal
 from moments.path import load_journal, Path, check_ignore
 #from medialist.medialist import MediaList
-from medley.sources import Converter, Sources, Source
+#from medley.sources import Converter, Sources, Source
+from medley.formats import Converter
 
 def flatten_structure(source, destination):
     """

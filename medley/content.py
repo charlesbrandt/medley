@@ -8,7 +8,7 @@ These are too specific:
 Song, Podcast, Album, Image, Book, Movie, Scene, 
 
 """
-import os, re, copy
+import os, re, copy, subprocess
 import hashlib
 
 from helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties, make_json_path
@@ -1654,6 +1654,54 @@ class Content(SimpleContent):
             self.titles.append(segment.title)
             self.marks.append(segment.start)
         
+    def extract_segment(self, destination):
+        """
+        adapted from split_media script
+
+        brew install libav
+        """
+        source = os.path.join(self.path, self.filename)
+
+        if self == self.root:
+            print "This segment covers the whole content object..."
+            print "not extracting"
+            print source
+
+        else:
+            #in case the end is not set for the segement,
+            #look up the end of the media file
+            find_end_command = "avconv -i %s 2>&1 | grep 'Duration' | awk '{print $2}' | sed s/,//" % (source)
+            process = subprocess.Popen(find_end_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = process.communicate()[0].strip()
+            default_end_mark = Mark()
+            default_end_mark.from_time(result)
+
+            #extract the clip
+
+            keep_start = self.start.total_seconds()
+            if self.end:
+                keep_end = self.end.total_seconds()
+            else:
+                keep_end = default_end_mark.total_seconds()
+            #we have a segment to keep...
+            duration = keep_end - keep_start
+            title_parts = self.title.split('. ')
+            main_title = title_parts[-1].replace(', ', '-')
+            title = to_tag(main_title)
+
+            #parts = self.filename.split('.')
+            #
+            #suffix = parts[-1]
+            
+            dest_part = "%s/%s-%s" % (destination, title, self.filename)
+
+            command = "avconv -i %s -ss %s -t %s -vcodec copy -acodec copy %s" % (source, keep_start, duration, dest_part)
+            print command
+            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process.wait()
+            #print process.communicate()[0]
+
+
 
     def load(self, source=None, debug=False):
         """
