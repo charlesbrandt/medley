@@ -8,7 +8,7 @@ These are too specific:
 Song, Podcast, Album, Image, Book, Movie, Scene, 
 
 """
-import os, re, copy, subprocess
+import os, re, copy, subprocess, time
 import hashlib
 
 from helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties, make_json_path
@@ -19,6 +19,7 @@ from moments.tag import to_tag
 #for history:
 from moments.journal import Journal
 from moments.log import Log
+from moments.filters import to_ascii2
 
 class Mark(object):
     """
@@ -1654,13 +1655,15 @@ class Content(SimpleContent):
             self.titles.append(segment.title)
             self.marks.append(segment.start)
         
-    def extract_segment(self, destination):
+    def extract_segment(self, destination, title=None):
         """
         adapted from split_media script
 
         brew install libav
         """
         source = os.path.join(self.path, self.filename)
+
+        extracted = ''
 
         if self == self.root:
             print "This segment covers the whole content object..."
@@ -1685,9 +1688,12 @@ class Content(SimpleContent):
                 keep_end = default_end_mark.total_seconds()
             #we have a segment to keep...
             duration = keep_end - keep_start
-            title_parts = self.title.split('. ')
-            main_title = title_parts[-1].replace(', ', '-')
-            title = to_tag(main_title)
+
+            if not title:
+                title_parts = self.title.split('. ')
+                main_title = title_parts[-1].replace(', ', '-')                
+                title = to_ascii2(main_title)
+                title = to_tag(title)
 
             #parts = self.filename.split('.')
             #
@@ -1695,19 +1701,39 @@ class Content(SimpleContent):
             
             dest_part = "%s/%s-%s" % (destination, title, self.filename)
 
-            command = "avconv -i %s -ss %s -t %s -vcodec copy -acodec copy %s" % (source, keep_start, duration, dest_part)
-            print command
-            process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            process.wait()
-            #print process.communicate()[0]
+            #if it already exists, this command won't exit cleanly
+            if not os.path.exists(dest_part):
+                command = 'avconv -i %s -ss %s -t %s -vcodec copy -acodec copy "%s"' % (source, keep_start, duration, dest_part)
+                print command
+                process = subprocess.Popen(command, shell=True,
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE)
+                #process.wait()
+                #print process.communicate()[0]
 
+                while process.poll() is None:
+                    #depending on which channel has output, can tailor that here
+                    #l = process.stderr.readline()
+                    #l = process.stdout.readline()
+                    #print l
+                    print "Processing: %s " % dest_part
+                    time.sleep(1)
 
+                #when process terminates, can finish printing the rest:
+                print process.stdout.read()
+
+            extracted = dest_part
+
+        return extracted
 
     def load(self, source=None, debug=False):
         """
         filename attribute should be unique
         this solves the issue with multiple files in the same directory
         """
+        #trying to avoid duplication:
+        super(Content, self).load(source, debug)
+
         if source:
             #if it's a path, scan for json:
             #content = find_and_load_json(source)
@@ -1717,66 +1743,115 @@ class Content(SimpleContent):
         else:
             content = self.content
 
-        #if we're trying to create a new Content object from scratch,
-        #we don't want to raise this error.
-        #if not content:
-        #    raise ValueError, "No Content!"
+        #following is handled by parent class SimpleContent.load():
+        
+        ## #if we're trying to create a new Content object from scratch,
+        ## #we don't want to raise this error.
+        ## #if not content:
+        ## #    raise ValueError, "No Content!"
 
-        if debug:
-            print content
+        ## if debug:
+        ##     print content
 
-        if not isinstance(content, dict):
-            #print "%s" % content
-            print ""
-            print content
-            print self.json_source
-            raise ValueError, "Unknown type of content: %s" % type(content)
+        ## if not isinstance(content, dict):
+        ##     #print "%s" % content
+        ##     print ""
+        ##     print content
+        ##     print self.json_source
+        ##     raise ValueError, "Unknown type of content: %s" % type(content)
 
-        #start keeping track of ultimate source for this content
-        #if it ends up as part of another list, this is the way to get back
-        if content.has_key('json_source'):
-            option = content['json_source']
-            if self.json_source and self.json_source != option:
-                #print "WARNING: over-writing old source."
-                #print "keeping initial source: %s and skipping found source: %s" % (self.json_source, option)
-                #print ""
-                pass
-            else:
-                self.json_source = option
-            del content['json_source']
+        ## #start keeping track of ultimate source for this content
+        ## #if it ends up as part of another list, this is the way to get back
+        ## if content.has_key('json_source'):
+        ##     option = content['json_source']
+        ##     if self.json_source and self.json_source != option:
+        ##         #print "WARNING: over-writing old source."
+        ##         #print "keeping initial source: %s and skipping found source: %s" % (self.json_source, option)
+        ##         #print ""
+        ##         pass
+        ##     else:
+        ##         self.json_source = option
+        ##     del content['json_source']
 
-        if content.has_key('timestamp'):
-            self.timestamp = Timestamp(content['timestamp'])
-            del content['timestamp']
-        if content.has_key('date'):
-            self.timestamp = Timestamp(content['date'])
-            del content['date']
+        ## if content.has_key('timestamp'):
+        ##     self.timestamp = Timestamp(content['timestamp'])
+        ##     del content['timestamp']
+        ## if content.has_key('date'):
+        ##     self.timestamp = Timestamp(content['date'])
+        ##     del content['date']
             
-        if content.has_key('title'):
-            self.title = content['title']
-            del content['title']
+        ## if content.has_key('title'):
+        ##     self.title = content['title']
+        ##     del content['title']
             
-        if content.has_key('description'):
-            self.description = content['description']
-            del content['description']
+        ## if content.has_key('description'):
+        ##     self.description = content['description']
+        ##     del content['description']
             
-        if content.has_key('sites'):
-            self.sites = content['sites']
-            del content['sites']
+        ## if content.has_key('sites'):
+        ##     self.sites = content['sites']
+        ##     del content['sites']
+
+        ## if content.has_key('people'):
+        ##     for person in content['people']:
+        ##         self.people.append(to_tag(person))
+        ##     del content['people']
+            
+        ## if content.has_key('tags'):
+        ##     for tag in content['tags']:
+        ##         self.tags.append(to_tag(tag))
+        ##     del content['tags']
+
+        ## if content.has_key('history'):
+        ##     history = content['history']
+        ##     l = Log()
+        ##     l.from_string(history)
+
+        ##     #shouldn't need to add any tags here
+        ##     #entries = l.to_entries(add_tags)
+        ##     entries = l.to_entries()
+        ##     #print "%s entries loaded from file" % len(entries)
+        ##     #print "%s entries in self before merging in entries" % len(self)
+        ##     journal = Journal()
+        ##     journal.update_many(entries)
+        ##     #print "%s entries in self after merging in entries" % len(self)
+
+        ##     #if l.has_entries:
+        ##     #found_entries = len(entries)
+
+        ##     l.close()
+
+        ##     #return found_entries
+        ##     self.history = journal
+            
+        ##     del content['history']
+
+        ## #deprecated: root is ambiguous here
+        ## #will continue to load for older jsons
+        ## if content.has_key('root'):
+        ##     self.base_dir = content['root']
+        ##     del content['root']
+        ## if content.has_key('content_base'):
+        ##     self.base_dir = content['content_base']
+        ##     del content['content_base']
+
+        ## if content.has_key('drive_dir'):
+        ##     self.drive_dir = content['drive_dir']
+        ##     del content['drive_dir']
+
+        ## #no path here! filename only!
+        ## if content.has_key('filename'):
+        ##     self.filename = content['filename']
+        ##     del content['filename']
+
+        ## if content.has_key('hash'):
+        ##     self.hash = content['hash']
+        ##     del content['hash']
+
 
         if content.has_key('image'):
             self.image = content['image']
             del content['image']
-
-        if content.has_key('people'):
-            for person in content['people']:
-                self.people.append(to_tag(person))
-            del content['people']
-            
-        if content.has_key('tags'):
-            for tag in content['tags']:
-                self.tags.append(to_tag(tag))
-            del content['tags']
 
         if content.has_key('tracks'):
             for title in content['tracks']:
@@ -1835,57 +1910,9 @@ class Content(SimpleContent):
             self.end = mark
             del content['end']
 
-        if content.has_key('history'):
-            history = content['history']
-            l = Log()
-            l.from_string(history)
-
-            #shouldn't need to add any tags here
-            #entries = l.to_entries(add_tags)
-            entries = l.to_entries()
-            #print "%s entries loaded from file" % len(entries)
-            #print "%s entries in self before merging in entries" % len(self)
-            journal = Journal()
-            journal.update_many(entries)
-            #print "%s entries in self after merging in entries" % len(self)
-
-            #if l.has_entries:
-            #found_entries = len(entries)
-
-            l.close()
-
-            #return found_entries
-            self.history = journal
-            
-            del content['history']
-
-
-        #deprecated: root is ambiguous here
-        #will continue to load for older jsons
-        if content.has_key('root'):
-            self.base_dir = content['root']
-            del content['root']
-        if content.has_key('content_base'):
-            self.base_dir = content['content_base']
-            del content['content_base']
-
-        if content.has_key('drive_dir'):
-            self.drive_dir = content['drive_dir']
-            del content['drive_dir']
-
         if content.has_key('media'):
             self.media = content['media']
             del content['media']
-
-        #no path here! filename only!
-        if content.has_key('filename'):
-            self.filename = content['filename']
-            del content['filename']
-
-        if content.has_key('hash'):
-            self.hash = content['hash']
-            del content['hash']
-
 
         #deprecated... use self.sites instead
         #site is only loaded for legacy json files...
@@ -1894,7 +1921,6 @@ class Content(SimpleContent):
         if content.has_key('site'):
             self.sites.append(content['site'])
             del content['site']
-
 
 
         if debug:

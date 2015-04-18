@@ -21,26 +21,6 @@
 
 # Requires: medley, moments
 
-
-
-
-
-Not verified
-
-## ## ## Example:
-## ## ## python /c/medley/scripts/copy_media.py /c/music/playlists/daily/2009/01/ /c/media:/c
-
-## ## ## the last parameter is a translate, filter option
-## ## ## the prefix in place in all source logs is the first option
-## ## ## and the local destination is the second option
-
-## ## ## TRANSLATE IS ONLY NEEDED:
-## ## ## if the path in the source playlist/log is incorrect...
-## ## ## it is used to help locate the media files without changing the list itself
-
-## ## ## translate also help with the destination if copy is enabled.
-## ## ## the default for that is the local directory
-
 """
 
 import sys, os, re
@@ -49,25 +29,65 @@ import subprocess
 from medley.helpers import load_json, save_json
 from medley.content import Content
 from medley.playlist import Playlist
+from medley.formats import M3U
 
 def usage():
     print __doc__
-    
+
+def copy_file(source, destination, verbose=False):
+    """
+    copy a single file 
+    """
+    #if not destination:
+    if os.path.exists(destination):
+        print "skipping: %s" % destination
+        pass
+    else:
+        dest_path = os.path.dirname(destination)
+        if not dest_path:
+            dest_path = os.path.abspath('./')
+            print "USING PATH: %s" % dest_path
+        if not os.path.exists(dest_path):
+            os.makedirs(dest_path)
+
+        #cp = subprocess.Popen("cp %s %s" % (source, destination), shell=True, stdout=subprocess.PIPE)
+        #cp.wait()
+        command = 'rsync -av "%s" "%s"' % (source, destination)
+        rsync = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if verbose:
+            print command
+            print rsync.communicate()[0]
+        else:
+            rsync.communicate()[0]
+                
 def copy_media(source, destination=''):
     if os.path.exists(source):
-        pl = Playlist()
-        pl.load(source)
+        pl = None
+        if re.search('m3u$', source):
+            #load it as an M3U:
+            print "LOADING AS M3U: %s" % source
+            pl = M3U(source)
+        else:
+            pl = Playlist()
+            pl.load(source)
+
+        if not os.path.exists(destination):
+            os.makedirs(destination)        
+            
         for content in pl:
             path = os.path.join(content.path, content.filename)
             print path
             if content != content.root:
                 #parent_path = os.path.join(content.parent.path, content.parent.filename)
+                #print parent_path
                 print "Extracting segment from parent content"
-                print parent_path
+                content.extract_segment(destination)
             else:
                 print "only need to copy original path"
+                this_dest = os.path.join(destination, content.filename)
+                copy_file(path, this_dest)
                 
-            print content.debug()
+            #print content.debug()
         print pl
     else:
         print "Couldn't find path: %s" % source
@@ -86,9 +106,14 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             destination = sys.argv[2]
         else:
-            destination = None
+            print "OUTPUT TO TEMP!"
+            destination = './temp'
 
     copy_media(source, destination)
+
+    if destination == './temp':
+        print 
+        print "OUTPUT TO TEMP!!"
 
 ## from moments.journal import Journal
 ## from moments.path import load_journal, Path, check_ignore

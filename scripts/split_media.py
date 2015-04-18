@@ -21,13 +21,17 @@ import subprocess
 
 from moments.tag import to_tag
 
-from medley.helpers import find_json
+from medley.helpers import find_json, split
 from medley.content import Content, Mark
 
 def usage():
     print __doc__
-    
+
 def split(source, destination):
+    """
+    for similar functionality for importing into other scripts, see also:
+    medley.content.Content.extract_segment
+    """
     #source must have the corresponding suffix to use for output
     parts = source.split('.')
     source_prefix = '.'.join(parts[:-1])
@@ -63,6 +67,8 @@ def split(source, destination):
     print mark.total_seconds()
     media_end = ''
 
+    created = []
+
     #tailor this to the way you want to decide which segments to remove
     for segment in content.segments[:]:
         #extract the clips
@@ -86,7 +92,12 @@ def split(source, destination):
         process.wait()
         #print process.communicate()[0]
 
+        created.append(dest_part)
+
         part += 1
+
+    return created
+    
         
 if __name__ == '__main__':
     source = None
