@@ -13,7 +13,10 @@ touch /c/people/$CIRCLE/meta/people.txt
 emacs /c/people/$CIRCLE/meta/people.txt
 echo "python /c/medley/scripts/person-create.py /c/people/$CIRCLE $CIRCLE <>"
 
-python person-create.py /c/path/to/people/ cloud_tag person_tag 
+#python person-create.py /c/path/to/people/ cloud_tag person_tag
+
+#if cloud_tag not specified, assumes the basename of the path to be the tag:
+python person-create.py /c/path/to/people/ person_tag [cloud_tag]
 
 """
 import os, sys
@@ -33,12 +36,18 @@ def main():
                 usage()
                 exit()
         root = sys.argv[1]
-        cloud_tag = sys.argv[2]
-        item = sys.argv[3]
+        item = sys.argv[2]
 
     else:
         usage()
         exit()
+
+    if len(sys.argv) > 3:
+        cloud_tag = sys.argv[3]
+    else:
+        if root[-1] == '/':
+            root = root[:-1]
+        cloud_tag = os.path.basename(root)
 
     people = People(root, cloud_tag)
     people.load()

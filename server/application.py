@@ -372,6 +372,7 @@ def person(person_name):
     related.sort(key=lambda rel: rel.tag)
 
     #check for available content here (or meta data for content)
+    #this is where photos get scanned too:
     #p.load_content(debug=True)
     p.load_content()
 
@@ -414,7 +415,9 @@ def person(person_name):
         #not sure how this relates to person.update_image... same purpose?
         
         content.drive_dir = path
-        
+
+        #person content gets loaded above in p.load_content...
+        #this looks for default images for every content item, if they exist
         images = content.find_media(kind="Image", relative=False, debug=False)
         if images:
             #print images

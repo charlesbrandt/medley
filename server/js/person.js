@@ -249,6 +249,10 @@ var ContentModel = function() {
       data: {
         'urls': self.photo_urls(),
         'tags': JSON.stringify(self.photo_tags())
+      },
+      success: function(data) { 
+        window.location.reload();
+        console.log("success!!!!!!");
       }
     });
   };

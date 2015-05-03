@@ -637,11 +637,11 @@ class People(list):
 
             #sometimes paths are updated, but content takes time to migrate
             #should catch this and alert someone to update accordingly
-            try:
-                person = Person(path, debug=self.debug)
-                self.append(person)
-            except:
-                missing.append(option)
+            #try:
+            person = Person(path, debug=self.debug)
+            self.append(person)
+            #except:
+            #    missing.append(option)
                 
         #if self.debug:
         #    print "People loaded: " 
