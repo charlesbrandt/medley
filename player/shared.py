@@ -29,6 +29,9 @@ from medley.helpers import load_json, save_json
 
 all_contents = {}
 
+#making it easier to pass these in to the list_tree from player for loading
+cli_items = []
+
 # rather than pass this in everywhere, allow it to be imported
 #since this is a widget, it probably needs to created like before
 #main_player = None

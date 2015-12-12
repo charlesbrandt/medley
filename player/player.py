@@ -41,6 +41,7 @@ from list_tree import PlaylistsTreeView, Node, TreeModel
 from playlist_view import PlaylistWidget, PlaylistModel
 
 #from shared import main_player
+from shared import cli_items
 
 __version__ = '0.0.1'
 
@@ -1108,7 +1109,27 @@ class AppWindow(QtGui.QMainWindow):
                                        platform.system()))
     
         
+def usage():
+    print __doc__
+    
 def main():
+    source = None
+    if len(sys.argv) > 1:
+        helps = ['--help', 'help', '-h']
+        for i in helps:
+            if i in sys.argv:
+                usage()
+                exit()
+
+        source = sys.argv[1]
+        #could handle more than one here, if needed
+        cli_items.append(source)
+
+    #finding where playlists are initialized is always tricky...
+    #AppWindow() -> MainWidget() -> LeftNavWidget()
+    #this contains PlayerWidget() and list_tree.PlaylistsTreeView()
+    #PlaylistsTreeView().__init__() calls load_lists(previous_path)
+    
     global main_window
     app = QtGui.QApplication(sys.argv)
     #this is needed for Phonon on Linux (DBUS):

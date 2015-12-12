@@ -1,3 +1,12 @@
+*2015.11.22 20:13:25 player
+/c/medley/instances.txt
+/c/medley/player/launch.sh
+/c/medley/player/playlist_view.py
+/c/medley/player/vlc.py
+/c/medley/player/shared.py
+/c/medley/player/list_tree.py
+/c/medley/player/player.py
+
 *2014.12.16 13:30:27 auto_playlist
 /c/medley/instances.txt
 /c/medley/scripts/launch.sh

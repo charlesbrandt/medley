@@ -7,7 +7,7 @@ from medley.playlist import Playlist
 from medley.formats import M3U
 from medley.content import Content
 
-from shared import all_contents, configs
+from shared import all_contents, configs, cli_items
 from playlist_view import PlaylistModel, find_contents
 
 
@@ -175,7 +175,7 @@ class Node(object):
 
         if simple.has_key('source'):
             self.source = simple['source']
-            print "loading playlist: %s" % self.source
+            #print "loading playlist: %s" % self.source
             if self.source:
                 #load self.source into self.content here
                 #playlist = load_playlist(self.source)
@@ -508,7 +508,33 @@ class PlaylistsTreeView(QtGui.QTreeView):
             print "Could not find a valid previous setup... starting blank"
             #self.playlists.root.from_json(item={})
             self.load_lists("blank.json")
-                        
+
+        if cli_items:
+            print "Items passed in from cli: %s" % cli_items
+
+            #print root.children
+            
+            for fname in cli_items:
+
+                contents = find_contents(fname)
+                for item in contents:
+                    #default to the first list...
+                    #will be Clean Slate if new
+                    #could make it the last one... or something else
+                    #TBD
+                    root.children[0].content.add_if_new(item)
+
+                #not sure that this step is even necessary here...
+                #just try adding it to the Playlist
+                
+                ## contents = []
+
+                ## contents = find_contents(fname)
+
+                ## print "CONTENTS DURING LOAD: %s" % contents
+                ## result = self.add_contents(contents)
+                ## print result
+                ## print
 
         #initialize data here:
         self.setModel(self.playlists)
@@ -690,6 +716,8 @@ class PlaylistsTreeView(QtGui.QTreeView):
     def add(self):
         """
         add a new child node to the currently selected node
+
+        this is for adding a new playlist
         """
         #print "ADDDDDD!!!"
 

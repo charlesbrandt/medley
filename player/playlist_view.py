@@ -89,6 +89,42 @@ class PlaylistModel(QtCore.QAbstractTableModel):
 
         else:
             self.key_order = key_order
+
+    def add_contents(self, contents):
+        """
+        originally in PlaylistView
+        but it was making many calls to PlaylistModel...
+        just do it all here
+        this will also help to add contents from other places
+
+        (targeting list_tree.PlaylistsTreeView specifically)
+        """
+        count = len(contents)
+        total_rows = self.rowCount(None)
+
+        #not sure if this will work here... 
+        cur_index = QtCore.QModelIndex()
+
+        self.beginInsertRows( cur_index, total_rows, total_rows+count-1 )
+
+        #for i in range(count):
+        for content in contents:
+            self.playlist.append(content)
+            ## name_only = os.path.basename(fname)
+            ## child = Node(name_only)
+            ## child.source = fname
+
+            ## #open fname here and assign Playlist object as child.content
+            ## playlist = load_playlist(fname)
+            ## child.content = playlist
+            ## #add Node to tree of playlists:
+            ## success = parent.insertChild(child_count, child)
+            
+        self.endInsertRows()
+        #print self.playlist
+
+        return "success"
+        
         
     def index(self, row, column, parent):
         """
@@ -701,6 +737,9 @@ class PlaylistView(QtGui.QTableView):
     def add_contents(self, contents):
         """
         helper for add_media to do the actual update of View Model
+
+        #TODO:
+        working on migrating this functionality to PlaylistModel.add_contents.
         """
 
         ## parent = self.model().getNode(self.cur_index)
