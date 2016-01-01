@@ -1,16 +1,16 @@
 #!/bin/bash
 
-python /c/mindstream/mindstream/launch.py -c /c/medley code
+launch.py -c /c/public/medley code
 
 #not used:
-#python /c/mindstream/mindstream/launch.py -c /c/medley todo
+#launch.py -c /c/medley todo
 
 echo "
-cd /c/medley/medley/less 
+cd /c/public/medley/medley/less 
 lessc style.less > ../css/style.css
 
 to launch a server:
-cd /c/medley/server
+cd /c/public/medley/server
 python application.py /c/podcasts
 
 http://localhost:8080/
@@ -21,27 +21,28 @@ cat /var/log/medley.log
 cat /var/log/medley.err
 
 have also been using customized watchmedo scripts
-cd /c/medley/medley
+cd /c/public/medley/medley
 watchmedo tricks tricks.yaml 
 
-touch /c/medley/medley/application.py
+touch /c/public/medley/medley/application.py
 
 
-python /c/mindstream/mindstream/launch.py -c /c/medley layout
-python /c/mindstream/mindstream/launch.py -c /c/medley server
+launch.py -c /c/public/medley layout
+launch.py -c /c/public/medley server
 
-python /c/mindstream/mindstream/launch.py -c /c/medley player
+launch.py -c /c/public/medley player
 
-python /c/mindstream/mindstream/launch.py -c /c/medley scripts
-python /c/mindstream/mindstream/launch.py -c /c/medley auto_playlist
-python /c/mindstream/mindstream/launch.py -c /c/medley extract_playlist
+launch.py -c /c/public/medley auto_playlist
+launch.py -c /c/public/medley split_media
+launch.py -c /c/public/medley extract_playlist
+launch.py -c /c/public/medley scripts
 
-python /c/mindstream/mindstream/launch.py -c /c/medley blank
-python /c/mindstream/mindstream/launch.py -c /c/medley start_here
-python /c/mindstream/mindstream/launch.py -c /c/music/medley todo
+launch.py -c /c/public/medley blank
+launch.py -c /c/public/medley start_here
+launch.py -c /c/music/medley todo
 
-python /c/mindstream/mindstream/launch.py -c /c/medley people
-python /c/mindstream/mindstream/launch.py -c /c/medley people_web
+launch.py -c /c/public/medley people
+launch.py -c /c/public/medley people_web
 
 "
 

@@ -313,7 +313,7 @@ class Playlist(PositionList):
 
 
     """
-    def __init__(self, items=[], log_path=None):
+    def __init__(self, items=[], log_path=None, debug=False):
         PositionList.__init__(self, items)
         if log_path is None:
             self.log_path = '/c/logs/transfer'
@@ -330,6 +330,8 @@ class Playlist(PositionList):
         #
         #this should not matter if a content object is edited directly
         self.sync_contents = False
+
+        self.debug = debug
 
     #save and load:
     #use helpers
@@ -402,15 +404,19 @@ class Playlist(PositionList):
         #print items
         contents = []
         for item in items:
-            #print item
-            #print ""
+            if self.debug:
+                print item
+                print ""
+                
             (json_source, segment_id) = item
             if all_contents.has_key(json_source):
-                #print "Matched existing Content object with path: %s" % json_source
+                if self.debug:
+                    print "Matched existing Content object with path: %s" % json_source
                 content = all_contents[json_source]
             else:
                 try:
-                    #print "loading: %s" % json_source
+                    if self.debug:
+                        print "loading: %s" % json_source
                     content = Content(json_source)
                     all_contents[json_source] = content
                 except:

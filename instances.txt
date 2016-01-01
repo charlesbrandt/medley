@@ -1,11 +1,49 @@
-*2015.11.22 20:13:25 player
-/c/medley/instances.txt
-/c/medley/player/launch.sh
-/c/medley/player/playlist_view.py
-/c/medley/player/vlc.py
-/c/medley/player/shared.py
-/c/medley/player/list_tree.py
-/c/medley/player/player.py
+*2015.12.17 21:57:10 split_media
+/c/public/medley/instances.txt
+/c/public/medley/launch.sh
+/c/public/medley/medley/helpers.py
+/c/public/medley/scripts/diff-playlists.py
+/c/public/medley/scripts/split_media.py
+
+*2015.12.17 21:53:04 auto_playlist
+/c/public/medley/instances.txt
+/c/public/medley/launch.sh
+/c/public/medley/scripts/launch.sh
+/c/public/medley/scripts/update_playlist.py
+/c/public/medley/scripts/make_relative_playlist.py
+/c/public/medley/scripts/copy_media.py
+/c/binaries/podcasts/beats_in_space/make_playlist.py
+/c/public/medley/medley/playlist.py
+/c/public/medley/medley/formats.py
+/c/public/medley/medley/helpers.py
+/c/public/medley/scripts/automatic_json_lists.py
+
+*2015.12.17 21:52:23 photos
+/c/public/medley/instances.txt
+/c/public/medley/launch.sh
+/c/public/medley/medley/helpers.py
+/c/public/medley/medley/scraper.py
+/c/public/medley/scripts/download_photos.py
+/c/public/medley/scripts/download_photos-gui.py
+
+*2014.11.21 16:33:56 player
+/c/public/medley/instances.txt
+/c/public/medley/launch.sh
+/c/public/medley/player/playlist_view.py
+/c/public/medley/player/list_tree.py
+/c/public/medley/player/vlc.py
+/c/public/medley/player/player.py
+
+*2015.12.17 19:16:48 code
+/c/public/medley/instances.txt
+/c/public/medley/launch.sh
+/c/public/medley/medley/scraper.py
+/c/public/medley/medley/helpers.py
+/c/public/medley/medley/playlist.py
+/c/public/medley/medley/formats.py
+/c/public/medley/medley/collector.py
+/c/public/medley/medley/content.py
+/c/public/medley/medley/people.py
 
 *2014.12.16 13:30:27 auto_playlist
 /c/medley/instances.txt

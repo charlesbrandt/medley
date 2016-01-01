@@ -175,10 +175,11 @@ class Node(object):
 
         if simple.has_key('source'):
             self.source = simple['source']
-            #print "loading playlist: %s" % self.source
             if self.source:
                 #load self.source into self.content here
                 #playlist = load_playlist(self.source)
+                #print "loading playlist: %s" % self.source
+                #playlist = Playlist(debug=True)
                 playlist = Playlist()
                 playlist.load(self.source, all_contents)
                 self.content = playlist
