@@ -48,6 +48,7 @@ def find_contents(fname):
     contents = []
     options = []
     if fname:
+        print "Loading: %s" % fname
         p = Path(fname)
         if p.type() == "Directory":
             d = p.load()
@@ -61,10 +62,13 @@ def find_contents(fname):
             #d = parent.load()
             options.append(p)
 
+        drive_dir = configs.get('default_drive_dir')            
         for option in options:
-            drive_dir = configs.get('default_drive_dir')            
+            print "Adding: %s" % unicode(option)
             content = import_content(unicode(option), all_contents, drive_dir)
             contents.append(content)
+    else:
+        print "No file selected: %s" % fname
 
     return contents
 
