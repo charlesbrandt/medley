@@ -27,8 +27,14 @@ from medley.content import Content
 
 def usage():
     print __doc__
-    
-def handle_skips(source, destination):
+
+
+def slice_media(source, destination=None, keep_tags=[], skip_tags=[]):
+    """
+    take a source (and optional destination)
+    load and
+    set up the other files that will be needed for the desired slice operation
+    """
     #source must have the corresponding suffix to use for output
     parts = source.split('.')
     source_prefix = '.'.join(parts[:-1])
@@ -36,9 +42,6 @@ def handle_skips(source, destination):
 
     if not destination:
         destination = source_prefix + '.new'
-
-    root = os.path.dirname(destination)
-    print root
     
     destination_json = destination + '.json'
     if os.path.exists(destination_json):
@@ -52,14 +55,17 @@ def handle_skips(source, destination):
         #don't want to load it 
         os.remove(final_dest)
 
-    
-    jfile = find_json(source)
-    print jfile
+    print "finding json for: %s" % source
+    jfile = find_json(source, limit_by_name=False)
+    print "json file:", jfile
     content = Content(jfile)
     
     #using this for updating segments
     content_copy = Content(jfile)
     
+
+
+
     #print content.segments
     in_skip = False
     skip_start = ''
@@ -73,7 +79,19 @@ def handle_skips(source, destination):
         #and then concatenate those together at the end
         #(and then update all of the timestamps)
 
-        if re.search('skip', segment.title):
+        if keep_tags:
+            keep_match = False
+            for option in keep_tags:
+                if re.search(option, segment.title):
+                    keep_match = True
+                    
+        elif skip_tags:
+            keep_match = True
+            for option in skip_tags:
+                if re.search(option, segment.title):
+                    keep_match = False
+        
+        if not keep_match:
             #this is the duration of all of the segments that we are keeping!!
             duration = 0
 
@@ -82,14 +100,20 @@ def handle_skips(source, destination):
             ## find end of the track, use that position (trim the end)
             if not segment.end:
                 pass
+
+            #check if there is anything that we've scanned previously
+            #that we need to keep before skipping this segment
             
-            if segment.start == keep_start:
+            if float(segment.start.total_seconds()) == float(keep_start):
                 #nothing to keep here... just update the keep_start and move on
-                keep_start = segment.end.total_seconds()
-                keep_end = None
+                if segment.end:
+                    keep_start = segment.end.total_seconds()
+                    keep_end = None
             else:
+                print "we have a segment to keep... %s != %s" % (segment.start.total_seconds(), keep_start)
+
                 keep_end = segment.start.total_seconds()
-                #we have a segment to keep...
+                print keep_end
                 duration = keep_end - keep_start
 
                 dest_part = "%s.part%03d.%s" % (destination, part, suffix)
@@ -100,15 +124,22 @@ def handle_skips(source, destination):
                 command = "avconv -i %s -ss %s -t %s -vcodec copy -acodec copy %s" % (source, keep_start, duration, dest_part)
                 process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 print command
-                print process.communicate()[0]
+                while process.poll() is None:
+                    #depending on which channel has output, can tailor that here
+                    l = process.stderr.readline()
+                    #l = process.stdout.readline()
+                    #print l
+
+                #when process terminates, can finish printing the rest:
+                #print process.stdout.read()
 
                 
                 #update these values
                 keep_start = segment.end.total_seconds()
                 keep_end = None
 
-                
-            skip_duration = segment.end.total_seconds() - segment.start.total_seconds()
+            if segment.end:
+                skip_duration = segment.end.total_seconds() - segment.start.total_seconds()
             
             #make a copy of Content object
             #update the position for all subsequent segments and marks
@@ -135,6 +166,9 @@ def handle_skips(source, destination):
             print ""
             part += 1
 
+
+
+
     #now join all of the parts back together:
 
     #update the new content's filename
@@ -148,6 +182,8 @@ def handle_skips(source, destination):
 
     #ffmpeg seems more versatile than avconv for joining files:
     #https://trac.ffmpeg.org/wiki/How%20to%20concatenate%20(join,%20merge)%20media%20files
+    root = os.path.dirname(destination)
+    print root
     file_list = os.path.join(root, "temp.txt")
     f = codecs.open(file_list, 'w', encoding='utf-8')    
     for dest_part in dest_parts:
@@ -174,6 +210,7 @@ def handle_skips(source, destination):
 
     print command
     
+    
         
 if __name__ == '__main__':
     source = None
@@ -190,8 +227,10 @@ if __name__ == '__main__':
         else:
             destination = None
 
-    handle_skips(source, destination)
-
+    #handle_skips(source, destination)
+    #handle_keeps(source, destination)
+    slice_media(source, destination, keep_tags=['\+'])
+    
     #TODO:
     #handle 'extract' tags
 
