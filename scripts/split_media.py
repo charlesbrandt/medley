@@ -21,7 +21,8 @@ import subprocess
 
 from moments.tag import to_tag
 
-from medley.helpers import find_json, split
+#from medley.helpers import find_json, split
+from medley.helpers import find_json
 from medley.content import Content, Mark
 
 def usage():

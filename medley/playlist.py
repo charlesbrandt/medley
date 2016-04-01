@@ -423,7 +423,10 @@ class Playlist(PositionList):
                     print "removing item. could not load: %s" % json_source
 
             #print json_source
-            segment = content.get_segment(segment_id)
+            try:
+                segment = content.get_segment(segment_id)
+            except:
+                raise ValueError, "Could not locate content... is it still available locally?"
             #print segment.to_dict()
             #print ""
             #print ""
