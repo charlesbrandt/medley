@@ -48,7 +48,11 @@ class Mark(object):
         #this is better represented in a segment instead of a mark
 
         #in milliseconds
-        self.position = int(position)
+        # for a long time have been using an int for position
+        # which should be fine with milliseconds,
+        # but may try a float
+        #self.position = int(position)
+        self.position = float(position)
         self.source = source
 
         if seconds:
@@ -98,12 +102,20 @@ class Mark(object):
         """
         shortcut to print the position in time format
         """
-        return "%02d:%02d:%02d" % self.as_hms()
+        (h, m, s, ms) = self.as_hms()
+        if ms:
+            return "%02d:%02d:%02d.%03d" % (h, m, s, ms)
+        else:
+            return "%02d:%02d:%02d" % (h, m, s)
 
     def from_time(self, text):
         parts = text.split(':')
         if len(parts) == 3:
-            self.from_hms(int(parts[0]), int(parts[1]), int(float(parts[2])))
+            sec_parts = parts[-1].split('.')
+            if len(sec_parts) > 1:
+                self.from_hms( int(parts[0]), int(parts[1]), int(float(parts[2])), int(sec_parts[-1]) )
+            else:
+                self.from_hms(int(parts[0]), int(parts[1]), int(float(parts[2])))
         elif len(parts) == 2:
             self.from_hms(minutes=int(parts[0]), seconds=int(parts[1]))
         else:
@@ -118,13 +130,14 @@ class Mark(object):
         """
         if milli_seconds is None:
             milli_seconds = self.position
-            
-        total_seconds = int(milli_seconds) / 1000
+
+        ms = float(milli_seconds) % 1000
+        total_seconds = float(milli_seconds) / 1000
         seconds = (int(total_seconds) % 60)
         total_minutes = (int(total_seconds) / 60)
         minutes = total_minutes % 60
         hours = total_minutes / 60
-        return (hours, minutes, seconds)
+        return (hours, minutes, seconds, ms)
 
     def from_hms(self, hours=0, minutes=0, seconds=0, ms=0):
         """
@@ -1900,13 +1913,13 @@ class Content(SimpleContent):
 
         if content.has_key('start'):
             mark = Mark()
-            mark.seconds = int(content['start'])
+            mark.seconds = float(content['start'])
             self.start = mark
             del content['start']
 
         if content.has_key('end'):
             mark = Mark()
-            mark.seconds = int(content['end'])
+            mark.seconds = float(content['end'])
             self.end = mark
             del content['end']
 

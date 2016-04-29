@@ -691,6 +691,9 @@ class PlayerWidget(QtGui.QWidget):
 
         time = length * pos
 
+        #print "position: ", pos
+        #print "time: ", time
+
         return time
 
     def get_remainder(self):
@@ -717,7 +720,16 @@ class PlayerWidget(QtGui.QWidget):
                 # after the video finished, the play button stills shows
                 # "Pause", not the desired behavior of a media player
                 # this will fix it
-                self.stop()
+                #
+                # However, sometimes it takes time to start media playing
+                # (especially under heavy load)
+                # this can cause media to stop before it gets going.
+                #
+                # If this continues to be a problem,
+                # should find a way to call stop toward the end of the media
+                # right now it looks like we call next()
+                #self.stop()
+                pass
 
 
         

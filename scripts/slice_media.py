@@ -17,31 +17,99 @@
 # update mark times accordingly
 # save as a new version
 
+see also medley.content.Content.split_media() methods
+
 """
 
 import os, sys, codecs, re
 import subprocess
+from datetime import datetime
 
-from medley.helpers import find_json
+from medley.helpers import find_json, get_media_properties
 from medley.content import Content
+from moments.tag import to_tag
 
 def usage():
     print __doc__
 
 
-def slice_media(source, destination=None, keep_tags=[], skip_tags=[]):
+def make_destination(dest_prefix, part, extension, cur_tags=[]):
+    main_title = '-'.join(cur_tags)
+    title = to_tag(main_title)
+    
+    #dest_part = "%s%02d-%s.%s" % (destination, part, title, suffix)
+    dest_part = "%s-%02d-%s.%s" % (dest_prefix, part, title, extension)
+    #dest_part = "%s.part%03d.%s" % (destination, part, suffix)
+    #force webm here
+    #dest_part = "%s.part%03d.%s" % (destination, part, extension)
+
+    #print dest_part
+    return dest_part
+
+
+def extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extension):
+    """
+    source
+    extension: for overriding the extension / file type
+    keep_start: where to start
+    segment: gives us the end
+    bitrate
+    part: for creating the filename
+    """
+    
+
+    #extract it:
+
+    #this one is good for keeping the format the same:
+    #command = "avconv -i %s -ss %s -t %s -vcodec copy -acodec copy %s" % (source, keep_start, cur_duration, dest_part)
+
+    #this will convert to webm for easier use in a browser:
+    #but will also take longer
+    command = "avconv -i %s -ss %s -t %s -f webm -c:v libvpx -qmin 0 -qmax 50 -crf 10 -b:v %s -threads 4 -acodec libvorbis %s" % (source, keep_start, cur_duration, bitrate, dest_part)
+    #via: http://superuser.com/questions/556463/converting-video-to-webm-with-ffmpeg-avconv
+
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print command
+    while process.poll() is None:
+        #depending on which channel has output, can tailor that here
+        l = process.stderr.readline()
+        #l = process.stdout.readline()
+        #print l
+
+    #when process terminates, can finish printing the rest:
+    #print process.stdout.read()
+
+    
+
+def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=None, bitrate='6M', extension='webm'):
     """
     take a source (and optional destination)
     load and
     set up the other files that will be needed for the desired slice operation
     """
     #source must have the corresponding suffix to use for output
-    parts = source.split('.')
-    source_prefix = '.'.join(parts[:-1])
-    suffix = parts[-1]
+    print "STARTING: ", datetime.now()
+    base = os.path.dirname(source)
+    print base
+    filename = os.path.basename(source)
+    print filename
+
+    edits_dir = os.path.join(base, "edits")
+    if not os.path.exists(edits_dir):
+        os.makedirs(edits_dir)
+
+    print "EDITS DIR: ", edits_dir
+    
+    file_parts = filename.split('.')
+    source_prefix = '.'.join(file_parts[:-1])
+    suffix = file_parts[-1]
 
     if not destination:
-        destination = source_prefix + '.new'
+        #destination = source_prefix + '.new'
+        destination = source_prefix + ''
+
+    destination = os.path.join(edits_dir, destination)
+    print "DESTINATION: ", destination
     
     destination_json = destination + '.json'
     if os.path.exists(destination_json):
@@ -49,16 +117,19 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[]):
         #don't want to load it 
         os.remove(destination_json)
 
-    final_dest = "%s.total.%s" % (destination, suffix)
+    #final_dest = "%s.total.%s" % (destination, suffix)
+    #using extension to override
+    final_dest = "%s.total.%s" % (destination, extension)
     if os.path.exists(final_dest):
         #get rid of it...
         #don't want to load it 
         os.remove(final_dest)
 
-    print "finding json for: %s" % source
+    print "FINDING JSON FOR: %s" % source
     jfile = find_json(source, limit_by_name=False)
-    print "json file:", jfile
+    print "JSON FILE:", jfile
     content = Content(jfile)
+    #print content.debug()
     
     #using this for updating segments
     content_copy = Content(jfile)
@@ -69,15 +140,23 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[]):
     #print content.segments
     in_skip = False
     skip_start = ''
+    #TODO:
+    #initialize here so we can check what the last value was
+    keep_match = False
+    segment = None
+    cur_tags = []
+    
     keep_start = 0
     keep_end = None
     part = 0
     dest_parts = []
     #tailor this to the way you want to decide which segments to remove
     for segment in content.segments[:]:
-        #I think we will actually need to extract the clips we want to keep
+        #we need to extract the clips we want to keep
         #and then concatenate those together at the end
         #(and then update all of the timestamps)
+
+        #only one or the other should be used at a time
 
         if keep_tags:
             keep_match = False
@@ -85,15 +164,26 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[]):
                 if re.search(option, segment.title):
                     keep_match = True
                     
+                    
         elif skip_tags:
             keep_match = True
             for option in skip_tags:
                 if re.search(option, segment.title):
                     keep_match = False
+
+        if keep_match:
+            #keep track of cur_tags
+            title_parts = segment.title.split('. ')
+            main_title = title_parts[-1]
+            tags = main_title.split(', ')
+            for tag in tags:
+                if not re.search('\+', tag) and not tag in cur_tags:
+                    cur_tags.append(tag)
+
         
         if not keep_match:
-            #this is the duration of all of the segments that we are keeping!!
-            duration = 0
+            #this is the cur_duration of all of the segments that we are keeping!!
+            cur_duration = 0
 
             #TODO:
             ## if end is none 
@@ -104,42 +194,26 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[]):
             #check if there is anything that we've scanned previously
             #that we need to keep before skipping this segment
             
-            if float(segment.start.total_seconds()) == float(keep_start):
-                #nothing to keep here... just update the keep_start and move on
-                if segment.end:
-                    keep_start = segment.end.total_seconds()
-                    keep_end = None
-            else:
+            if float(segment.start.total_seconds()) != float(keep_start):
                 print "we have a segment to keep... %s != %s" % (segment.start.total_seconds(), keep_start)
 
                 keep_end = segment.start.total_seconds()
                 print keep_end
-                duration = keep_end - keep_start
+                cur_duration = keep_end - keep_start
 
-                dest_part = "%s.part%03d.%s" % (destination, part, suffix)
+                dest_part = make_destination(destination, part, extension, cur_tags)
                 dest_parts.append(dest_part)
-                
-                print dest_part
-                #extract it:
-                command = "avconv -i %s -ss %s -t %s -vcodec copy -acodec copy %s" % (source, keep_start, duration, dest_part)
-                process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                print command
-                while process.poll() is None:
-                    #depending on which channel has output, can tailor that here
-                    l = process.stderr.readline()
-                    #l = process.stdout.readline()
-                    #print l
 
-                #when process terminates, can finish printing the rest:
-                #print process.stdout.read()
-
+                #extract_segment(source, destination, extension, keep_start, cur_duration, bitrate, part, dest_parts)
+                extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extension)
                 
-                #update these values
-                keep_start = segment.end.total_seconds()
-                keep_end = None
 
             if segment.end:
                 skip_duration = segment.end.total_seconds() - segment.start.total_seconds()
+                #update these values
+                keep_start = segment.end.total_seconds()
+                
+            keep_end = None
             
             #make a copy of Content object
             #update the position for all subsequent segments and marks
@@ -150,23 +224,46 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[]):
                 copy_segment.json_source = destination_json
                 copy_segment.filename = os.path.basename(final_dest)
                 if (copy_segment.title == segment.title):
-                    print "Matched: ", copy_segment.title
+                    #print "Matched: ", copy_segment.title
                     matched_current = True
                     content_copy.segments.remove(copy_segment)
                 elif matched_current:
-                    print "Updating: ", copy_segment.title, " Removing: ", skip_duration
-                    print "Original start: ", copy_segment.start.position
+                    #print "Updating: ", copy_segment.title, " Removing: ", skip_duration
+                    #print "Original start: ", copy_segment.start.position
                     new_start = copy_segment.start.total_seconds() - skip_duration
                     copy_segment.start.position = new_start * 1000
-                    print "New start: ", copy_segment.start.position
+                    #print "New start: ", copy_segment.start.position
                     if copy_segment.end:
                         new_end = copy_segment.end.total_seconds() - skip_duration
                         copy_segment.end.position = new_end * 1000
 
+            #don't want to do this:
+            #duration = duration - skip_duration
+            
             print ""
             part += 1
+            #reset these
+            cur_tags = []
 
 
+    if keep_match:
+        #if the last segment was a keep_match,
+        #make sure we extract the last one:
+
+
+        if segment.end:
+            keep_end = segment.end.total_seconds()
+        else:
+            keep_end = duration
+
+        print keep_end
+        cur_duration = keep_end - keep_start
+            
+        dest_part = make_destination(destination, part, extension, cur_tags)
+        dest_parts.append(dest_part)
+
+        extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extension)
+        #extract_segment(source, destination, extension, keep_start, cur_duration, bitrate, part, dest_parts)                
 
 
     #now join all of the parts back together:
@@ -229,7 +326,18 @@ if __name__ == '__main__':
 
     #handle_skips(source, destination)
     #handle_keeps(source, destination)
-    slice_media(source, destination, keep_tags=['\+'])
+
+    properties = get_media_properties(source)
+    duration = properties[1]
+    bitrate = properties[2]
+    bitstr = "%sk" % bitrate
+    print bitstr
+    #exit()
+
+    #slice_media(source, destination, keep_tags=['\+'], bitrate='2M')
+    #slice_media(source, destination, keep_tags=['\+'], bitrate='6M')
+    slice_media(source, destination, keep_tags=['\+'], duration=duration, bitrate=bitstr)
+    #slice_media(source, destination, keep_tags=['keep'])
     
     #TODO:
     #handle 'extract' tags

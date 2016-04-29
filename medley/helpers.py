@@ -96,7 +96,7 @@ def make_json_path(item):
     print json_name
     return os.path.join(unicode(parent), json_name)
 
-def find_json(item, limit_by_name=True, debug=False):
+def find_json(item, limit_by_name=False, debug=False):
     """
     take any string
     see if it is a path for a json file
@@ -108,6 +108,14 @@ def find_json(item, limit_by_name=True, debug=False):
 
     if limit_by_name is true, and if item is a (non-json) file,
     use its filename to limit jsons to match that filename by default
+    also [2016.04.10 14:21:49]
+    switching this behavior
+    now if limit_by_name is set to true,
+    it will only return a result if the name matches
+    otherwise the default behavior will be to try to match the name
+    if there is more than one json in the directory
+    otherwise it won't be strict
+    
     """
     if re.search('.*\.json$', item):
         if debug:
@@ -162,11 +170,24 @@ def find_json(item, limit_by_name=True, debug=False):
         else:
             #found more than one
             logging.debug("find_json: found many: %s" % matches)
-            print "WARNING: find_json: more than one match found: %s" % matches
 
-            logging.debug("find_json: returning last: %s" % matches[-1])
+            #if limit by name was not specified as true,
+            #in the case of multiple matches,
+            #it may still make sense to try to match by name
+            #if no match, then it's still possible to return the last one
+            found = False
+            if name: 
+                for match in matches:
+                    if re.search(name, unicode(match)):
+                        found = match
 
-            return matches[-1]
+            if found:
+                logging.debug("find_json: matched name: %s" % found)
+                return found
+            else:
+                print "WARNING: find_json: more than one match found: %s" % matches
+                logging.debug("find_json: returning last: %s" % matches[-1])
+                return matches[-1]
 
 
 def get_media_dimensions(movie_p, debug=False):
@@ -235,6 +256,7 @@ def get_media_properties(movie_p, debug=False):
     #print output
     size = None
     seconds = None
+    bitrate = None
     
     lines = output.splitlines()
     for line in lines:
@@ -265,6 +287,7 @@ def get_media_properties(movie_p, debug=False):
             #print dstring
             h, m, s = dstring.split(':')
             seconds = (int(h) * 60 * 60) + (int(m) * 60) + float(s)
+            bitrate = parts[5]
             #print seconds
         else:
             #could look for other content here:
@@ -284,7 +307,7 @@ def get_media_properties(movie_p, debug=False):
     #filesize = os.path.getsize(movie_p)
 
     #print size
-    return size, seconds
+    return size, seconds, bitrate
 
 def grab_frame(movie_p, position, destination=None, debug=False):
     """
