@@ -39,6 +39,10 @@ python diff_json_and_merge.py /path/to/d1 /path/to/d2
 
 it is best if d1 is a subset of d2 (pruned collection derived from bigger one)
 
+
+If d2 does not yet have any data, use rsync or copy to get the initial set (nothing to synchronize in that case):
+rsync -av /d1/*.json /d2/
+
 """
 
 # skelton for command line interaction:
@@ -359,20 +363,24 @@ def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False, sync=True
                 
                 p1 = Path(n1path)
                 if p1.type() == "Directory":
-                    if recurse:
-                        (last_difference, last_added, last_skipped) = diff_dirs(n1path, n2path, recurse, indent+1, sync)
-                        is_difference |= last_difference
-                        added.extend(last_added)
-                        skipped.extend(last_skipped)
+                    if os.path.exists(n2path):
+                        if recurse:
+                            (last_difference, last_added, last_skipped) = diff_dirs(n1path, n2path, recurse, indent+1, sync)
+                            is_difference |= last_difference
+                            added.extend(last_added)
+                            skipped.extend(last_skipped)
 
-                        ## if last_difference:
-                        ##     print "Differences found: %s" % n1path
-                        ##     #add a new line after finished with 
-                        ##     if not indent:
-                        ##         print "\n"
+                            ## if last_difference:
+                            ##     print "Differences found: %s" % n1path
+                            ##     #add a new line after finished with 
+                            ##     if not indent:
+                            ##         print "\n"
+                        else:
+                            print "No Comparison"
                     else:
-                        print "No Comparison"
-
+                        print "%s - D1 ONLY" % item.translate(unaccented_map())
+                        is_difference = True
+                        
 
     #if anything is left in d2contents, it must not have been in d1
     if len(d2contents):
