@@ -1,3 +1,12 @@
+*2016.05.03 08:38:37 scripts
+/c/public/medley/instances.txt
+/c/public/medley/launch.sh
+/c/public/medley/medley/helpers.py
+/c/public/medley/scripts/diff-playlists.py
+/c/public/medley/medley/scraper.py
+/c/public/medley/scripts/download_photos.py
+/c/public/medley/scripts/download_photos-gui.py
+
 *2016.03.06 17:04:07 server
 /c/public/medley/instances.txt
 /c/public/medley/launch.sh

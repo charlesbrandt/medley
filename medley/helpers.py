@@ -16,6 +16,7 @@ import zipfile
 
 from moments.path import Path
 from moments.journal import Journal
+from moments.tag import to_tag
 
 def save_json(destination, json_objects):
     json_file = codecs.open(destination, 'w', encoding='utf-8', errors='ignore')
@@ -92,7 +93,8 @@ def make_json_path(item):
         #must be some other file type... load the parent directory:
         parent = p.parent()
 
-    json_name = "%s.json" % name
+    #making jsons named as tags to help normalize difficult characters
+    json_name = "%s.json" % to_tag(name)
     print json_name
     return os.path.join(unicode(parent), json_name)
 
@@ -132,7 +134,7 @@ def find_json(item, limit_by_name=False, debug=False):
             parent = p
             d = p.load()
         else:
-            name = p.name
+            name = to_tag(p.name)
             #must be some other file type... load the parent directory:
             parent = p.parent()
             d = parent.load()

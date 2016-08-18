@@ -645,7 +645,9 @@ def import_content(source, all_contents={}, drive_dir=None):
     content = None
     
     option = source
-    json_source = find_json(unicode(option))
+    #when importing content, should match the filename
+    #other wise all media items in the folder will use the same name
+    json_source = find_json(unicode(option), limit_by_name=True)
     if not json_source:
         json_source = make_json_path(unicode(option))
 
