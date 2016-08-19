@@ -44,40 +44,6 @@ def load_json(source_file, create=False):
         json_file.close()
     return json_objects
 
-def find_htmls(item):
-    p = Path(item)
-    if p.type() == "Directory":
-        root = item
-    else:
-        parent = p.parent()
-        root = str(parent)
-
-    matches = []
-    options = os.listdir(root)
-    for o in options:
-        if re.search('.*\.html$', o):
-            html = os.path.join(root, o)
-            matches.append(html)
-            
-    return matches
-    
-def find_zips(item):
-    p = Path(item)
-    if p.type() == "Directory":
-        root = item
-    else:
-        parent = p.parent()
-        root = str(parent)
-
-    matches = []
-    options = os.listdir(root)
-    for o in options:
-        if re.search('.*\.zip$', o):
-            zipf = os.path.join(root, o)
-            matches.append(zipf)
-            
-    return matches
-    
 def make_json_path(item):
 
     name = ''
@@ -95,35 +61,20 @@ def make_json_path(item):
 
     #making jsons named as tags to help normalize difficult characters
     json_name = "%s.json" % to_tag(name)
-    print json_name
+    #print json_name
     return os.path.join(unicode(parent), json_name)
 
-def find_json(item, limit_by_name=False, debug=False):
+def find_jsons(item, limit_by_name=False, debug=False):
     """
-    take any string
-    see if it is a path for a json file
-    or a path to a directory that contains a json file
-    or look in the same directory as the item
-
-    if more than one json file found, print a warning
-    return the last json file
-
-    if limit_by_name is true, and if item is a (non-json) file,
-    use its filename to limit jsons to match that filename by default
-    also [2016.04.10 14:21:49]
-    switching this behavior
-    now if limit_by_name is set to true,
-    it will only return a result if the name matches
-    otherwise the default behavior will be to try to match the name
-    if there is more than one json in the directory
-    otherwise it won't be strict
-    
+    foundation for find_json
+    but this returns all matches (based on parameters)
     """
+
     if re.search('.*\.json$', item):
         if debug:
             #print "find_and_load_json: item is a json string: %s" % item
             logging.debug("find_json: item is a json string: %s" % item)
-        return item
+        return [item]
 
     else:
         parent = ''
@@ -164,34 +115,116 @@ def find_json(item, limit_by_name=False, debug=False):
         if debug:
             print "Found the following: %s" % matches
 
-        if not matches:
-            return None
-        elif len(matches) == 1:
-            logging.debug("find_json: found match: %s" % matches[0])
-            return matches[0]
+        return matches
+    
+def find_json(item, limit_by_name=False, debug=False):
+    """
+    take any string
+    see if it is a path for a json file
+    or a path to a directory that contains a json file
+    or look in the same directory as the item
+
+    if more than one json file found, print a warning
+    return the last json file
+
+    if limit_by_name is true, and if item is a (non-json) file,
+    use its filename to limit jsons to match that filename by default
+    also [2016.04.10 14:21:49]
+    switching this behavior
+    now if limit_by_name is set to true,
+    it will only return a result if the name matches
+    otherwise the default behavior will be to try to match the name
+    if there is more than one json in the directory
+    otherwise it won't be strict
+    
+    """
+    matches = find_jsons(item, limit_by_name, debug)
+
+    if not matches:
+        return None
+
+    elif len(matches) == 1:
+        logging.debug("find_json: found match: %s" % matches[0])
+        return matches[0]
+
+    else:
+        #found more than one
+        logging.debug("find_json: found many: %s" % matches)
+
+        #if limit by name was not specified as true,
+        #in the case of multiple matches,
+        #it may still make sense to try to match by name
+        #if no match, then it's still possible to return the last one
+        found = False
+        if name: 
+            for match in matches:
+                if re.search(name, unicode(match)):
+                    found = match
+
+        if found:
+            logging.debug("find_json: matched name: %s" % found)
+            return found
         else:
-            #found more than one
-            logging.debug("find_json: found many: %s" % matches)
-
-            #if limit by name was not specified as true,
-            #in the case of multiple matches,
-            #it may still make sense to try to match by name
-            #if no match, then it's still possible to return the last one
-            found = False
-            if name: 
-                for match in matches:
-                    if re.search(name, unicode(match)):
-                        found = match
-
-            if found:
-                logging.debug("find_json: matched name: %s" % found)
-                return found
-            else:
-                print "WARNING: find_json: more than one match found: %s" % matches
-                logging.debug("find_json: returning last: %s" % matches[-1])
-                return matches[-1]
+            print "WARNING: find_json: more than one match found: %s" % matches
+            logging.debug("find_json: returning last: %s" % matches[-1])
+            return matches[-1]
 
 
+def find_htmls(item):
+    p = Path(item)
+    if p.type() == "Directory":
+        root = item
+    else:
+        parent = p.parent()
+        root = str(parent)
+
+    matches = []
+    options = os.listdir(root)
+    for o in options:
+        if re.search('.*\.html$', o):
+            html = os.path.join(root, o)
+            matches.append(html)
+            
+    return matches
+
+def find_media(item):
+    """
+    using this in content.import_content to check for time based media
+    (videos or sounds)
+    """
+    p = Path(item)
+    if p.type() == "Directory":
+        root = p.load()
+    else:
+        parent = p.parent()
+        root = parent.load()
+
+    matches = []
+    #now root is a directory...
+    #use that to help find media
+    root.scan_filetypes()
+    matches.extend(root.sounds)
+    matches.extend(root.movies)
+    return matches
+
+    
+def find_zips(item):
+    p = Path(item)
+    if p.type() == "Directory":
+        root = item
+    else:
+        parent = p.parent()
+        root = str(parent)
+
+    matches = []
+    options = os.listdir(root)
+    for o in options:
+        if re.search('.*\.zip$', o):
+            zipf = os.path.join(root, o)
+            matches.append(zipf)
+            
+    return matches
+    
 def get_media_dimensions(movie_p, debug=False):
     """
     expects a full path to a media item

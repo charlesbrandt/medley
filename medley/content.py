@@ -11,7 +11,7 @@ Song, Podcast, Album, Image, Book, Movie, Scene,
 import os, re, copy, subprocess, time
 import hashlib
 
-from helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties, make_json_path
+from helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties, make_json_path, find_media, find_jsons
 
 from moments.path import Path
 from moments.timestamp import Timestamp
@@ -649,7 +649,26 @@ def import_content(source, all_contents={}, drive_dir=None):
     #other wise all media items in the folder will use the same name
     json_source = find_json(unicode(option), limit_by_name=True)
     if not json_source:
-        json_source = make_json_path(unicode(option))
+        #we didn't find a matching content.json for the media source supplied
+        #we should also check if there is only one media file in the directory
+        #and only one content.json file (that doesn't match the source name)
+        #in that case, it may make sense to go ahead
+        #and update the content.json filename to be the same as the source
+        files = find_media(option)
+        jsons = find_jsons(unicode(option))
+        print "Files:", files
+        print "JSONs:", jsons
+
+        if len(files) == 1 and len(jsons) == 1:
+            #this is what we were expecting originally:
+            json_dest = make_json_path(unicode(option))
+            print "WARNING: automatically moving %s to %s" % (jsons[0], json_dest)
+            os.rename(jsons[0], json_dest)
+            #should be set now
+            json_source = json_dest
+        else:
+            #ok... we tried... too many files to be sure. just make a new one
+            json_source = make_json_path(unicode(option))
 
     #won't need json_objects, but need to create the json file if new
     json_objects = load_json(json_source, create=True)
