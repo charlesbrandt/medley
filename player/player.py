@@ -382,7 +382,7 @@ class PlayerWidget(QtGui.QWidget):
         ##     self.play_state = "paused"
 
 
-    def play(self, content=None, playlist=None, marks_col=None, titles_col=None):
+    def play(self, content=None, playlist=None, marks_col=None, titles_col=None, loop=False):
         #usually this will not be set if just playing from main window:
         ## if marks_col:
         ##     make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+M'),
@@ -406,6 +406,7 @@ class PlayerWidget(QtGui.QWidget):
 
         self.start = 0
         self.end = None
+        self.loop = loop
         if not content is None:
             self.cur_content = content
             #need milliseconds:
@@ -747,10 +748,14 @@ class PlayerWidget(QtGui.QWidget):
         #print remain
 
         if self.cur_content and self.cur_content.end and time >= self.cur_content.end.position:
-            print "AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
-            self.next()
+            if self.loop:
+                self.seek(self.cur_content.start.total_seconds() * 1000)
+            else:
+                print "AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
+                self.next()
 
-        elif remain <= 2000:
+        #make sure we've actually loaded something here (time != 0)
+        elif time and remain <= 2000:
             print "Reaching the end of a track, moving on."
             self.next()
             

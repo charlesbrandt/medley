@@ -10,6 +10,7 @@ from medley.helpers import find_json, load_json
 #from medley.helpers import find_json, make_json_path, load_json
 
 from moments.path import Path
+from moments.launch import file_browse
 
 re1='(\\d+)(\.)'	# Integer Number 1
 find_number = re.compile(re1,re.IGNORECASE|re.DOTALL)
@@ -85,10 +86,11 @@ class PlaylistModel(QtCore.QAbstractTableModel):
 
         #define the order that things are displayed
         if key_order is None:
-            self.key_order = ['up', 'play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
-            self.key_order = ['up', 'play', 'open', 'order', 'people', 'filename', 'tags', 'status', 'timestamp', 'title', 'segments', 'marks', 'start', 'end', ]
-            self.key_order = ['up', 'open', 'play', 'status', 'tags', 'start', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', ]
-            self.key_order = ['up', 'open', 'play', 'media', 'status', 'tags', 'start', 'order', 'title', 'people', 'timestamp', 'segments', 'marks', 'end', ]
+            #different options available
+            #self.key_order = ['up', 'play', 'open', 'order', 'title', 'status', 'timestamp', 'tags', 'people', 'segments', 'marks', 'start', 'end', ]
+            #self.key_order = ['up', 'play', 'open', 'order', 'people', 'filename', 'tags', 'status', 'timestamp', 'title', 'segments', 'marks', 'start', 'end', ]
+            #self.key_order = ['up', 'open', 'play', 'status', 'tags', 'start', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', ]
+            self.key_order = ['open', 'play', 'media', 'status', 'tags', 'start', 'order', 'title', 'people', 'timestamp', 'segments', 'marks', 'end', 'up', 'loop', ]
             #see also ContentWindow for other common key_order 
 
         else:
@@ -219,7 +221,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
             elif key == 'media':
                  #just return this one the way it is
                  return json.dumps(getattr(content, key))
-            elif key == 'play' or key == 'open' or key == 'up':
+            elif key == 'play' or key == 'open' or key == 'up' or key == 'loop':
                 #TODO: check main playing status to see
                 #if this is currently playing item
                 #display play icon if so
@@ -277,6 +279,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
               (self.key_order[index.column()] == 'up') or
               (self.key_order[index.column()] == 'marks') or
               (self.key_order[index.column()] == 'play') or
+              (self.key_order[index.column()] == 'loop') or
               (self.key_order[index.column()] == 'segments')):
               
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsDropEnabled | \
@@ -603,7 +606,10 @@ class PlaylistView(QtGui.QTableView):
         self.setAlternatingRowColors(True)
         #self.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         #self.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+
+        #this is what allows drag and drop from one position to another:
         self.setDefaultDropAction(QtCore.Qt.MoveAction)
+        
         self.doubleClicked.connect(self.check_click)
         #has no effect on trees, but might work in tables
         #self.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
@@ -620,6 +626,29 @@ class PlaylistView(QtGui.QTableView):
         #until something else gets set:
         blank_list = PlaylistModel(Playlist())
         self.setModel(blank_list)
+
+    def dragEnterEvent(self, evt):
+        #This works, but the drop does not...
+        #not sure why!
+        mime_data = evt.mimeData()
+        print "DRAAAG!"
+        #print dir(mime_data)
+        #print mime_data.data
+        #print mime_data.property
+        if mime_data.hasUrls():
+            self.dropFile = mime_data.urls()[0].toLocalFile()
+            print self.dropFile
+            #ideally this would happen in actual drop:
+            self.add_media(self.dropFile)
+            evt.acceptProposedAction()
+            #evt.accept()
+
+    def dropEvent(self, evt):
+        mime_data = evt.mimeData()
+        print "DROPP!"
+        print self.dropFile
+        #print dir(mime_data)
+        evt.acceptProposedAction()
         
     def setModel(self, model):
         super(PlaylistView, self).setModel(model)
@@ -642,6 +671,7 @@ class PlaylistView(QtGui.QTableView):
 
         sm.selectionChanged.connect(self.store_current_selection)
 
+        loop_index = self.model().key_order.index('loop')
         play_index = self.model().key_order.index('play')
         open_index = self.model().key_order.index('open')
         up_index = self.model().key_order.index('up')
@@ -649,11 +679,13 @@ class PlaylistView(QtGui.QTableView):
         title_index = self.model().key_order.index('title')
         status_index = self.model().key_order.index('status')
         start_index = self.model().key_order.index('start')
+
+        self.setColumnWidth(loop_index, 25)
         self.resizeColumnToContents(play_index)
         self.resizeColumnToContents(open_index)
         self.resizeColumnToContents(up_index)
         self.resizeColumnToContents(order_index)
-        self.resizeColumnToContents(title_index)
+        #self.resizeColumnToContents(title_index)
         self.resizeColumnToContents(status_index)
         self.resizeColumnToContents(start_index)
 
@@ -716,10 +748,16 @@ class PlaylistView(QtGui.QTableView):
             self.content_view.raise_() # just to be sure it's on top
 
 
+        if self.model().key_order[index.column()] == 'loop':
+            #print "Loop: %s" % self.cur_content.title
+            self.model().playlist.set_current(self.cur_content)
+            self.player.play(self.cur_content, self.model().playlist, self.marks_col, self.titles_col, loop=True)
+
+
         if self.model().key_order[index.column()] == 'play':
             #print "Play: %s" % self.cur_content.title
             #maybe it is better to pass self.model().playlist?
-            print self.cur_content.to_dict()
+            #print self.cur_content.to_dict()
             self.model().playlist.set_current(self.cur_content)
             self.player.play(self.cur_content, self.model().playlist, self.marks_col, self.titles_col)
             #print main_player
@@ -881,6 +919,11 @@ class PlaylistWidget(QtGui.QWidget):
         playlist_toolbar.addAction(removeAction)
 
 
+        folderAction = QtGui.QAction(QtGui.QIcon('images/folder-o.png'), 'Folder', self)
+        folderAction.triggered.connect(self.launch_finder)
+        playlist_toolbar.addAction(folderAction)
+
+
         self.row = QtGui.QHBoxLayout()
         self.row.addWidget(playlist_toolbar)
 
@@ -903,6 +946,13 @@ class PlaylistWidget(QtGui.QWidget):
 
         self.playlist_view.model().removeRows(row)
 
+    def launch_finder(self, row=None):
+        if row is None:
+            row = self.playlist_view.cur_index.row()
+
+        content = self.playlist_view.model().playlist[row]
+        print content.path
+        file_browse(content.path)
 
 class MarksWidget(QtGui.QWidget):
     """
@@ -1589,12 +1639,17 @@ class ContentWindow(QtGui.QMainWindow):
         playlist = Playlist(self.content.segments)
 
         #key_order = ['open', 'order', 'tags', 'start', 'play', 'title', 'status', 'timestamp', 'people', 'segments', 'marks', 'end', 'up', ]
-        key_order = ['open', 'play', 'status', 'tags', 'start', 'order', 'title', 'filename', 'people', 'timestamp', 'segments', 'marks', 'end', 'up', ]
+        key_order = ['loop', 'open', 'play', 'start', 'title', 'filename', 'people', 'tags', 'timestamp', 'segments', 'marks', 'end', 'order', 'status', 'up', ]
         #key_order = None
         
         subtree = PlaylistModel(playlist, key_order=key_order)
 
         self.table.playlist_view.setModel(subtree)
+
+        #only want to expand here:
+        title_index = self.table.playlist_view.model().key_order.index('title')
+        self.table.playlist_view.resizeColumnToContents(title_index)
+        
 
         self.titles_col.content = content
         self.titles_col.titles.content = content

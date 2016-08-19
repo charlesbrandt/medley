@@ -695,7 +695,16 @@ def import_content(source, all_contents={}, drive_dir=None):
         if not drive_dir:
             print "WARNING: No path prefix set: %s" % drive_dir
             #need to use drive_dir here... base_dir is not enough
-            content.drive_dir = content_path
+            #dd_path = Path(content_path)
+            print "currnet base_dir:", content.base_dir
+            if re.search(content.base_dir, content_path):
+                print "removing base_dir: %s" % content.base_dir
+                content.drive_dir = content_path.replace(content.base_dir, '')
+            else:
+                content.drive_dir = content_path
+
+            print "Drive dir result: ", content.drive_dir
+            
         else:
             dd_path = Path(drive_dir)
             content.base_dir = dd_path.to_relative(content_path)
@@ -1607,7 +1616,7 @@ class Content(SimpleContent):
             else:
                 bd_option = self.base_dir
 
-                
+            #sometimes the drive_dir and base_dir get out of sync?
             return os.path.join(dd_option, bd_option)
         else:
             return os.path.join(self.drive_dir, self.base_dir)
