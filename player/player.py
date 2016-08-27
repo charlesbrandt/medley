@@ -382,7 +382,8 @@ class PlayerWidget(QtGui.QWidget):
         ##     self.play_state = "paused"
 
 
-    def play(self, content=None, playlist=None, marks_col=None, titles_col=None, loop=False):
+    def play(self, content=None, playlist=None, parent_content=None, loop=False, marks_col=None, titles_col=None):
+    
         #usually this will not be set if just playing from main window:
         ## if marks_col:
         ##     make_mark = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+M'),
@@ -416,6 +417,7 @@ class PlayerWidget(QtGui.QWidget):
 
             #print "updating content with: ", content, " and start to: ", self.start
 
+        self.parent_content = parent_content
 
         if not playlist is None:
             self.cur_playlist = playlist
@@ -435,6 +437,15 @@ class PlayerWidget(QtGui.QWidget):
         else:
             #couldn't find anything to play, (re)disable play button
             self.play_button.setEnabled(False)
+
+        # look for the index of self.cur_content in self.cur_playlist
+        # save the index for updating loop content
+        self.cur_index = None
+        ## if self.cur_playlist and self.cur_content:
+        ##     self.cur_index = self.cur_playlist.index(self.cur_content)
+        if self.parent_content and self.cur_content:
+            self.cur_index = self.parent_content.segments.index(self.cur_content)
+            print "Index found: %s" % self.cur_index
             
         #look for cur_content: source file, start position, end position
         #print "PlayerWidget.play() called!"
@@ -749,7 +760,20 @@ class PlayerWidget(QtGui.QWidget):
 
         if self.cur_content and self.cur_content.end and time >= self.cur_content.end.position:
             if self.loop:
+                #this works, but does not update the content object
+                #so new loop points are not used
+                #self.seek(self.cur_content.start.total_seconds() * 1000)
+                
+                #not sure if this will get updated content object
+                #doesn't update, and number of loops are limited
+                #self.play(self.cur_content)
+
+                #update the content object from playlist
+                if (not self.cur_index is None) and self.parent_content:
+                    self.cur_content = self.parent_content.segments[self.cur_index]
+                    #self.cur_content = self.cur_playlist[self.cur_index]
                 self.seek(self.cur_content.start.total_seconds() * 1000)
+
             else:
                 print "AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
                 self.next()

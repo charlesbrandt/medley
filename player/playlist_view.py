@@ -751,7 +751,14 @@ class PlaylistView(QtGui.QTableView):
         if self.model().key_order[index.column()] == 'loop':
             #print "Loop: %s" % self.cur_content.title
             self.model().playlist.set_current(self.cur_content)
-            self.player.play(self.cur_content, self.model().playlist, self.marks_col, self.titles_col, loop=True)
+
+            #self.marks_col and self.titles_col both have
+            #a main content object associated with them
+            #this is the item that gets updated
+            #and eventually synchronized with self.model().playlist
+            #will try to access it directly
+            #self.player.play(self.cur_content, self.model().playlist, self.marks_col, self.titles_col, loop=True)
+            self.player.play(self.cur_content, self.model().playlist, parent_content=self.marks_col.content, loop=True)
 
 
         if self.model().key_order[index.column()] == 'play':
@@ -759,7 +766,15 @@ class PlaylistView(QtGui.QTableView):
             #maybe it is better to pass self.model().playlist?
             #print self.cur_content.to_dict()
             self.model().playlist.set_current(self.cur_content)
-            self.player.play(self.cur_content, self.model().playlist, self.marks_col, self.titles_col)
+            #self.player.play(self.cur_content, self.model().playlist, self.marks_col, self.titles_col)
+
+            #in a window with only a playlist_view, may not be a marks_col...
+            #no easy access to parent content in that case
+            if self.marks_col:
+                self.player.play(self.cur_content, self.model().playlist, parent_content=self.marks_col.content, loop=False)
+            else:
+                self.player.play(self.cur_content, self.model().playlist)
+            
             #print main_player
             #main_player.play(self.cur_content, self.model().playlist, self.marks_col, self.titles_col)
 
@@ -1620,6 +1635,13 @@ class ContentWindow(QtGui.QMainWindow):
                                 self, player.previous)
         prevs2 = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Up'),
                                 self, player.previous)
+
+        faster = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+,'),
+                                self, player.slower)
+        slower = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+.'),
+                                self, player.faster)
+
+
 
         self.content = None
         self.table.playlist_view.player = player
