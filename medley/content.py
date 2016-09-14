@@ -2240,6 +2240,13 @@ class Content(SimpleContent):
             result += ''.ljust(indent) + 'drive_dir: %s\n' % self.drive_dir
         if self.filename:
             result += ''.ljust(indent) + 'filename: %s\n' % self.filename
+        if self.path:
+            result += ''.ljust(indent) + 'path: %s\n' % self.path
+        if self.json_source:
+            result += ''.ljust(indent) + 'json_source: %s\n' % self.json_source
+
+        result += '\n'
+
         if self.media:
             result += ''.ljust(indent) + 'media: %s\n' % self.media
             
