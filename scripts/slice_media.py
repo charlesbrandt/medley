@@ -22,6 +22,8 @@ see also medley.content.Content.split_media() methods
 Warning: This does not work well with media stored in .iso files
 The times marked with medley are often different than those that get extracted
 it's best to note times on a single file instead of an iso
+
+
 """
 
 import os, sys, codecs, re
@@ -82,6 +84,29 @@ def extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extens
     #when process terminates, can finish printing the rest:
     #print process.stdout.read()
 
+
+def extract_audio(source, destination, keep_start, cur_duration):
+    """
+    source
+    keep_start: where to start
+    """
+    #-vn (output)
+    #       Disable video recording.
+
+    #use:
+    #avconv -codecs
+    # to see a list of codecs availabe if copy is not preferred
+
+    #command = "avconv -i %s -ss %s -t %s -vn -acodec copy %s" % (source, keep_start, cur_duration, destination)
+    #wav?
+    #multiple channels (more than 2)
+    #command = "avconv -i %s -ss %s -t %s -vn -acodec pcm_s16le %s" % (source, keep_start, cur_duration, destination)
+    command = "avconv -i %s -ss %s -t %s -vn -ac 2 %s" % (source, keep_start, cur_duration, destination)
+
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print command
+    while process.poll() is None:
+        l = process.stderr.readline()
 
 def look_for_keeps(content, keep_tags, skip_tags):
     """
@@ -148,7 +173,7 @@ def make_segment_groups(keeps, make_separate):
 
     return groups    
 
-def extract_group(group, source, destination, extension, bitrate, offset=0, drift=1):
+def extract_group(group, source, destination, extension, bitrate, offset=0, drift=1, audio_only=False):
     """
     take a list of one or more content.segments
     figure out the start and end
@@ -191,59 +216,20 @@ def extract_group(group, source, destination, extension, bitrate, offset=0, drif
 
     cur_duration = keep_end - keep_start
 
+    #print "AUDIO ONLY:", audio_only
+    if audio_only:
+        dest_part = make_destination(destination, part, "wav", cur_tags)
+        extract_audio(source, dest_part, keep_start, cur_duration)
 
-    dest_part = make_destination(destination, part, extension, cur_tags)
+    else:
+        dest_part = make_destination(destination, part, extension, cur_tags)
 
-    extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extension)
+        extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extension)
 
     return dest_part
 
-#def process_segments(content, keep_tags, skip_tags, content_copy, destination, destination_json, final_dest, make_separate, extension, drift=1.145):
-def process_segments(content, keep_tags, skip_tags, content_copy, destination, destination_json, final_dest, make_separate, extension, offset=0, drift=1):
-    """
-    rather than tring to do everything in one pass
-    start by finding the segments we want
-    then seeing what to do, based on make separate or not
 
-    #trying to extract the clips we want to keep
-    #and then concatenate those together at the end
-    #(and then update all of the timestamps in the content object)
-
-    offset is the number of seconds to adjust all times by
-    different playback applications will put the time as different from ffmpeg
-
-    offset is not as effective as drift
-    drift = 1.27 was too much
-    drift = 1.1163 is closer, but not enough
-    drift = 1.13
-    drift = 1.145 or 1.146
-    """
-
-    dest_parts = []
-
-    #depends on keep_tags or skip_tags, whichever one (and only one) is sent
-    keeps = look_for_keeps(content, keep_tags, skip_tags)
-
-    if keeps:
-        groups = make_segment_groups(keeps, make_separate)
-        #now we know how things are grouped (even if everything is separate)
-        
-
-        for group in groups:
-            dest_part = extract_group(group, source, destination, extension, bitrate, offset, drift)
-
-            dest_parts.append(dest_part)
-    else:
-        print "Nothing found to keep: %s" % keeps
-
-
-    #TODO:
-    #could generate a corresponding content.json file based on the groups
-
-    return keeps
-        
-
-def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=None, bitrate='6M', extension='webm', make_separate=True, drift=1.1):
+def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=None, bitrate='6M', extension='webm', make_separate=True, offset=0, drift=1, audio_only=True):
     """
     take a source (and optional destination)
     load and set up the other files 
@@ -316,7 +302,7 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
         
 
         for group in groups:
-            dest_part = extract_group(group, source, destination, extension, bitrate, drift)
+            dest_part = extract_group(group, source, destination, extension, bitrate, offset, drift, audio_only=audio_only)
 
             dest_parts.append(dest_part)
     else:
