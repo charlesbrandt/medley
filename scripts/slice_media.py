@@ -19,6 +19,11 @@
 
 see also medley.content.Content.split_media() methods
 
+Warning: This does not work well with media stored in .iso files
+The times marked with medley are often different than those that get extracted
+it's best to note times on a single file instead of an iso
+
+
 """
 
 import os, sys, codecs, re
@@ -79,20 +84,166 @@ def extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extens
     #when process terminates, can finish printing the rest:
     #print process.stdout.read()
 
-    
 
-def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=None, bitrate='6M', extension='webm'):
+def extract_audio(source, destination, keep_start, cur_duration):
+    """
+    source
+    keep_start: where to start
+    """
+    #-vn (output)
+    #       Disable video recording.
+
+    #use:
+    #avconv -codecs
+    # to see a list of codecs availabe if copy is not preferred
+
+    #command = "avconv -i %s -ss %s -t %s -vn -acodec copy %s" % (source, keep_start, cur_duration, destination)
+    #wav?
+    #multiple channels (more than 2)
+    #command = "avconv -i %s -ss %s -t %s -vn -acodec pcm_s16le %s" % (source, keep_start, cur_duration, destination)
+    command = "avconv -i %s -ss %s -t %s -vn -ac 2 %s" % (source, keep_start, cur_duration, destination)
+
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print command
+    while process.poll() is None:
+        l = process.stderr.readline()
+
+def look_for_keeps(content, keep_tags, skip_tags):
+    """
+    depending on if keep_tags is sent
+    or if skip_tags is sent
+    will determine if the process is additive (add all keep_tags)
+    or subtractive (ignore all skip_tags)
+    """
+    keeps = []
+
+    #only one or the other (keep_tags vs skip_tags) should be used at a time
+    if keep_tags:
+        for segment in content.segments[:]:
+            for option in keep_tags:
+                if re.search(option, segment.title):
+                    keeps.append(segment)
+
+    elif skip_tags:
+        for segment in content.segments[:]:
+            keep_match = True
+            for option in skip_tags:
+                if re.search(option, segment.title):
+                    keep_match = False
+            #if checked everything and no match, must be a keeper
+            if keep_match:
+                keeps.append(segment)
+
+    return keeps
+
+def check_segment_end(segment):
+    """
+    not all segments have an end set...
+    helper to check for that without concern
+    """
+    end = -1
+    if segment.end:
+        end = segment.end.total_seconds()
+
+    return end
+
+def make_segment_groups(keeps, make_separate):
+    #depending on make_separate
+    #if true, we want to create every keep segment individually
+    #if not, we want to try to combine adjacent segments to minimize jump cuts
+
+    #groups is always a list of lists 
+    groups = []
+    if make_separate:
+        for item in keeps:
+            groups.append( [ item, ] )
+    else:
+        cur_group = [ keeps[0] ]
+
+        previous_end = check_segment_end(keeps[0])
+
+        for item in keeps[1:]:
+            if item.start.total_seconds() == previous_end:
+                cur_group.append( item )
+            else:
+                groups.append(cur_group)
+                cur_group = [ item, ]
+
+            previous_end = check_segment_end(item)
+
+    return groups    
+
+def extract_group(group, source, destination, extension, bitrate, offset=0, drift=1, audio_only=False):
+    """
+    take a list of one or more content.segments
+    figure out the start and end
+    figure out the corresponding tags
+    do the extract
+    """
+    #extract the group:
+    cur_duration = 0
+    cur_tags = []
+    part = None
+    keep_start = None
+    keep_end = None
+
+    for segment in group:
+        #check positions
+        cur_start_adjusted = segment.start.total_seconds() * drift + offset
+        if keep_start is None:
+            keep_start = cur_start_adjusted
+        #usually segments should be in order, but just in case:
+        elif keep_start > cur_start_adjusted:
+            keep_start = cur_start_adjusted
+
+        cur_end_adjusted = check_segment_end(segment) * drift + offset
+        if keep_end is None:
+            keep_end = cur_end_adjusted
+        #usually segments should be in order, but just in case:
+        elif keep_end < cur_end_adjusted:
+            keep_end = cur_end_adjusted
+
+
+        #update tags:
+        title_parts = segment.title.split('. ')
+        if part is None:
+            part = int(title_parts[0])
+        main_title = title_parts[-1]
+        tags = main_title.split(', ')
+        for tag in tags:
+            if not re.search('\+', tag) and not tag in cur_tags:
+                cur_tags.append(tag)
+
+    cur_duration = keep_end - keep_start
+
+    #print "AUDIO ONLY:", audio_only
+    if audio_only:
+        dest_part = make_destination(destination, part, "wav", cur_tags)
+        extract_audio(source, dest_part, keep_start, cur_duration)
+
+    else:
+        dest_part = make_destination(destination, part, extension, cur_tags)
+
+        extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extension)
+
+    return dest_part
+
+
+def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=None, bitrate='6M', extension='webm', make_separate=True, offset=0, drift=1, audio_only=True):
     """
     take a source (and optional destination)
-    load and
-    set up the other files that will be needed for the desired slice operation
+    load and set up the other files 
+    that will be needed for the desired slice operation
+
+    if make_separate is True, adjacent 'keep' clips won't be extracted together
+    this may cause rough transitions between clips when re-joined later
     """
     #source must have the corresponding suffix to use for output
     print "STARTING: ", datetime.now()
     base = os.path.dirname(source)
-    print base
+    print "Path: ", base
     filename = os.path.basename(source)
-    print filename
+    print "Filename: ", filename
 
     edits_dir = os.path.join(base, "edits")
     if not os.path.exists(edits_dir):
@@ -101,12 +252,12 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     print "EDITS DIR: ", edits_dir
     
     file_parts = filename.split('.')
-    source_prefix = '.'.join(file_parts[:-1])
+    source_filename_prefix = '.'.join(file_parts[:-1])
     suffix = file_parts[-1]
 
     if not destination:
-        #destination = source_prefix + '.new'
-        destination = source_prefix + ''
+        #destination = source_filename_prefix + '.new'
+        destination = source_filename_prefix + ''
 
     destination = os.path.join(edits_dir, destination)
     print "DESTINATION: ", destination
@@ -114,7 +265,8 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     destination_json = destination + '.json'
     if os.path.exists(destination_json):
         #get rid of it...
-        #don't want to load it 
+        #don't want to load it
+        print "removing existing json to start fresh: ", destination_json
         os.remove(destination_json)
 
     #final_dest = "%s.total.%s" % (destination, suffix)
@@ -123,11 +275,13 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     if os.path.exists(final_dest):
         #get rid of it...
         #don't want to load it 
+        print "removing existing destinatino to start fresh: ", final_dest
         os.remove(final_dest)
 
     print "FINDING JSON FOR: %s" % source
     jfile = find_json(source, limit_by_name=False)
     print "JSON FILE:", jfile
+
     content = Content(jfile)
     #print content.debug()
     
@@ -135,135 +289,59 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     content_copy = Content(jfile)
     
 
+    #keeps = process_segments(content, keep_tags, skip_tags, content_copy, destination, destination_json, final_dest, make_separate, extension)
 
-
-    #print content.segments
-    in_skip = False
-    skip_start = ''
-    #TODO:
-    #initialize here so we can check what the last value was
-    keep_match = False
-    segment = None
-    cur_tags = []
-    
-    keep_start = 0
-    keep_end = None
-    part = 0
     dest_parts = []
-    #tailor this to the way you want to decide which segments to remove
-    for segment in content.segments[:]:
-        #we need to extract the clips we want to keep
-        #and then concatenate those together at the end
-        #(and then update all of the timestamps)
 
-        #only one or the other should be used at a time
+    #depends on keep_tags or skip_tags, whichever one (and only one) is sent
+    keeps = look_for_keeps(content, keep_tags, skip_tags)
 
-        if keep_tags:
-            keep_match = False
-            for option in keep_tags:
-                if re.search(option, segment.title):
-                    keep_match = True
-                    
-                    
-        elif skip_tags:
-            keep_match = True
-            for option in skip_tags:
-                if re.search(option, segment.title):
-                    keep_match = False
+    if keeps:
+        groups = make_segment_groups(keeps, make_separate)
+        #now we know how things are grouped (even if everything is separate)
+        
 
-        if keep_match:
-            #keep track of cur_tags
-            title_parts = segment.title.split('. ')
-            main_title = title_parts[-1]
-            tags = main_title.split(', ')
-            for tag in tags:
-                if not re.search('\+', tag) and not tag in cur_tags:
-                    cur_tags.append(tag)
+        for group in groups:
+            dest_part = extract_group(group, source, destination, extension, bitrate, offset, drift, audio_only=audio_only)
+
+            dest_parts.append(dest_part)
+    else:
+        print "Nothing found to keep: %s" % keeps
+
+
+    #TODO:
+    #could generate a corresponding content.json file 
+    #for each exported segment based on the groups
+    #(not necessary when make_separate == True)
+
+    
+    # now go through and update the content meta data
+    # go through and create an updated content.json based on what was kept
+
+    print keeps
+
+    cur_pos = 0
+    skip_duration = 0
+
+    #assuming all segments in keep are still in the right order
+    for segment in keeps:
+        if cur_pos != segment.start.total_seconds():
+            skip_duration += segment.start.total_seconds() - cur_pos
+
+        cur_pos = check_segment_end(segment)
+
+        #update the segment
+        new_start = segment.start.total_seconds() - skip_duration
+        segment.start.position = new_start * 1000
+        #print "New start: ", copy_segment.start.position
+        if segment.end:
+            new_end = segment.end.total_seconds() - skip_duration
+            segment.end.position = new_end * 1000
 
         
-        if not keep_match:
-            #this is the cur_duration of all of the segments that we are keeping!!
-            cur_duration = 0
 
-            #TODO:
-            ## if end is none 
-            ## find end of the track, use that position (trim the end)
-            if not segment.end:
-                pass
+    content_copy.segments = keeps
 
-            #check if there is anything that we've scanned previously
-            #that we need to keep before skipping this segment
-            
-            if float(segment.start.total_seconds()) != float(keep_start):
-                print "we have a segment to keep... %s != %s" % (segment.start.total_seconds(), keep_start)
-
-                keep_end = segment.start.total_seconds()
-                print keep_end
-                cur_duration = keep_end - keep_start
-
-                dest_part = make_destination(destination, part, extension, cur_tags)
-                dest_parts.append(dest_part)
-
-                #extract_segment(source, destination, extension, keep_start, cur_duration, bitrate, part, dest_parts)
-                extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extension)
-                
-
-            if segment.end:
-                skip_duration = segment.end.total_seconds() - segment.start.total_seconds()
-                #update these values
-                keep_start = segment.end.total_seconds()
-                
-            keep_end = None
-            
-            #make a copy of Content object
-            #update the position for all subsequent segments and marks
-            matched_current = False
-            for copy_segment in content_copy.segments[:]:
-                #this only updates the segments... 
-                #not the mark_list or the title_list
-                copy_segment.json_source = destination_json
-                copy_segment.filename = os.path.basename(final_dest)
-                if (copy_segment.title == segment.title):
-                    #print "Matched: ", copy_segment.title
-                    matched_current = True
-                    content_copy.segments.remove(copy_segment)
-                elif matched_current:
-                    #print "Updating: ", copy_segment.title, " Removing: ", skip_duration
-                    #print "Original start: ", copy_segment.start.position
-                    new_start = copy_segment.start.total_seconds() - skip_duration
-                    copy_segment.start.position = new_start * 1000
-                    #print "New start: ", copy_segment.start.position
-                    if copy_segment.end:
-                        new_end = copy_segment.end.total_seconds() - skip_duration
-                        copy_segment.end.position = new_end * 1000
-
-            #don't want to do this:
-            #duration = duration - skip_duration
-            
-            print ""
-            part += 1
-            #reset these
-            cur_tags = []
-
-
-    if keep_match:
-        #if the last segment was a keep_match,
-        #make sure we extract the last one:
-
-
-        if segment.end:
-            keep_end = segment.end.total_seconds()
-        else:
-            keep_end = duration
-
-        print keep_end
-        cur_duration = keep_end - keep_start
-            
-        dest_part = make_destination(destination, part, extension, cur_tags)
-        dest_parts.append(dest_part)
-
-        extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extension)
-        #extract_segment(source, destination, extension, keep_start, cur_duration, bitrate, part, dest_parts)                
 
 
     #now join all of the parts back together:

@@ -151,11 +151,17 @@ def find_json(item, limit_by_name=False, debug=False):
         #found more than one
         logging.debug("find_json: found many: %s" % matches)
 
-        #if limit by name was not specified as true,
+        #even if limit by name was not specified as true,
         #in the case of multiple matches,
         #it may still make sense to try to match by name
         #if no match, then it's still possible to return the last one
         found = False
+        name = ''
+        p = Path(item)
+        #maybe this should be checked for directories too???
+        if p.type() != "Directory":
+            name = to_tag(p.name)
+            
         if name: 
             for match in matches:
                 if re.search(name, unicode(match)):

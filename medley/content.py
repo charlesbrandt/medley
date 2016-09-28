@@ -759,7 +759,7 @@ class SimpleContent(object):
         self.added = ''
         self.visited = ''
 
-        #aka sources?
+        #aka sources? aka links?
         self.sites = []
 
         self.people = []
