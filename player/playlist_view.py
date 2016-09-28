@@ -7,7 +7,9 @@ from shared import all_contents, configs
 from medley.content import Content, Mark, import_content
 from medley.playlist import Playlist
 from medley.helpers import find_json, load_json
-#from medley.helpers import find_json, make_json_path, load_json
+from medley.helpers import get_media_properties
+from medley.slice_media import slice_media
+
 
 from moments.path import Path
 from moments.launch import file_browse
@@ -1341,16 +1343,12 @@ class ExportDialog(QtGui.QDialog):
         self.cur_dir.setText(self.content.path)
         grid.addWidget(self.cur_dir, 2, 1)
 
-        siteLabel = QtGui.QLabel("Site Name:")        
-        grid.addWidget(siteLabel, 3, 0)
-        self.siteEdit = QtGui.QLineEdit()
-        grid.addWidget(self.siteEdit, 3, 1)
+        extensionLabel = QtGui.QLabel("Extension:")        
+        grid.addWidget(extensionLabel, 3, 0)
+        self.extensionEdit = QtGui.QLineEdit()
+        self.extensionEdit.setText("webm")
+        grid.addWidget(self.extensionEdit, 3, 1)
 
-        titleLabel = QtGui.QLabel("Page Title:")        
-        grid.addWidget(titleLabel, 4, 0)
-        self.titleEdit = QtGui.QLineEdit()
-        grid.addWidget(self.titleEdit, 4, 1)
-         
         self.status = QtGui.QLabel("")
         grid.addWidget(self.status, 5, 0, 1, 2)
 
@@ -1359,25 +1357,6 @@ class ExportDialog(QtGui.QDialog):
         grid.addWidget(export, 6, 1)
         
         self.setLayout(grid)
-
-        
-        ## self.layout = QtGui.QVBoxLayout()
-        ## self.text = QtGui.QPlainTextEdit()
-        ## self.text.setPlainText(parent.content)
-        ## self.layout.addWidget(self.text)
-
-        ## self.row = QtGui.QHBoxLayout()
-
-        ## cancel_button = QtGui.QPushButton("Cancel")
-        ## self.row.addWidget(cancel_button)
-        ## ok_button = QtGui.QPushButton("OK")
-        ## self.row.addWidget(ok_button)
-
-        ## self.layout.addLayout(self.row)
-
-        ## self.setLayout(self.layout)
-        ## ok_button.clicked.connect(self.accept)
-        ## cancel_button.clicked.connect(self.reject)
 
 
     def openDirectoryDialog(self):
@@ -1394,8 +1373,22 @@ class ExportDialog(QtGui.QDialog):
 
         button = self.sender()
         if isinstance(button, QtGui.QPushButton):
+            source = os.path.join(self.content.path, self.content.filename)
+
             #self.status.setText("You pressed %s!" % button.text())
-            pass
+            properties = get_media_properties(source)
+            duration = properties[1]
+            bitrate = properties[2]
+            bitstr = "%sk" % bitrate
+            print bitstr
+
+            extension = self.extensionEdit.text()
+
+            destination = None
+            slice_media(source, destination, keep_tags=['\+'], duration=duration, bitrate=bitstr, extension=extension)
+
+            #slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=None, bitrate='6M', extension='webm', make_separate=True, offset=0, drift=1, audio_only=False)
+            
 
         
 class TitlesWidget(QtGui.QWidget):
