@@ -1316,6 +1316,87 @@ class EditTitlesDialog(QtGui.QDialog):
         ok_button.clicked.connect(self.accept)
         cancel_button.clicked.connect(self.reject)
 
+
+class ExportDialog(QtGui.QDialog):
+    """
+    subclass QDialog:
+    http://srinikom.github.io/pyside-docs/PySide/QtGui/QDialog.html#PySide.QtGui.QDialog
+    """
+    def __init__(self, parent=None):
+        super(ExportDialog, self).__init__(parent)
+        self.setWindowTitle("Export Clips!")
+        self.setModal(True)
+
+        self.content = parent.content
+
+        grid = QtGui.QGridLayout()
+        grid.setSpacing(10)        
+
+        #http://www.blog.pythonlibrary.org/2013/04/16/pyside-standard-dialogs-and-message-boxes/
+        dirDialogBtn =  QtGui.QPushButton("Choose Destination")
+        dirDialogBtn.clicked.connect(self.openDirectoryDialog)
+        grid.addWidget(dirDialogBtn, 2, 0)
+
+        self.cur_dir = QtGui.QLineEdit()
+        self.cur_dir.setText(self.content.path)
+        grid.addWidget(self.cur_dir, 2, 1)
+
+        siteLabel = QtGui.QLabel("Site Name:")        
+        grid.addWidget(siteLabel, 3, 0)
+        self.siteEdit = QtGui.QLineEdit()
+        grid.addWidget(self.siteEdit, 3, 1)
+
+        titleLabel = QtGui.QLabel("Page Title:")        
+        grid.addWidget(titleLabel, 4, 0)
+        self.titleEdit = QtGui.QLineEdit()
+        grid.addWidget(self.titleEdit, 4, 1)
+         
+        self.status = QtGui.QLabel("")
+        grid.addWidget(self.status, 5, 0, 1, 2)
+
+        export = QtGui.QPushButton('Export', self)
+        export.clicked.connect(self.export_clips)
+        grid.addWidget(export, 6, 1)
+        
+        self.setLayout(grid)
+
+        
+        ## self.layout = QtGui.QVBoxLayout()
+        ## self.text = QtGui.QPlainTextEdit()
+        ## self.text.setPlainText(parent.content)
+        ## self.layout.addWidget(self.text)
+
+        ## self.row = QtGui.QHBoxLayout()
+
+        ## cancel_button = QtGui.QPushButton("Cancel")
+        ## self.row.addWidget(cancel_button)
+        ## ok_button = QtGui.QPushButton("OK")
+        ## self.row.addWidget(ok_button)
+
+        ## self.layout.addLayout(self.row)
+
+        ## self.setLayout(self.layout)
+        ## ok_button.clicked.connect(self.accept)
+        ## cancel_button.clicked.connect(self.reject)
+
+
+    def openDirectoryDialog(self):
+        """
+        Opens a dialog to allow user to choose a directory
+        """
+        flags = QtGui.QFileDialog.DontResolveSymlinks | QtGui.QFileDialog.ShowDirsOnly
+        d = directory = QtGui.QFileDialog.getExistingDirectory(self, "Open Directory", self.content.path, flags)
+        self.cur_dir.setText(d)
+
+
+    def export_clips(self):
+        #print "Making Page here!!!!"
+
+        button = self.sender()
+        if isinstance(button, QtGui.QPushButton):
+            #self.status.setText("You pressed %s!" % button.text())
+            pass
+
         
 class TitlesWidget(QtGui.QWidget):
     """
@@ -1370,13 +1451,39 @@ class TitlesWidget(QtGui.QWidget):
         detailsAction.triggered.connect(self.content_details)
         titles_toolbar.addAction(detailsAction)
 
-        editAction = QtGui.QAction(QtGui.QIcon('images/edit.png'), 'Show edit in console', self)
+        editAction = QtGui.QAction(QtGui.QIcon('images/edit.png'), 'Show edit titles window', self)
         editAction.triggered.connect(self.bulk_edit_titles)
         titles_toolbar.addAction(editAction)
+
+        exportAction = QtGui.QAction(QtGui.QIcon('images/export.png'), 'Show export titles window', self)
+        exportAction.triggered.connect(self.export_clips)
+        titles_toolbar.addAction(exportAction)
 
         self.layout.addWidget(titles_toolbar)
 
         self.setLayout(self.layout)
+
+    def export_clips(self):
+        if self.content:
+            
+            export = ExportDialog(self)
+            #export.show()
+            #make it blocking:
+            export.exec_()
+
+            if export.result() == "Accepted":
+                print "make it happen"
+            else:
+                print "nope!"
+
+            self.sync()
+
+        else:
+            print "NO CONTENT assigned to self: %s" % self.content
+            print "can't export!"
+            print
+            
+
 
     def bulk_edit_titles(self):
         if self.content:

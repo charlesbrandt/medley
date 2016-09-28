@@ -361,7 +361,7 @@ def grab_frame(movie_p, position, destination=None, debug=False):
         destination = os.path.join(parent, '1.jpg')
         
     #command1 = "ffmpeg -i %s" % (movie_p)
-    command1 = "avconv -i %s" % (movie_p)
+    #command1 = "avconv -i %s" % (movie_p)
     #command1 = "ffmpeg -ss %s -i %s -t 1 -s 480x300 -f image2 imagefile.jpg" % (position, movie_p)
     #command1 = "avconv -ss %s -i %s -t 1 -f image2 1.jpg" % (position, movie_p)
     command1 = "avconv -ss %s -i %s -t 1 -f image2 %s" % (position, movie_p, destination)
