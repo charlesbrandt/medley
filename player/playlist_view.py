@@ -1,4 +1,5 @@
 import json, re, os
+from threading import Thread
 from PySide import QtGui, QtCore
 
 from shared import all_contents, configs
@@ -1349,12 +1350,39 @@ class ExportDialog(QtGui.QDialog):
         self.extensionEdit.setText("webm")
         grid.addWidget(self.extensionEdit, 3, 1)
 
-        self.status = QtGui.QLabel("")
-        grid.addWidget(self.status, 5, 0, 1, 2)
+        keepLabel = QtGui.QLabel("Keep Tags:")        
+        grid.addWidget(keepLabel, 4, 0)
+        self.keepEdit = QtGui.QLineEdit()
+        self.keepEdit.setText("\+,")
+        grid.addWidget(self.keepEdit, 4, 1)
 
-        export = QtGui.QPushButton('Export', self)
-        export.clicked.connect(self.export_clips)
-        grid.addWidget(export, 6, 1)
+        audioLabel = QtGui.QLabel("Audio only?:")        
+        grid.addWidget(audioLabel, 5, 0)
+        self.audioOnly = QtGui.QCheckBox()
+        grid.addWidget(self.audioOnly, 5, 1)
+
+        separateLabel = QtGui.QLabel("Make separate?:")        
+        grid.addWidget(separateLabel, 6, 0)
+        self.makeSeparate = QtGui.QCheckBox()
+        state = QtCore.Qt.CheckState(1)
+        print state
+        self.makeSeparate.setCheckState(QtCore.Qt.Checked)
+        grid.addWidget(self.makeSeparate, 6, 1)
+
+        ## self.status = QtGui.QLabel("")
+        ## grid.addWidget(self.status, 5, 0, 1, 2)
+
+        ## export = QtGui.QPushButton('Export', self)
+        ## export.clicked.connect(self.export_clips)
+        ## grid.addWidget(export, 6, 1)
+
+        cancel_button = QtGui.QPushButton("Cancel")
+        cancel_button.clicked.connect(self.reject)
+        grid.addWidget(cancel_button, 7, 0)
+
+        export_button = QtGui.QPushButton("Export")
+        export_button.clicked.connect(self.accept)
+        grid.addWidget(export_button, 7, 1)
         
         self.setLayout(grid)
 
@@ -1367,27 +1395,26 @@ class ExportDialog(QtGui.QDialog):
         d = directory = QtGui.QFileDialog.getExistingDirectory(self, "Open Directory", self.content.path, flags)
         self.cur_dir.setText(d)
 
+        
+    ## #this functionality has been moved to the parent after dialog completes
+    ## def export_clips(self):
+    ##     button = self.sender()
+    ##     if isinstance(button, QtGui.QPushButton):
+    ##         source = os.path.join(self.content.path, self.content.filename)
 
-    def export_clips(self):
-        #print "Making Page here!!!!"
+    ##         #self.status.setText("You pressed %s!" % button.text())
+    ##         properties = get_media_properties(source)
+    ##         duration = properties[1]
+    ##         bitrate = properties[2]
+    ##         bitstr = "%sk" % bitrate
+    ##         print bitstr
 
-        button = self.sender()
-        if isinstance(button, QtGui.QPushButton):
-            source = os.path.join(self.content.path, self.content.filename)
+    ##         extension = self.extensionEdit.text()
 
-            #self.status.setText("You pressed %s!" % button.text())
-            properties = get_media_properties(source)
-            duration = properties[1]
-            bitrate = properties[2]
-            bitstr = "%sk" % bitrate
-            print bitstr
+    ##         destination = None
+    ##         slice_media(source, destination, keep_tags=['\+'], duration=duration, bitrate=bitstr, extension=extension)
 
-            extension = self.extensionEdit.text()
-
-            destination = None
-            slice_media(source, destination, keep_tags=['\+'], duration=duration, bitrate=bitstr, extension=extension)
-
-            #slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=None, bitrate='6M', extension='webm', make_separate=True, offset=0, drift=1, audio_only=False)
+    ##         #slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=None, bitrate='6M', extension='webm', make_separate=True, offset=0, drift=1, audio_only=False)
             
 
         
@@ -1464,8 +1491,35 @@ class TitlesWidget(QtGui.QWidget):
             #make it blocking:
             export.exec_()
 
-            if export.result() == "Accepted":
+            #print "RESULT: ", export.result()
+
+            if export.result():
                 print "make it happen"
+                source = os.path.join(self.content.path, self.content.filename)
+
+                #self.status.setText("You pressed %s!" % button.text())
+                properties = get_media_properties(source)
+                duration = properties[1]
+                bitrate = properties[2]
+                bitstr = "%sk" % bitrate
+                print "Bitrate: ", bitstr
+
+                extension = export.extensionEdit.text()
+                audio_only = export.audioOnly.isChecked()
+                make_separate = export.makeSeparate.isChecked()
+
+                keep_string = export.keepEdit.text()
+                keep_tags = keep_string.split(',')
+                print "Keep tags: ", keep_tags
+
+                
+                destination = None
+                #slice_media(source, destination, keep_tags=['\+'], duration=duration, bitrate=bitstr, extension=extension, make_separate=make_separate, audio_only=audio_only)
+                thread = Thread( target=slice_media, args=(source,), kwargs={'destination':destination, 'keep_tags':keep_tags, 'duration':duration, 'bitrate':bitstr, 'extension':extension, 'make_separate':make_separate, 'audio_only':audio_only} )
+                #might not get any feedback here, but hopefully keeps UI active
+                thread.start()
+                    
+                #slice_media(source, destination, keep_tags=keep_tags, duration=duration, bitrate=bitstr, extension=extension, make_separate=make_separate, audio_only=audio_only)
             else:
                 print "nope!"
 

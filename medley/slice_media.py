@@ -136,18 +136,23 @@ def look_for_keeps(content, keep_tags, skip_tags):
 
     return keeps
 
-def check_segment_end(segment):
+def check_segment_end(segment, duration):
     """
     not all segments have an end set...
     helper to check for that without concern
+
+    duration should be passed in to handle no segment end
     """
-    end = -1
+    end = duration
+    #TODO: What about no end on segment?
+    # get end of content (total length)
     if segment.end:
         end = segment.end.total_seconds()
+        
 
     return end
 
-def make_segment_groups(keeps, make_separate):
+def make_segment_groups(keeps, make_separate, duration):
     #depending on make_separate
     #if true, we want to create every keep segment individually
     #if not, we want to try to combine adjacent segments to minimize jump cuts
@@ -160,7 +165,7 @@ def make_segment_groups(keeps, make_separate):
     else:
         cur_group = [ keeps[0] ]
 
-        previous_end = check_segment_end(keeps[0])
+        previous_end = check_segment_end(keeps[0], duration)
 
         for item in keeps[1:]:
             if item.start.total_seconds() == previous_end:
@@ -169,11 +174,11 @@ def make_segment_groups(keeps, make_separate):
                 groups.append(cur_group)
                 cur_group = [ item, ]
 
-            previous_end = check_segment_end(item)
+            previous_end = check_segment_end(item, duration)
 
     return groups    
 
-def extract_group(group, source, destination, extension, bitrate, offset=0, drift=1, audio_only=False):
+def extract_group(group, source, destination, extension, bitrate, duration, offset=0, drift=1, audio_only=False):
     """
     take a list of one or more content.segments
     figure out the start and end
@@ -196,7 +201,7 @@ def extract_group(group, source, destination, extension, bitrate, offset=0, drif
         elif keep_start > cur_start_adjusted:
             keep_start = cur_start_adjusted
 
-        cur_end_adjusted = check_segment_end(segment) * drift + offset
+        cur_end_adjusted = check_segment_end(segment, duration) * drift + offset
         if keep_end is None:
             keep_end = cur_end_adjusted
         #usually segments should be in order, but just in case:
@@ -297,12 +302,12 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     keeps = look_for_keeps(content, keep_tags, skip_tags)
 
     if keeps:
-        groups = make_segment_groups(keeps, make_separate)
+        groups = make_segment_groups(keeps, make_separate, duration)
         #now we know how things are grouped (even if everything is separate)
         
 
         for group in groups:
-            dest_part = extract_group(group, source, destination, extension, bitrate, offset, drift, audio_only=audio_only)
+            dest_part = extract_group(group, source, destination, extension, bitrate, duration, offset, drift, audio_only=audio_only)
 
             dest_parts.append(dest_part)
     else:
@@ -328,7 +333,7 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
         if cur_pos != segment.start.total_seconds():
             skip_duration += segment.start.total_seconds() - cur_pos
 
-        cur_pos = check_segment_end(segment)
+        cur_pos = check_segment_end(segment, duration)
 
         #update the segment
         new_start = segment.start.total_seconds() - skip_duration
