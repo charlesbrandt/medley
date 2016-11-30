@@ -279,9 +279,9 @@ def get_media_properties(movie_p, debug=False):
     expects a full path to a media item
     use ffmpeg/avconv to query media for dimensions
 
-    return a string representation of the size
+    return a string representation of the dimensions (size) (not file size)
     the duration in seconds
-    and the file size
+    and the bitrate
 
     sudo apt-get install libav-tools
     """
@@ -339,7 +339,8 @@ def get_media_properties(movie_p, debug=False):
         print "\n\n"
         print "Warning! Could not parse output from avconv!!"
         print "Media file probably corrupt"
-        print lines
+        for line in lines:
+            print line
 
         #optional to raise an error here:
         #raise ValueError, "Invalid media. See above output"
