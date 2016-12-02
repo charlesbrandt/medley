@@ -2208,7 +2208,7 @@ class Content(SimpleContent):
 
         for item in options:
             #dimensions = get_media_dimensions(item)
-            dimensions, duration = get_media_properties(item)
+            dimensions, duration, bitrate = get_media_properties(item)
             self.end = Mark(seconds=duration)
             #print self.end
             if debug:

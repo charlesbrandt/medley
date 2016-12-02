@@ -295,7 +295,7 @@ def get_media_properties(movie_p, debug=False):
     output = process.communicate()[1]
 
     #print output
-    size = None
+    dimensions = None
     seconds = None
     bitrate = None
     
@@ -309,16 +309,16 @@ def get_media_properties(movie_p, debug=False):
                 parts = line.split(' ')
                 if debug:
                     print "FOUND: %s" % parts
-                #size = parts[-1]
+                #dimensions = parts[-1]
                 for p in parts:
                     if re.search('x', p) and len(p.split('x')) == 2:
-                        size = p
+                        dimensions = p
 
                 #get rid of trailing commas:
-                if re.search(',$', size):
-                    size = size[:-1]
+                if re.search(',$', dimensions):
+                    dimensions = dimensions[:-1]
                     
-                #size = parts[-11]
+                #dimensions = parts[-11]
         elif re.search('Duration', line):
             #print "DURATION!!"
             #print line
@@ -348,8 +348,8 @@ def get_media_properties(movie_p, debug=False):
     #could return filesize if needed (content.update_dimensions handles this)
     #filesize = os.path.getsize(movie_p)
 
-    #print size
-    return size, seconds, bitrate
+    #print dimensions
+    return dimensions, seconds, bitrate
 
 def grab_frame(movie_p, position, destination=None, debug=False):
     """
