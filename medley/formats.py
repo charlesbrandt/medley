@@ -13,6 +13,14 @@ but a single source could have many marks associated with it (no concept of this
 load in the tab delimited bookmark exported by Mort Player (on Android)
 
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
+from past.utils import old_div
 
 import os, sys, codecs, re
 import logging
@@ -20,11 +28,11 @@ import logging
 from moments.timestamp import Timestamp
 from moments.path import Path
 
-from content import Mark, Content, MarkList, import_content
-from helpers import make_json_path
+from .content import Mark, Content, MarkList, import_content
+from .helpers import make_json_path
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 class M3U(list):
     """
@@ -54,9 +62,9 @@ class M3U(list):
             source = self.source
 
         if source is None:
-            raise ValueError, "Need a source sooner or later: %s" % source
+            raise ValueError("Need a source sooner or later: %s" % source)
         
-        print "opening: %s" % source
+        print("opening: %s" % source)
         #for reading unicode
         f = codecs.open(source, 'r', encoding='utf-8')
 
@@ -91,7 +99,7 @@ class M3U(list):
                         time = fulltime.split('=')[1]
 
                         bytes_per_second = 24032.0
-                        ms = (float(bytes) / bytes_per_second) * 1000
+                        ms = (old_div(float(bytes), bytes_per_second)) * 1000
                         ms = int(ms)
 
                         ## if int(time) < 0:
@@ -111,7 +119,7 @@ class M3U(list):
                         ##     ms = int(time) * 1000
                         
                     else:
-                        raise ValueError, "Unknown number of sub parts in bookmarks: %s" % sub_parts
+                        raise ValueError("Unknown number of sub parts in bookmarks: %s" % sub_parts)
 
                     marks_options.append( [ int(ms), name, bytes ] )
             else:
@@ -142,7 +150,7 @@ class M3U(list):
                     if look_for_meta:
                         content.load()
                 else:
-                    print "Skipping: %s" % location
+                    print("Skipping: %s" % location)
                     
         f.close()
 
@@ -157,9 +165,9 @@ class M3U(list):
             destination = self.source
 
         if destination is None:
-            raise ValueError, "Need a destination sooner or later: %s" % destination
+            raise ValueError("Need a destination sooner or later: %s" % destination)
         
-        print "opening: %s" % destination
+        print("opening: %s" % destination)
         f = codecs.open(destination, 'w', encoding='utf-8')
 
         m3u = u"#EXTM3U\r\n"
@@ -185,7 +193,7 @@ class M3U(list):
                 #either of these should work as long as no paths
                 #have been converted to strings along the way
                 #m3u += u"#EXTINF:{0}\r\n".format(title)
-                m3u += u"#EXTINF:%s,%s - %s\r\n" % (unicode(length), unicode(artist), unicode(title))
+                m3u += u"#EXTINF:%s,%s - %s\r\n" % (str(length), str(artist), str(title))
                 
                 if bookmarks:
                     m3u += "#EXTVLCOPT:bookmarks=%s\r\n" % bookmarks
@@ -199,7 +207,7 @@ class M3U(list):
 
                 m3u += u"\r\n"
             else:
-                print "Ignoring. Item not found: %s" % path
+                print("Ignoring. Item not found: %s" % path)
 
         f.write(m3u)
         f.close()
@@ -208,12 +216,12 @@ class M3U(list):
 
 
 
-class TextIndex():
+class TextIndex(object):
     
     #previously Marks.save_marks
     #outputs a text list of media and track lists
     def save_marks(self, files):
-        for key in files.keys():
+        for key in list(files.keys()):
             files[key].sort()
             pre_parts = key.split('/') 
             parts = pre_parts[-1].split('.')
@@ -225,7 +233,7 @@ class TextIndex():
 
             #concise version
             for item in files[key]:
-                print item
+                print(item)
                 [ ms1, hours, minutes, seconds, name, created, location ] = item
                 f.write("%02d:%02d:%02d %s\n" % (hours, minutes, seconds, name))
 
@@ -282,9 +290,9 @@ class MortplayerBookmarks(list):
             source = self.source
 
         if source is None:
-            raise ValueError, "Need a source sooner or later: %s" % source
+            raise ValueError("Need a source sooner or later: %s" % source)
         
-        print "opening: %s" % source
+        print("opening: %s" % source)
         #for reading unicode
         f = codecs.open(source, 'r', encoding='utf-8')
 
@@ -292,7 +300,7 @@ class MortplayerBookmarks(list):
             (location, number, name, ms1, end, utime) = line.strip().split('\t')
             if number == "1":
                 created = Timestamp()
-                created.from_epoch(float(utime) / 1000)
+                created.from_epoch(old_div(float(utime), 1000))
                 #print "*%s %s" % (created, name)
 
                 ## #print (location, number, name, ms1, end, utime)
@@ -323,7 +331,7 @@ class MortplayerBookmarks(list):
     def save(self, destination='temp.mpb'):
         """
         """
-        print "saving to: %s" % destination
+        print("saving to: %s" % destination)
         #for writing unicode
         f = codecs.open(destination, 'w', encoding='utf-8')
 
@@ -342,7 +350,7 @@ class MortplayerBookmarks(list):
         f_marks = {}
         self.group_marks_by_file(f_marks)
         m3u = "#EXTM3U\r\n"
-        for source in f_marks.keys():
+        for source in list(f_marks.keys()):
             if (verify and os.path.exists(source)) or (not verify):
                 #obj = self.get_object(i)
                 #could use an ID3 library to load this information here:
@@ -360,7 +368,7 @@ class MortplayerBookmarks(list):
 
                 m3u += "\r\n"
             else:
-                print "Ignoring. Item not found: %s" % source
+                print("Ignoring. Item not found: %s" % source)
 
         f = codecs.open(destination, 'w', encoding='utf-8')
         f.write(m3u)
@@ -374,14 +382,14 @@ class MortplayerBookmarks(list):
             self.load(source)
 
         if not len(self):
-            raise ValueError, "no marks to process: %s" % len(self)
+            raise ValueError("no marks to process: %s" % len(self))
 
         if files is None:
             files = {}
 
         for mark in self:
             location = mark.source
-            if files.has_key(location):
+            if location in files:
                 files[location].append(mark)
             else:
                 files[location] = [ mark ] 
@@ -402,9 +410,9 @@ class MortplayerBookmarks(list):
         e.g. filename, track title from ID3, etc)
 
         """
-        print "DEPRECATED: group_marks_by_tracks"
-        print "after self.group_by_file(),"
-        print "use: MarkList.group_by_tracks instead"
+        print("DEPRECATED: group_marks_by_tracks")
+        print("after self.group_by_file(),")
+        print("use: MarkList.group_by_tracks instead")
 
 
         if f_marks is None:
@@ -412,7 +420,7 @@ class MortplayerBookmarks(list):
 
         new_f_marks = {}
         
-        for key in f_marks.keys():
+        for key in list(f_marks.keys()):
             #could find default pattern and insert it here instead of "start"
             file_groups = [ ]
 
@@ -452,7 +460,7 @@ class MortplayerBookmarks(list):
                 else:
                     #probably just a description of some kind:
                     current_group.append( next_mark )
-                    print "Unmatched tag: %s" % next_mark.tag
+                    print("Unmatched tag: %s" % next_mark.tag)
 
             #don't forget last group found:
             file_groups.append(current_group)
@@ -508,13 +516,13 @@ class MortplayerBookmarks(list):
                         marks.load()
                         marks.group_marks_by_file(f_marks)
 
-                        print current_file
+                        print(current_file)
 
             #pluses = find_pluses(f_marks)
             files = f_marks
 
             matched = []
-            for key in files.keys():
+            for key in list(files.keys()):
                 for mark in files[key]:
                     if re.search('\+', mark.tag):
                         matched.append(mark)
@@ -539,7 +547,7 @@ class MortplayerBookmarks(list):
                     if log_check.search(f):
 
                         marks = from_mortplayer(current_file)
-                        print current_file
+                        print(current_file)
                         for mark in marks:
                             #print mark.source
                             parts = mark.source.split('/')
@@ -560,8 +568,8 @@ class MortplayerBookmarks(list):
                             prefix = '/mnt/sdcard/external_sd/podcasts/beats_in_space/'
                             new_source = os.path.join(prefix, year, date, correct_name)
                             if new_source != mark.source:
-                                print mark.source
-                                print new_source
+                                print(mark.source)
+                                print(new_source)
 
                             mark.source = new_source
 
@@ -592,11 +600,11 @@ class MortplayerBookmarks(list):
                         group_marks_by_file(marks, f_marks)
                         bookmark_found = True
                 if not bookmark_found:
-                    print "No bookmarks for: %s" % root
+                    print("No bookmarks for: %s" % root)
                     for f in files:
                         if text_check.search(f):
-                            print f
-                    print ""
+                            print(f)
+                    print("")
 
         return f_marks
 
@@ -641,9 +649,9 @@ class iPhoneBookmarks(list):
             source = self.source
 
         if source is None:
-            raise ValueError, "Need a source sooner or later: %s" % source
+            raise ValueError("Need a source sooner or later: %s" % source)
         
-        print "opening: %s" % source
+        print("opening: %s" % source)
         #for reading unicode
         f = codecs.open(source, 'r', encoding='utf-8')
 
@@ -688,7 +696,7 @@ class iPhoneBookmarks(list):
 
             else:
                 #other lines that we don't need to worry about:
-                print "Skipping line: %s" % line
+                print("Skipping line: %s" % line)
                 
             ## (location, number, name, ms1, end, utime) = line.strip().split('\t')
             ## if number == "1":
@@ -717,7 +725,7 @@ class iPhoneBookmarks(list):
 
         #return self
         #print groups
-        if len(groups.items()) == 2:
+        if len(list(groups.items())) == 2:
             return groups
         else:
             return groups
@@ -726,7 +734,7 @@ class iPhoneBookmarks(list):
     def save(self, destination='temp.mpb'):
         """
         """
-        print "saving to: %s" % destination
+        print("saving to: %s" % destination)
         #for writing unicode
         f = codecs.open(destination, 'w', encoding='utf-8')
 
@@ -775,7 +783,7 @@ class Converter(object):
         """
         if path is None:
             if self.path is None:
-                raise ValueError, "Need a filename to load from file"
+                raise ValueError("Need a filename to load from file")
             else:
                 path = self.path
 
@@ -803,8 +811,8 @@ class Converter(object):
                 try:
                     sl_pos = parts.index('-sl')
                 except:
-                    print "SL found, but incorrect format:"
-                    print e.render()
+                    print("SL found, but incorrect format:")
+                    print(e.render())
                     exit()
                 jumpstr = parts[sl_pos+1]
                 jumps = Jumps(jumpstr)
@@ -812,9 +820,9 @@ class Converter(object):
                 try:
                     source_file = parts[sl_pos+2]
                 except:
-                    print "no source file in parts: %s" % parts
-                    print line
-                    print
+                    print("no source file in parts: %s" % parts)
+                    print(line)
+                    print()
 
                 #get rid of surrounding quotes here
                 source_file = source_file.replace('"', '')
@@ -902,7 +910,7 @@ class Converter(object):
 
         tally = {}
 
-        print "Starting size: %s" % len(sources)
+        print("Starting size: %s" % len(sources))
 
         #at this point we will be losing any entry associated
         #in order to condense
@@ -917,13 +925,13 @@ class Converter(object):
             i.jumps.sort()
             key = i.as_key()
 
-            if tally.has_key(key):
+            if key in tally:
                 tally[key] += 1
             else:
                 tally[key] = 1
 
         #get the keys and values
-        items = tally.items()
+        items = list(tally.items())
 
         #convert top items to lists instead of default tuple returned by dict
         new_items = []
@@ -971,17 +979,17 @@ class Converter(object):
                             #update tally i in condensed
                             pos = condensed.index(i)
                             condensed[pos][1] += c[1]
-                            print "found subset: %s of: %s. current length: %s" % ( cset, iset, len(condensed))
+                            print("found subset: %s of: %s. current length: %s" % ( cset, iset, len(condensed)))
                             condensed.remove(c)
-                            print "new length: %s" % len(condensed)
+                            print("new length: %s" % len(condensed))
                             match = True
                         elif iset.issubset(cset):
                             #update tally i in condensed
                             pos = condensed.index(c)
                             condensed[pos][1] += i[1]
-                            print "found subset: %s of: %s. current length: %s" % ( iset, cset, len(condensed))
+                            print("found subset: %s of: %s. current length: %s" % ( iset, cset, len(condensed)))
                             condensed.remove(i)
-                            print "new length: %s" % len(condensed)
+                            print("new length: %s" % len(condensed))
                             match = True
                         else:
                             #print "times didn't match"
@@ -997,7 +1005,7 @@ class Converter(object):
                 pass
             
         items = condensed
-        print "After Condensing: %s" % len(items)
+        print("After Condensing: %s" % len(items))
 
         # see Items.sort()
 
@@ -1014,7 +1022,7 @@ class Converter(object):
         for i in new_items:
             items.append( i[1] )
 
-        print "After Sorting: %s" % len(items)
+        print("After Sorting: %s" % len(items))
 
         #re-assign the original entry with an item if we can
         #
@@ -1026,7 +1034,7 @@ class Converter(object):
                 pos = items.index(key)
                 items[pos] = [ i.path, i.jumps, i.entry ]
 
-        print "After Adding original entry back: %s" % len(items)
+        print("After Adding original entry back: %s" % len(items))
 
 
         #regenerate a new Sources object:
@@ -1040,7 +1048,7 @@ class Converter(object):
             destination.append(source)
 
         #should be smaller or the same if condensing and sorting is working:
-        print "Ending size: %s" % len(destination)
+        print("Ending size: %s" % len(destination))
 
         destination.update()
         return destination
@@ -1061,14 +1069,14 @@ class Converter(object):
         use from_entries, and condense_and_sort()
         """
         j = load_journal(path)
-        print len(j)
-        print j
+        print(len(j))
+        print(j)
         for i in j:
-            print i.render()
+            print(i.render())
 
         sources = self.from_entries(j, sources)
             
-        print len(sources)
+        print(len(sources))
         if sort:
             #condense and sort will change the order of an entry list
             new_sources = self.condense_and_sort(sources)
@@ -1084,13 +1092,13 @@ class Converter(object):
         use from_entries, and condense_and_sort()
         """
         j = load_journal(destination)
-        print len(j)
-        print j
+        print(len(j))
+        print(j)
 
         if skip_dupes:
             j.associate_data()
             for source in sources:
-                if not j.datas.has_key(str(source.path)+'\n\n'):
+                if str(source.path)+'\n\n' not in j.datas:
                     moment = source.as_moment()
                     moment.tags.union(tags)
                     j.update_entry(moment)

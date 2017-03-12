@@ -24,6 +24,7 @@ seems to be as simple as loading and re-saving a content object...
 not sure why some contexts are having difficulty
 wrong drive_dir supplied?
 """
+from __future__ import print_function
 
 import os, sys, codecs, re
 
@@ -32,7 +33,7 @@ from medley.content import Content
 from medley.playlist import Playlist
 
 def usage():
-    print __doc__
+    print(__doc__)
     
 def update_jsons(source):
     """
@@ -48,13 +49,13 @@ def update_jsons(source):
         for f in files:
             current_file = os.path.join(root, f)
             if json_check.search(f):
-                print
-                print current_file
+                print()
+                print(current_file)
                 result = load_json(current_file)
                 #if isinstance(result, dict) and result.has_key('segments'):
-                if isinstance(result, dict) and result.has_key('media'):
+                if isinstance(result, dict) and 'media' in result:
                     content = Content(current_file)
-                    print content.drive_dir
+                    print(content.drive_dir)
                     #for segment in content.segments:
                     #    print segment.json_source
                     #scan_content(content, cur_lists)
@@ -63,7 +64,7 @@ def update_jsons(source):
                     content.save()
 
                 else:
-                    print "Skipping: %s... not a Content object" % current_file
+                    print("Skipping: %s... not a Content object" % current_file)
 
                 #print result
                 #print 
@@ -91,7 +92,7 @@ if __name__ == '__main__':
             if not os.path.isdir(source):
                 source = os.path.basedir(source)
         else:
-            print "Couldn't find path: %s" % source
+            print("Couldn't find path: %s" % source)
             exit()
 
 

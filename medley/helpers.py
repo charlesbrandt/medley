@@ -8,6 +8,8 @@
 helper functions, often needed in multiple modules
 
 """
+from __future__ import print_function
+from builtins import str
 
 import os, json, codecs, re
 import logging
@@ -27,20 +29,20 @@ def load_json(source_file, create=False):
     if not os.path.exists(source_file):
         json_objects = {}
         if create:
-            print "CREATING NEW JSON FILE: %s" % source_file
+            print("CREATING NEW JSON FILE: %s" % source_file)
             json_file = codecs.open(source_file, 'w', encoding='utf-8', errors='ignore')
             #make sure there is something there for subsequent loads
             json_file.write(json.dumps(json_objects))
             json_file.close()
         else:
-            raise ValueError, "JSON file does not exist: %s" % source_file
+            raise ValueError("JSON file does not exist: %s" % source_file)
     else:
         json_file = codecs.open(source_file, 'r', encoding='utf-8', errors='ignore')
 
         try:
             json_objects = json.loads(json_file.read())
         except:
-            raise ValueError, "No JSON object could be decoded from: %s" % source_file
+            raise ValueError("No JSON object could be decoded from: %s" % source_file)
         json_file.close()
     return json_objects
 
@@ -62,7 +64,7 @@ def make_json_path(item):
     #making jsons named as tags to help normalize difficult characters
     json_name = "%s.json" % to_tag(name)
     #print json_name
-    return os.path.join(unicode(parent), json_name)
+    return os.path.join(str(parent), json_name)
 
 def find_jsons(item, limit_by_name=False, debug=False):
     """
@@ -90,30 +92,30 @@ def find_jsons(item, limit_by_name=False, debug=False):
             parent = p.parent()
             d = parent.load()
             if debug:
-                print "%s not a directory, using: %s" % (item, parent)
+                print("%s not a directory, using: %s" % (item, parent))
             
         matches = []
         for j in d.files:
             #if debug:
             #    print "Checking: %s" % j
-            if re.search('\.json$', unicode(j)):
+            if re.search('\.json$', str(j)):
                 if debug:
-                    print "matched json: %s" % j
+                    print("matched json: %s" % j)
 
-                match = os.path.join(unicode(parent), unicode(j))
+                match = os.path.join(str(parent), str(j))
                 #this should allow us to hone in on one
                 #if there is more than one media file in a directory
                 if name and limit_by_name:
-                    if re.search(name, unicode(j)):
+                    if re.search(name, str(j)):
                         matches.append(match)
                     else:
                         if debug:
-                            print "could not find %s in %s" % (name, unicode(j))
+                            print("could not find %s in %s" % (name, str(j)))
                 else:
                     matches.append(match)
 
         if debug:
-            print "Found the following: %s" % matches
+            print("Found the following: %s" % matches)
 
         return matches
     
@@ -164,14 +166,14 @@ def find_json(item, limit_by_name=False, debug=False):
             
         if name: 
             for match in matches:
-                if re.search(name, unicode(match)):
+                if re.search(name, str(match)):
                     found = match
 
         if found:
             logging.debug("find_json: matched name: %s" % found)
             return found
         else:
-            print "WARNING: find_json: more than one match found: %s" % matches
+            print("WARNING: find_json: more than one match found: %s" % matches)
             logging.debug("find_json: returning last: %s" % matches[-1])
             return matches[-1]
 
@@ -259,7 +261,7 @@ def get_media_dimensions(movie_p, debug=False):
                 #adjust accordingly
                 parts = line.split(' ')
                 if debug:
-                    print "FOUND: %s" % parts
+                    print("FOUND: %s" % parts)
                 #size = parts[-1]
                 for p in parts:
                     if re.search('x', p) and len(p.split('x')) == 2:
@@ -308,7 +310,7 @@ def get_media_properties(movie_p, debug=False):
                 #adjust accordingly
                 parts = line.split(' ')
                 if debug:
-                    print "FOUND: %s" % parts
+                    print("FOUND: %s" % parts)
                 #dimensions = parts[-1]
                 for p in parts:
                     if re.search('x', p) and len(p.split('x')) == 2:
@@ -336,11 +338,11 @@ def get_media_properties(movie_p, debug=False):
             pass
 
     if not seconds:
-        print "\n\n"
-        print "Warning! Could not parse output from avconv!!"
-        print "Media file probably corrupt"
+        print("\n\n")
+        print("Warning! Could not parse output from avconv!!")
+        print("Media file probably corrupt")
         for line in lines:
-            print line
+            print(line)
 
         #optional to raise an error here:
         #raise ValueError, "Invalid media. See above output"
@@ -405,7 +407,7 @@ def extract_zip(zip_file, debug=False):
         if not dest_dir in sources:
             sources.append(dest_dir)
         if debug:
-            print "Decompressing " + filename + " to " + dest_dir + "<br>"
+            print("Decompressing " + filename + " to " + dest_dir + "<br>")
         if not os.path.exists(dest_dir):
              os.makedirs(dest_dir)
 
@@ -423,10 +425,10 @@ def extract_zip(zip_file, debug=False):
 
 def load_cloud(cloud_name, cloud_file):
     if not cloud_file:
-        raise ValueError, "No cloud_file supplied: %s" % cloud_file
+        raise ValueError("No cloud_file supplied: %s" % cloud_file)
 
     if not os.path.exists(cloud_file):
-        raise ValueError, "Couldn't find cloud file: %s" % cloud_file
+        raise ValueError("Couldn't find cloud file: %s" % cloud_file)
     
     clouds = Journal(cloud_file)
 
@@ -435,7 +437,7 @@ def load_cloud(cloud_name, cloud_file):
             cur_cloud = clouds.tags(cloud_name)[0].data.split()
         else:
             cur_cloud = []
-            print "no clouds found for tag: %s in %s" % (cloud_name, cloud_file)
+            print("no clouds found for tag: %s in %s" % (cloud_name, cloud_file))
     return cur_cloud
 
 

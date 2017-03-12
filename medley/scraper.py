@@ -6,15 +6,21 @@ rather than using a class object with plugins (scraper-old.py)
 just making the main parts functions that can be imported...
 that should be much easier to use for other scripts that need them
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import chr
 
 import re, os, codecs, subprocess, time, sqlite3
 #import logging
 
 #urllib.retrieve:
-import urllib
-import urllib2
-import urlparse
-import cookielib
+import urllib.request, urllib.parse, urllib.error
+import urllib.request, urllib.error, urllib.parse
+import urllib.parse
+import http.cookiejar
 
 from moments.timestamp import Timestamp
 from moments.path import Path
@@ -25,9 +31,9 @@ except:
     try:
         import simplejson as json
     except:
-        raise ValueError, "NO JSON"
+        raise ValueError("NO JSON")
 
-from content import SimpleContent
+from .content import SimpleContent
 
 def download_image(url, destination_path, tags=[], alt_name="image", people=[], drive_dir=None, base_dir=None):
     """
@@ -38,10 +44,10 @@ def download_image(url, destination_path, tags=[], alt_name="image", people=[], 
     update name if needed
     """
     
-    print
-    print url
-    print "drive_dir", drive_dir
-    print "base_dir", base_dir
+    print()
+    print(url)
+    print("drive_dir", drive_dir)
+    print("base_dir", base_dir)
     #find original filename... should be in the url
     path_parts = url.split('/')
     suffix_parts = path_parts[-1].split('?')
@@ -60,28 +66,28 @@ def download_image(url, destination_path, tags=[], alt_name="image", people=[], 
     generics = ['original', 'temp', 'photo', 'image', 'picture']
     for option in generics:
         if re.match(option, name_parts[0], re.I):
-            print "Updating: %s to %s" % (file_name, alt_name)
+            print("Updating: %s to %s" % (file_name, alt_name))
             name_parts[0] = alt_name
 
     extension = name_parts[-1].lower()
     if not extension in [ 'jpg', 'jpeg', 'png', 'gif', 'tif' ]:
         #just give it something
-        print "Unrecognized extension: %s, adding .jpg" % (extension)
+        print("Unrecognized extension: %s, adding .jpg" % (extension))
         name_parts.append('jpg')
 
     file_name = '.'.join(name_parts)
 
     download = os.path.join(destination_path, "temp.image")
     if os.path.exists(download):
-        print
-        print url
-        print download
-        raise ValueError, "Temp image already exists. Not overwriting"
+        print()
+        print(url)
+        print(download)
+        raise ValueError("Temp image already exists. Not overwriting")
 
     #print download
 
     #go ahead and download it now:
-    urllib.urlretrieve(url, download)
+    urllib.request.urlretrieve(url, download)
 
     download_size = os.path.getsize(download)
 
@@ -100,7 +106,7 @@ def download_image(url, destination_path, tags=[], alt_name="image", people=[], 
             dest_size = os.path.getsize(new_dest)
             if download_size == dest_size:
                 #if its the same simply delete the temp one...
-                print "Already had: %s" % url
+                print("Already had: %s" % url)
                 os.remove(download)
                 existing = False
                 duplicate = True
@@ -130,7 +136,7 @@ def download_image(url, destination_path, tags=[], alt_name="image", people=[], 
     if base_dir and drive_dir:
         content.base_dir = base_dir
     elif base_dir:
-        raise ValueError, "If specifying a base_dir (%s), specify a drive_dir (%s) too!" % (drive_dir, base_dir)
+        raise ValueError("If specifying a base_dir (%s), specify a drive_dir (%s) too!" % (drive_dir, base_dir))
     else:
         content.base_dir = ""
 
@@ -172,13 +178,13 @@ def download_images(urls, destination_path, tags=[], alt_name="image", people=[]
 
 def get_all_cookies(cookie_db):
     CONTENTS = "host, path, isSecure, expiry, name, value"
-    cj = cookielib.LWPCookieJar()       # This is a subclass of FileCookieJar that has useful load and save methods
+    cj = http.cookiejar.LWPCookieJar()       # This is a subclass of FileCookieJar that has useful load and save methods
     con = sqlite3.connect(cookie_db)
     cur = con.cursor()
     sql = "SELECT {c} FROM moz_cookies".format(c=CONTENTS)
     cur.execute(sql)
     for item in cur.fetchall():
-        c = cookielib.Cookie(0, item[4], item[5],
+        c = http.cookiejar.Cookie(0, item[4], item[5],
             None, False,
             item[0], item[0].startswith('.'), item[0].startswith('.'),
             item[1], False,
@@ -203,7 +209,7 @@ def download_alt(url, dest):
 
 
     # create a password manager
-    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+    password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
 
     # Add the username and password.
     # If we knew the realm, we could use it instead of None.
@@ -212,10 +218,10 @@ def download_alt(url, dest):
               user='username',
               passwd='password')
 
-    handler = urllib2.HTTPBasicAuthHandler(password_mgr)
+    handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
 
     # create "opener" (OpenerDirector instance)
-    opener = urllib2.build_opener(handler, urllib2.HTTPCookieProcessor(cj))
+    opener = urllib.request.build_opener(handler, urllib.request.HTTPCookieProcessor(cj))
 
     # use the opener to fetch a URL
     #opener.open(a_url)
@@ -228,7 +234,7 @@ def download_alt(url, dest):
     f = open(dest, 'w')
     meta = u.info()
     file_size = int(meta.getheaders("Content-Length")[0])
-    print "Downloading: %s Bytes: %s" % (url, file_size)
+    print("Downloading: %s Bytes: %s" % (url, file_size))
 
     file_size_dl = 0
     block_sz = 8192
@@ -241,7 +247,7 @@ def download_alt(url, dest):
         f.write(buffer)
         status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
         status = status + chr(8)*(len(status)+1)
-        print status,
+        print(status, end=' ')
 
     f.close()
 
@@ -254,7 +260,7 @@ def download(url, dest):
     #http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python
     #urllib.urlretrieve ("http://www.example.com/songs/mp3.mp3", "mp3.mp3")
 
-    urllib.urlretrieve(url, dest)
+    urllib.request.urlretrieve(url, dest)
 
 
 def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloads/', filename=None, ping_page=None, ping_interval=None):
@@ -298,7 +304,7 @@ def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloa
     for f in post_files:
         if f not in pre_files:
             new_files.append(f)
-    print "found these new files: %s" % new_files
+    print("found these new files: %s" % new_files)
     assert len(new_files) < 3 and len(new_files) > 0
 
     for f in new_files:
@@ -328,7 +334,7 @@ def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloa
 
             if ping_page and ping_interval:
                 if now.datetime > ping_start.future(minutes=ping_interval).datetime:
-                    print "time to ping! %s, %s" % (now, ping_page)
+                    print("time to ping! %s, %s" % (now, ping_page))
                     driver.get(ping_page)
                     ping_start = Timestamp()
             
@@ -338,7 +344,7 @@ def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloa
             if new_size != size:
                 if stalled:
                     now = Timestamp()
-                    print "download resumed: %s" % now
+                    print("download resumed: %s" % now)
 
                 stalled = False
                 size = new_size
@@ -350,7 +356,7 @@ def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloa
                     #check if stall_start was 25 minutes ago
 
                     if now.datetime > stall_start.future(minutes=25).datetime:
-                        print "stall threshold met. deleting: %s" % dest
+                        print("stall threshold met. deleting: %s" % dest)
                         dpartp.remove()
                         dpath.remove()
                         #if we get here, we know it didn't work
@@ -367,7 +373,7 @@ def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloa
                 else:
                     stalled = True
                     stall_start = Timestamp()
-                    print "download stalled since: %s" % stall_start
+                    print("download stalled since: %s" % stall_start)
     if not skipped:
         return filename
     else:
@@ -393,11 +399,11 @@ def download_with_browser(driver, link, destination_root, browser_dl_root='/User
     if not filename is True:
         downloaded_item = os.path.join(browser_dl_root, filename)
         dest = os.path.join(destination_root, filename)
-        print "Moving: %s to %s" % (downloaded_item, dest)
+        print("Moving: %s to %s" % (downloaded_item, dest))
         move_download(downloaded_item, dest)
         return dest
     else:
-        print "No file downloaded: %s" % filename
+        print("No file downloaded: %s" % filename)
         return False
 
 def save_current(driver, destination='./', page_id=1, prefix="site_name"):

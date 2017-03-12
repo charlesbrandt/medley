@@ -12,6 +12,7 @@
 #
 
 """
+from __future__ import print_function
 
 #import os, codecs, re, shutil
 import os
@@ -177,7 +178,7 @@ class Grabber(QtGui.QWidget):
             QtCore.QTimer.singleShot(0, self.handle_download)
         else:
             self.status.setText("All done!")
-            print "All done!"
+            print("All done!")
         
 
 ## class AppWindow(QtGui.QMainWindow):

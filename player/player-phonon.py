@@ -20,6 +20,10 @@ Tree of Lists
 
 
 """
+from __future__ import print_function
+from __future__ import division
+from builtins import next
+from past.utils import old_div
 
 import sys, os
 import platform
@@ -88,7 +92,7 @@ class PlayerWidget(QtGui.QWidget):
         self.next_button.setIcon(QtGui.QIcon("images/next.png"))
         self.next_button.setIconSize(QtCore.QSize(20, 20))
 
-        self.next_button.clicked.connect(self.next)
+        self.next_button.clicked.connect(self.__next__)
 
         row1 = QtGui.QHBoxLayout()
         row1.addWidget(self.prev_button)
@@ -214,9 +218,9 @@ class PlayerWidget(QtGui.QWidget):
         ## #playbackMenu.addAction(nextAction)
 
         nexts = QtGui.QShortcut(QtGui.QKeySequence('Alt+Down'),
-                                self.video_window, self.next)
+                                self.video_window, self.__next__)
         nexts = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Down'),
-                                self.video_window, self.next)
+                                self.video_window, self.__next__)
 
         fullscreen = QtGui.QShortcut(QtGui.QKeySequence('F'),
                                      self.video_window, self.toggle_full)
@@ -380,9 +384,9 @@ class PlayerWidget(QtGui.QWidget):
                 self.video_window.setWindowTitle(title)
 
 
-            print "making path"
+            print("making path")
             path = os.path.join(self.cur_content.path, self.cur_content.filename)
-            print "Playing: %s" % path
+            print("Playing: %s" % path)
 
             player_path = self.player.currentSource().fileName()
             if path != player_path:
@@ -407,18 +411,18 @@ class PlayerWidget(QtGui.QWidget):
                 cur_text = 'b'
                 while start_text != cur_text:
                     time = self.player.currentTime()
-                    cur_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
+                    cur_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
                     cur_text = cur_time.toString('mm:ss')
 
-                    start_time = QtCore.QTime((self.start / 3600000), (self.start / 60000) % 60, (self.start / 1000) % 60)
+                    start_time = QtCore.QTime((old_div(self.start, 3600000)), (old_div(self.start, 60000)) % 60, (old_div(self.start, 1000)) % 60)
                     start_text = start_time.toString('mm:ss')
 
                     #tried to trigger this
                     self.update_position()
             
 
-            print "Playing: %s" % path
-            print self.cur_content.title
+            print("Playing: %s" % path)
+            print(self.cur_content.title)
             #print self.cur_content.to_dict()
 
 
@@ -450,17 +454,17 @@ class PlayerWidget(QtGui.QWidget):
         #pass it on
         self.player.pause()            
 
-    def next(self):
+    def __next__(self):
         if self.cur_playlist and len(self.cur_playlist):
             content = self.cur_playlist.increment()
             self.play(content)
-        print "Go Next"
+        print("Go Next")
 
     def previous(self):
         if self.cur_playlist and len(self.cur_playlist):
             content = self.cur_playlist.decrement()
             self.play(content)
-        print "Go Previous"
+        print("Go Previous")
 
     def forward(self):
         time = self.player.currentTime()
@@ -492,18 +496,18 @@ class PlayerWidget(QtGui.QWidget):
 
     def tick(self, time):
         if self.cur_content and self.cur_content.end and time > self.cur_content.end.position:
-            print "AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
-            self.next()
-        display_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
-        hours = time / 3600000
+            print("AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST")
+            next(self)
+        display_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
+        hours = old_div(time, 3600000)
         if hours:
             self.time_passed.setText(display_time.toString('h:mm:ss'))
         else:
             self.time_passed.setText(display_time.toString('mm:ss'))
 
         time = self.player.remainingTime()
-        remain_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
-        hours = time / 3600000
+        remain_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
+        hours = old_div(time, 3600000)
         remain_string = ''
         if hours:
             remain_string = remain_time.toString('h:mm:ss')
@@ -512,8 +516,8 @@ class PlayerWidget(QtGui.QWidget):
         self.time_remain.setText("-%s" % remain_string)
 
         if remain_string == "00:01" or remain_string == "00:00" and self.cur_content:
-            print "END OF TRACK: AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
-            self.next()
+            print("END OF TRACK: AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST")
+            next(self)
 
 
     def change_selection(self, playlist, content=None):
@@ -782,7 +786,7 @@ class AppWindow(QtGui.QMainWindow):
         nextAction = QtGui.QAction('Next', self)
         nextAction.setShortcut('Alt+Down')
         nextAction.setStatusTip('Next Track')        
-        nextAction.triggered.connect(self.widget.left_nav.player.next)
+        nextAction.triggered.connect(self.widget.left_nav.player.__next__)
         #nextAction.triggered.connect(main_player.next)
         playbackMenu.addAction(nextAction)
 

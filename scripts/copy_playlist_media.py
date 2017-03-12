@@ -20,6 +20,8 @@ useful to use:
 afterwards to update the original playlist to the new location:
 python /c/medley/scripts/filter_m3u_path.py /media/path/to.m3u /media/previous/base/:/media/new/base/
 """
+from __future__ import print_function
+from builtins import str
 import os, sys, codecs
 import re, shutil
 
@@ -28,7 +30,7 @@ from medley.marks import M3U
 from moments.path import Path
 
 def usage():
-    print __doc__    
+    print(__doc__)    
 
 def copy_media(source, source_root, destination_root):
     m3u = M3U(source)
@@ -43,9 +45,9 @@ def copy_media(source, source_root, destination_root):
             destination = os.path.join(destination_root, relative)
             dpath = Path(destination)
             dparent = dpath.parent()
-            print relative
-            print sparent
-            print destination
+            print(relative)
+            print(sparent)
+            print(destination)
 
             if not os.path.exists(str(dparent)):
                 os.makedirs(str(dparent))
@@ -53,21 +55,21 @@ def copy_media(source, source_root, destination_root):
             if not os.path.exists(destination):
                 p.copy(destination)
             else:
-                print "already have: %s" % destination
+                print("already have: %s" % destination)
 
             for option in os.listdir(str(sparent)):
                 soption = os.path.join(str(sparent), option)
                 spath = Path(soption)
-                print spath.type()
+                print(spath.type())
                 if spath.type() != "Movie" and spath.type() != "Directory":
                     doption = os.path.join(str(dparent), option)
                     if not os.path.exists(doption):
-                        print "copy here: %s, to %s" % (soption, doption)
+                        print("copy here: %s, to %s" % (soption, doption))
                         shutil.copy(soption, doption)
                     
                 
 
-            print
+            print()
 
 def main():
     #this is used to distinguish actual media from markers

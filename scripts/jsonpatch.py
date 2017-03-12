@@ -33,6 +33,11 @@
 """ Apply JSON-Patches (RFC 6902) """
 
 from __future__ import unicode_literals
+from builtins import map
+from builtins import str
+from builtins import range
+from past.builtins import basestring
+from builtins import object
 
 import collections
 import copy
@@ -87,7 +92,7 @@ def multidict(ordered_pairs):
     return dict(
         # unpack lists that have only 1 item
         (key, values[0] if len(values) == 1 else values)
-        for key, values in mdict.items()
+        for key, values in list(mdict.items())
     )
 
 
@@ -372,7 +377,7 @@ class PatchOperation(object):
         raise NotImplementedError('should implement patch operation.')
 
     def __hash__(self):
-        return hash(frozenset(self.operation.items()))
+        return hash(frozenset(list(self.operation.items())))
 
     def __eq__(self, other):
         if not isinstance(other, PatchOperation):
@@ -567,7 +572,7 @@ def _longest_common_subseq(src, dst):
     matrix = [[0] * ldst for _ in range(lsrc)]
     z = 0  # length of the longest subsequence
     range_src, range_dst = None, None
-    for i, j in itertools.product(range(lsrc), drange):
+    for i, j in itertools.product(list(range(lsrc)), drange):
         if src[i] == dst[j]:
             if i == 0 or j == 0:
                 matrix[i][j] = 1
@@ -675,7 +680,7 @@ def _compare_left(path, src, left, shift):
     if end == -1:
         end = len(src)
     # we need to `remove` elements from list tail to not deal with index shift
-    for idx in reversed(range(start + shift, end + shift)):
+    for idx in reversed(list(range(start + shift, end + shift))):
         ptr = JsonPointer.from_parts(path + [str(idx)])
         yield (
             {'op': 'remove',

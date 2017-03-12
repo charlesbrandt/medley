@@ -15,6 +15,7 @@
 # this version only splits the file into the marked segements
 
 """
+from __future__ import print_function
 
 import os, sys, codecs, re
 import subprocess
@@ -26,7 +27,7 @@ from medley.helpers import find_json
 from medley.content import Content, Mark
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 def split(source, destination):
     """
@@ -42,10 +43,10 @@ def split(source, destination):
         destination = source_prefix + '.new'
 
     root = os.path.dirname(destination)
-    print "ROOT:", root    
+    print("ROOT:", root)    
     
     jfile = find_json(source, limit_by_name=False, debug=True)
-    print "json:", jfile
+    print("json:", jfile)
     content = Content(jfile)
     
     #using this for updating segments
@@ -65,7 +66,7 @@ def split(source, destination):
     mark = Mark()
     mark.from_time(result)
     
-    print mark.total_seconds()
+    print(mark.total_seconds())
     media_end = ''
 
     created = []
@@ -88,7 +89,7 @@ def split(source, destination):
         dest_part = "%s%02d-%s.%s" % (destination, part, title, suffix)
 
         command = "avconv -i %s -ss %s -t %s -vcodec copy -acodec copy %s" % (source, keep_start, duration, dest_part)
-        print command
+        print(command)
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         process.wait()
         #print process.communicate()[0]

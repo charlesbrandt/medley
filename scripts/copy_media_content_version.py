@@ -22,6 +22,7 @@
 # Requires: medley, moments
 
 """
+from __future__ import print_function
 
 import sys, os, re
 import subprocess
@@ -32,7 +33,7 @@ from medley.playlist import Playlist
 from medley.formats import M3U
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 def copy_file(source, destination, verbose=False):
     """
@@ -40,13 +41,13 @@ def copy_file(source, destination, verbose=False):
     """
     #if not destination:
     if os.path.exists(destination):
-        print "skipping: %s" % destination
+        print("skipping: %s" % destination)
         pass
     else:
         dest_path = os.path.dirname(destination)
         if not dest_path:
             dest_path = os.path.abspath('./')
-            print "USING PATH: %s" % dest_path
+            print("USING PATH: %s" % dest_path)
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
 
@@ -55,8 +56,8 @@ def copy_file(source, destination, verbose=False):
         command = 'rsync -av "%s" "%s"' % (source, destination)
         rsync = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if verbose:
-            print command
-            print rsync.communicate()[0]
+            print(command)
+            print(rsync.communicate()[0])
         else:
             rsync.communicate()[0]
                 
@@ -65,7 +66,7 @@ def copy_media(source, destination=''):
         pl = None
         if re.search('m3u$', source):
             #load it as an M3U:
-            print "LOADING AS M3U: %s" % source
+            print("LOADING AS M3U: %s" % source)
             pl = M3U(source)
         else:
             pl = Playlist()
@@ -76,21 +77,21 @@ def copy_media(source, destination=''):
             
         for content in pl:
             path = os.path.join(content.path, content.filename)
-            print path
+            print(path)
             if content != content.root:
                 #parent_path = os.path.join(content.parent.path, content.parent.filename)
                 #print parent_path
-                print "Extracting segment from parent content"
+                print("Extracting segment from parent content")
                 content.extract_segment(destination)
             else:
-                print "only need to copy original path"
+                print("only need to copy original path")
                 this_dest = os.path.join(destination, content.filename)
                 copy_file(path, this_dest)
                 
             #print content.debug()
-        print pl
+        print(pl)
     else:
-        print "Couldn't find path: %s" % source
+        print("Couldn't find path: %s" % source)
         exit()
         
 if __name__ == '__main__':
@@ -106,12 +107,12 @@ if __name__ == '__main__':
         if len(sys.argv) > 2:
             destination = sys.argv[2]
         else:
-            print "OUTPUT TO TEMP!"
+            print("OUTPUT TO TEMP!")
             destination = './temp'
 
     copy_media(source, destination)
 
     if destination == './temp':
-        print 
-        print "OUTPUT TO TEMP!!"
+        print() 
+        print("OUTPUT TO TEMP!!")
 

@@ -11,6 +11,7 @@ see if person already exists
 see if any close matches exist (prompt for help resolving)
 create if not
 """
+from __future__ import print_function
 import os, sys
 
 from medley.people import Person, People, create_person
@@ -37,7 +38,7 @@ def people_create(people_root, person_term='person'):
     skipped = []
     for group in people.cluster:
         for item in group:
-            print "Starting #%s (out of %s): %s" % (total, ppl_amt, item)
+            print("Starting #%s (out of %s): %s" % (total, ppl_amt, item))
             match = people.get(item)
             amatch = ambi.contains(item)
             if not match and not amatch:
@@ -50,7 +51,7 @@ def people_create(people_root, person_term='person'):
                     #skipped.append(item)
                     ambi.add_at(item, cluster_pos)
                     ambi.save(ambiguous_file)
-                    print "Automatically skipping: %s" % item
+                    print("Automatically skipping: %s" % item)
 
                 else:
                     create_person(item, people, cluster_pos, people_root, skipped, ambi)
@@ -58,26 +59,26 @@ def people_create(people_root, person_term='person'):
             elif amatch:
                 #if it matched, then it's a dupe
                 #and the person has already been added
-                print "AMBIGUOUS TAG: %s" % item
-                print ""
+                print("AMBIGUOUS TAG: %s" % item)
+                print("")
 
             else:
                 #if it matched, then it's a dupe
                 #and the person has already been added
-                print "DUPE TAG: %s" % item
-                print ""
+                print("DUPE TAG: %s" % item)
+                print("")
 
             #print item
             total += 1
 
         #go back through skipped items now
         for item in skipped:
-            print "item: %s" % item
+            print("item: %s" % item)
 
         cluster_pos += 1
-        print ""
+        print("")
 
-    print "Total: %s" % total
+    print("Total: %s" % total)
         
 if __name__ == '__main__':
     people_create()

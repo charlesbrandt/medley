@@ -9,13 +9,15 @@
 # generate markers playlists for incorporation into other playlists
 
 """
+from __future__ import print_function
+from builtins import str
 
 import os, sys, codecs, re
 
 ROOT = "/c/medley/markers"
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 
 def get_markers():

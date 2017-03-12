@@ -26,6 +26,7 @@ python /c/mindstream/mindstream/launch.py -c /c/trees todo
 
 
 """
+from __future__ import print_function
 import logging, re
 
 from bottle import static_file
@@ -72,7 +73,7 @@ logging.basicConfig(filename="debug.log", level=logging.DEBUG)
 configs = {}
 
 def usage():
-    print __doc__
+    print(__doc__)
     
 @route('/robots.txt')
 def robots_static():
@@ -156,14 +157,14 @@ def get_summary(collection_name):
     """
     collections = Collections(configs['root'], configs['collection_list'])
     collections.load_summaries()
-    print "# of collection summaries loaded: %s" % len(collections)
-    print "looking for: %s" % collection_name
+    print("# of collection summaries loaded: %s" % len(collections))
+    print("looking for: %s" % collection_name)
     collection_summary = collections.get_summary(collection_name)
     return collection_summary
     
 def get_collection(collection_name):
     collection_summary = get_summary(collection_name)
-    print "COLLECTION SUMMARY ROOT: %s, META: %s" % (collection_summary.root, collection_summary.meta_root)
+    print("COLLECTION SUMMARY ROOT: %s, META: %s" % (collection_summary.root, collection_summary.meta_root))
     collection = collection_summary.load_collection()
     return collection
 
@@ -175,7 +176,7 @@ def rescan(collection_name=None):
         summary = get_summary(collection_name)
         collection.summary = summary
 
-        print "REPARSING COLLECTION: %s" % (collection_name)
+        print("REPARSING COLLECTION: %s" % (collection_name))
         #don't think this is what we want here!!!
         #collection.reparse()
         summary.scan_metas()
@@ -331,7 +332,7 @@ def person_update(person_name):
                 new_p.similar_to = ','.join(new_p_similars)
                 new_p.save()
         else:
-            print "Nothing found for: %s, (%s)" % (item, options)
+            print("Nothing found for: %s, (%s)" % (item, options))
 
 
     #print p.photo_order
@@ -382,14 +383,14 @@ def person(person_name):
 
     path = people_path()
 
-    print len(p.contents)
+    print(len(p.contents))
     
     #locate a default image for every content item
     #check for content's collection availability
     for content in p.contents:
 
-        print content.path
-        print 
+        print(content.path)
+        print() 
         
         #logging.info(path)
         
@@ -431,7 +432,7 @@ def person(person_name):
         #(which may not exist)
         #look at what collections are available
         #then see if the content is available as part of that collection
-        if content.remainder.has_key('collection'):
+        if 'collection' in content.remainder:
             #check if content's collection is available
             collection_name = content.remainder['collection']
             collection_summary = collections.get_summary(collection_name)
@@ -444,8 +445,8 @@ def person(person_name):
                 #content.available = False
                 content.remainder['available'] = False
         else:
-            print "No Collection!!!!"
-            print content.to_dict()
+            print("No Collection!!!!")
+            print(content.to_dict())
             
     content_json = json.dumps(p.contents.as_list(include_empty=True))
     #even though photos is just a list of strings
@@ -572,9 +573,9 @@ def people_tags():
     """
     the original version that only shows tags
     """
-    print configs
-    print configs['people_root']
-    print configs['person_term']
+    print(configs)
+    print(configs['people_root'])
+    print(configs['person_term'])
 
     p = get_people()
     
@@ -606,12 +607,12 @@ def people(group_number=None):
 
     if a group number is supplied, show details for that group
     """
-    print "initializing people"
+    print("initializing people")
     p = get_people()
-    print "loading people"
+    print("loading people")
     p.load()
 
-    print "making json groups"
+    print("making json groups")
 
     limited = []
 
@@ -627,7 +628,7 @@ def people(group_number=None):
     #links = []
     #index = 0
     for group in limited:
-        print group
+        print(group)
         new_group = []
         for item in group:
             person = p.get_first(item)
@@ -657,7 +658,7 @@ def people(group_number=None):
         
     else:
         pj = json.dumps(groups)
-        print "Length: %s" % len(groups)
+        print("Length: %s" % len(groups))
         #print pj
 
         #for person in p:
@@ -693,7 +694,7 @@ def collection_zip(collection_name=None, content_name=None):
                     dest_dir = os.path.join(zip_root, dirname)
                     if not dest_dir in sources:
                         sources.append(dest_dir)
-                    print "Decompressing " + filename + " to " + dest_dir + "<br>"
+                    print("Decompressing " + filename + " to " + dest_dir + "<br>")
                     if not os.path.exists(dest_dir):
                          os.makedirs(dest_dir)
                     dest = os.path.join(dest_dir, name)
@@ -702,7 +703,7 @@ def collection_zip(collection_name=None, content_name=None):
                         fd.write(zfile.read(name))
                         fd.close()
                         dpath = Path(dest)
-                        print "making thumb"
+                        print("making thumb")
                         img = dpath.load()
                         img.make_thumbs(['small'], save_original=False)
 
@@ -712,7 +713,7 @@ def collection_zip(collection_name=None, content_name=None):
                 spath = Path(source, relative_prefix=path_root)
                 sdir = spath.load()
                 zips.append(sdir.contents)
-                print source
+                print(source)
 
     #return template('simple', body=result, title="unzip!")
     return template('zip', zips=zips)
@@ -734,8 +735,8 @@ def collection_content(collection_name=None, content_name=None):
             content.movies = content.find_media(relative=False, debug=True)
             content.sounds = content.find_media(kind="Sound", relative=False, debug=True)
             content.zips = find_zips(content.path)
-            print content.zips
-            print content_name, content.base_dir
+            print(content.zips)
+            print(content_name, content.base_dir)
             return template('content', content=content, collection=collection_name)
 
     message = "Could not find: %s in %s" % (content_name, collection_name)
@@ -754,7 +755,7 @@ def collection_person(collection_name=None, person_name=None):
 
         #drive_root = os.path.dirname(os.path.dirname(summary.available[0]))
         drive_root = os.path.dirname(summary.available[0])
-        print drive_root
+        print(drive_root)
 
         #filter the whole collection down to only items with this person:
         results = []
@@ -784,15 +785,15 @@ def collection_person(collection_name=None, person_name=None):
 def collection(collection_name=None):
     if collection_name:
         summary = get_summary(collection_name)
-        print summary
+        print(summary)
         #needed for current podcasts rendering approach:
         #summary.load_scraper()
 
         collection = get_collection(collection_name)
-        print collection
-        print "APP load_cluster()"
+        print(collection)
+        print("APP load_cluster()")
         cluster = summary.load_cluster()
-        print cluster
+        print(cluster)
         
     else:
         summary = None
@@ -855,7 +856,7 @@ def launch():
                         'port': '8080',
                         }
 
-            print "CREATING NEW CONFIG FILE: %s" % config_json
+            print("CREATING NEW CONFIG FILE: %s" % config_json)
             json_file = codecs.open(config_json, 'w', encoding='utf-8', errors='ignore')
             json_file.write(json.dumps(configs))
             json_file.close()
@@ -864,7 +865,7 @@ def launch():
         #add this in for global use:
         configs['root'] = root
         
-        print configs
+        print(configs)
         #exit()
         #run(host='localhost', port=8080)
         #run(host=configs['host'], port=configs['port'])

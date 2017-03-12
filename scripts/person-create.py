@@ -19,6 +19,7 @@ echo "python /c/medley/scripts/person-create.py /c/people/$CIRCLE $CIRCLE <>"
 python person-create.py /c/path/to/people/ person_tag [cloud_tag]
 
 """
+from __future__ import print_function
 import os, sys
 
 from medley.people import Person, People, create_person
@@ -26,7 +27,7 @@ from medley.people import Person, People, create_person
 #from medley.collector import Cluster
 
 def usage():
-    print __doc__
+    print(__doc__)
     
 def main():
     if len(sys.argv) > 1:

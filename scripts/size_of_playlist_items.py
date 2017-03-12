@@ -16,6 +16,7 @@ python size_of_playlist_items.py /media/path/to.m3u
 
 
 """
+from __future__ import print_function
 import os, sys, codecs
 import re
 
@@ -26,7 +27,7 @@ from medley.content import Content
 from moments.path import Path, check_ignore
 
 def usage():
-    print __doc__    
+    print(__doc__)    
 
 def summarize_items(items, media_root, ignores):
     """
@@ -128,6 +129,31 @@ def size_of_list(source, media_root=None, ignores=['/c/',]):
                 details_total.extend(details)
             return (summary_total, details_total)
 
+    total_size = 0
+    total_items = 0
+    #seconds?
+    total_length = 0
+    for item in items:
+        check_item = False
+        if media_root and re.match(media_root, item):
+            check_item = True
+        #elif not re.match(ignore, item):
+        elif not check_ignore(item, ignores):
+            check_item = True
+
+        if check_item:
+            p = Path(item)
+            f = p.load()
+
+            total_size += f.check_size()
+            results = get_media_properties(item)
+            print(results)
+            total_length += results[1]
+            total_items += 1
+            #print item
+
+    print("found %s matching items" % total_items)
+    return total_size, total_length, total_items
 
 def main():
     #requires that at least one argument is passed in to the script itself

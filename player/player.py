@@ -23,6 +23,10 @@ migrating this version to use VLC wrapper directly, rather than phonon layer.
 difficulty getting phonon to use VLC back end.
 
 """
+from __future__ import print_function
+from __future__ import division
+from builtins import next
+from past.utils import old_div
 
 import sys, os
 import platform
@@ -114,7 +118,7 @@ class PlayerWidget(QtGui.QWidget):
         self.next_button.setIcon(QtGui.QIcon("images/next.png"))
         self.next_button.setIconSize(QtCore.QSize(20, 20))
 
-        self.next_button.clicked.connect(self.next)
+        self.next_button.clicked.connect(self.__next__)
 
         row1 = QtGui.QHBoxLayout()
         row1.addWidget(self.prev_button)
@@ -263,9 +267,9 @@ class PlayerWidget(QtGui.QWidget):
 
 
         nexts = QtGui.QShortcut(QtGui.QKeySequence('Alt+Down'),
-                                self.video_window, self.next)
+                                self.video_window, self.__next__)
         nexts = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Down'),
-                                self.video_window, self.next)
+                                self.video_window, self.__next__)
 
         fullscreen = QtGui.QShortcut(QtGui.QKeySequence('F'),
                                      self.video_window, self.toggle_full)
@@ -445,7 +449,7 @@ class PlayerWidget(QtGui.QWidget):
         ##     self.cur_index = self.cur_playlist.index(self.cur_content)
         if self.parent_content and self.cur_content:
             self.cur_index = self.parent_content.segments.index(self.cur_content)
-            print "Index found: %s" % self.cur_index
+            print("Index found: %s" % self.cur_index)
             
         #look for cur_content: source file, start position, end position
         #print "PlayerWidget.play() called!"
@@ -470,7 +474,7 @@ class PlayerWidget(QtGui.QWidget):
             #print "Cur_content.path: ", self.cur_content.path
             #print "Cur_content.filename: ", self.cur_content.filename
             path = os.path.join(self.cur_content.path, self.cur_content.filename)
-            print "Playing: %s" % path
+            print("Playing: %s" % path)
 
             #player_path = self.player.currentSource().fileName()
             if hasattr(self, 'Media') and self.Media:
@@ -480,7 +484,7 @@ class PlayerWidget(QtGui.QWidget):
                 player_path = None
                 
             if path != player_path:
-                print "MEDIA PATH: %s != %s" % (path, player_path)
+                print("MEDIA PATH: %s != %s" % (path, player_path))
                 #get rid of everything already played:
                 #self.player.clear()
                 #self.player.setCurrentSource(Phonon.MediaSource(path))
@@ -539,10 +543,10 @@ class PlayerWidget(QtGui.QWidget):
 
                 #time = self.player.currentTime()
                 time = self.MediaPlayer.get_position() * 1000
-                cur_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
+                cur_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
                 cur_text = cur_time.toString('mm:ss')
 
-                start_time = QtCore.QTime((self.start / 3600000), (self.start / 60000) % 60, (self.start / 1000) % 60)
+                start_time = QtCore.QTime((old_div(self.start, 3600000)), (old_div(self.start, 60000)) % 60, (old_div(self.start, 1000)) % 60)
                 start_text = start_time.toString('mm:ss')
 
                 #tried to trigger this
@@ -552,8 +556,8 @@ class PlayerWidget(QtGui.QWidget):
                 
                 self.seek(self.start)
 
-            print "Playing: %s" % path
-            print self.cur_content.title
+            print("Playing: %s" % path)
+            print(self.cur_content.title)
             #print self.cur_content.to_dict()
 
 
@@ -564,7 +568,7 @@ class PlayerWidget(QtGui.QWidget):
         """Set the position
         """
         # setting the position to where the slider was dragged
-        self.MediaPlayer.set_position(Position / 1000.0)
+        self.MediaPlayer.set_position(old_div(Position, 1000.0))
         # the vlc MediaPlayer needs a float value between 0 and 1, Qt
         # uses integer variables, so you need a factor; the higher the
         # factor, the more precise are the results
@@ -607,22 +611,22 @@ class PlayerWidget(QtGui.QWidget):
     def stop(self):
         """Stop player
         """
-        print "Stopping"
+        print("Stopping")
         self.MediaPlayer.stop()
         #self.PlayButton.setText("Play")
 
 
-    def next(self):
+    def __next__(self):
         if self.cur_playlist and len(self.cur_playlist):
             content = self.cur_playlist.increment()
             self.play(content)
-        print "Go Next"
+        print("Go Next")
 
     def previous(self):
         if self.cur_playlist and len(self.cur_playlist):
             content = self.cur_playlist.decrement()
             self.play(content)
-        print "Go Previous"
+        print("Go Previous")
 
     def forward(self):
         #time = self.player.currentTime()
@@ -666,7 +670,7 @@ class PlayerWidget(QtGui.QWidget):
         #print dir(self.MediaPlayer)
         if self.rate > .1:
             self.rate = self.rate - .1
-        print self.rate
+        print(self.rate)
         self.MediaPlayer.set_rate(self.rate)
 
     def faster(self):
@@ -675,7 +679,7 @@ class PlayerWidget(QtGui.QWidget):
         #print dir(self.MediaPlayer)
         if self.rate > .1:
             self.rate = self.rate + .1
-        print self.rate
+        print(self.rate)
         self.MediaPlayer.set_rate(self.rate)
 
     def set_volume(self, Volume):
@@ -689,7 +693,7 @@ class PlayerWidget(QtGui.QWidget):
         """
         length = self.Media.get_duration()
         #print "length:", length
-        ratio = (position * 1.0) / length
+        ratio = old_div((position * 1.0), length)
         #print "ratio:", ratio
         return ratio
 
@@ -775,16 +779,16 @@ class PlayerWidget(QtGui.QWidget):
                 self.seek(self.cur_content.start.total_seconds() * 1000)
 
             else:
-                print "AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST"
-                self.next()
+                print("AUTOMATICALLY MOVING TO NEXT TRACK IN PLAYLIST")
+                next(self)
 
         #make sure we've actually loaded something here (time != 0)
         elif time and remain <= 2000:
-            print "Reaching the end of a track, moving on."
-            self.next()
+            print("Reaching the end of a track, moving on.")
+            next(self)
             
-        display_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
-        hours = time / 3600000
+        display_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
+        hours = old_div(time, 3600000)
         if hours:
             self.time_passed.setText(display_time.toString('h:mm:ss'))
         else:
@@ -793,8 +797,8 @@ class PlayerWidget(QtGui.QWidget):
         #time = self.player.remainingTime()
         #time = self.MediaPlayer.get_length() - (self.MediaPlayer.get_position() * 1000)
         time = remain
-        remain_time = QtCore.QTime((time / 3600000), (time / 60000) % 60, (time / 1000) % 60)
-        hours = time / 3600000
+        remain_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
+        hours = old_div(time, 3600000)
         remain_string = ''
         if hours:
             remain_string = remain_time.toString('h:mm:ss')
@@ -1111,7 +1115,7 @@ class AppWindow(QtGui.QMainWindow):
         nextAction = QtGui.QAction('Next', self)
         nextAction.setShortcut('Alt+Down')
         nextAction.setStatusTip('Next Track')        
-        nextAction.triggered.connect(self.widget.left_nav.player.next)
+        nextAction.triggered.connect(self.widget.left_nav.player.__next__)
         #nextAction.triggered.connect(main_player.next)
         playbackMenu.addAction(nextAction)
 
@@ -1151,7 +1155,7 @@ class AppWindow(QtGui.QMainWindow):
     
         
 def usage():
-    print __doc__
+    print(__doc__)
     
 def main():
     source = None

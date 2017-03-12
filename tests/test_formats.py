@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import object
 import sys, os
 # one directory up
 _root_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -10,17 +12,17 @@ from moments.filters import to_ascii2
 #for assert_equal
 from nose.tools import *
 
-class TestM3U:
+class TestM3U(object):
     def setUp(self):
         a = True
         #self.c = sources.Converter()
 
     def test_load(self):
         m = M3U("sample.m3u")
-        print m
+        print(m)
         for content in m:
             #print to_ascii2(content.marks)
-            print len(content.marks)
+            print(len(content.marks))
             assert (len(content.marks) == 43) or (len(content.marks) == 12)
         assert len(m) == 2
 
