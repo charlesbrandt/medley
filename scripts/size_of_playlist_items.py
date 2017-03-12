@@ -28,6 +28,64 @@ from moments.path import Path, check_ignore
 def usage():
     print __doc__    
 
+def summarize_items(items, media_root, ignores):
+    """
+    Takes a list of paths to the media / files that should be summarized
+
+    media_root is used to force a size check for a certain path
+    (which allows ignoring everything else?)
+
+    """
+
+    #list of results for each item... can be used for csv later
+    details = [ ('dimensions', 'length', 'bitrate', 'data size', 'filename'), ]
+    # only include summarized results for the list here
+    # (may be more than one)
+    summary = [ ]
+    
+    total_size = 0
+    total_items = 0
+    #seconds?
+    total_length = 0
+    for item in items:
+        check_item = False
+        #see if it's in the media_root that was passed in
+        #force check in that case
+        if media_root and re.match(media_root, item):
+            check_item = True
+
+        #otherwise, make sure it's not in one of the explicit ignores:
+        elif not check_ignore(item, ignores):
+            check_item = True
+
+        if check_item:
+            p = Path(item)
+            f = p.load()
+
+            try:
+                results = get_media_properties(item)
+                cur_size = f.check_size()
+                total_size += cur_size
+            except:
+                print "missing: %s" % item
+            else: 
+                if results[0] != None:
+                    print results
+                    results = list(results)
+                    results.append(cur_size)
+                    results.append(item)
+                    total_length += results[1]
+                    total_items += 1
+                    #print item
+                    details.append(results)
+                else:
+                    print "skipping: %s" % item
+                
+    print "found %s matching items" % total_items
+    summary = [ total_size, total_length, total_items ]
+    return (summary, details)
+
+
 def size_of_list(source, media_root=None, ignores=['/c/',]):
     """
     ignores are used to distinguish actual media from markers
@@ -44,40 +102,32 @@ def size_of_list(source, media_root=None, ignores=['/c/',]):
             #already have a list
             #clean it up
             for item in loaded:
-                #these are usually content .json files:
+                #these are usually content .json files
+                #load them and then look for the media path
                 content = Content(item[0])
                 #print content.media
                 items.append(content.media[-1][0])
+            (summary, details) = summarize_items(items, media_root, ignores)
+            details.insert( 0, (source, ) )
+            summary.insert( 0, source )
+            return ([summary, ], details)
+        
         elif isinstance(loaded, dict):
             #walk the tree to load each item individually
-            #could call size_of_list() recursively
-            pass
+            #call size_of_list() recursively
+            print "dictionary found:"
+            #print loaded
+            summary_total = []
+            details_total = []
+            for child in loaded['children']:
+                (summary, details) = size_of_list(child['source'])
+                cur_name = child['name']
+                #replace filepath with name:
+                summary[0][0] = cur_name
+                summary_total.extend(summary)
+                details_total.extend(details)
+            return (summary_total, details_total)
 
-    total_size = 0
-    total_items = 0
-    #seconds?
-    total_length = 0
-    for item in items:
-        check_item = False
-        if media_root and re.match(media_root, item):
-            check_item = True
-        #elif not re.match(ignore, item):
-        elif not check_ignore(item, ignores):
-            check_item = True
-
-        if check_item:
-            p = Path(item)
-            f = p.load()
-
-            total_size += f.check_size()
-            results = get_media_properties(item)
-            print results
-            total_length += results[1]
-            total_items += 1
-            #print item
-
-    print "found %s matching items" % total_items
-    return total_size, total_length, total_items
 
 def main():
     #requires that at least one argument is passed in to the script itself
@@ -94,8 +144,29 @@ def main():
         else:
             media_root = None
 
-        result = size_of_list(source, media_root)
-        print result
+        summaries, details = size_of_list(source, media_root)
+
+        base = os.path.dirname(source)
+        dest = os.path.join(base, 'summaries.csv')
+        f = codecs.open(dest, 'w', encoding='utf-8')
+        for summary in summaries:
+            new_summary = []
+            for item in summary:
+                new_summary.append(str(item))
+            f.write(','.join(new_summary))
+            f.write('\n')
+        f.close()
+
+        dest = os.path.join(base, 'details.csv')
+        f = codecs.open(dest, 'w', encoding='utf-8')
+        for detail in details:
+            new_detail = []
+            for item in detail:
+                new_detail.append(str(item))
+            f.write(','.join(new_detail))
+            f.write('\n')
+        f.close()
+        
 
     else:
         usage()

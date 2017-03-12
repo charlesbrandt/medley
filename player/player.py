@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 originally adapted from:
 http://stackoverflow.com/questions/4163740/qtreeview-with-drag-and-drop-support-in-pyqt?rq=1
