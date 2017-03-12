@@ -1,3 +1,8 @@
+from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import range
 import json, re, os
 from threading import Thread
 from PySide import QtGui, QtCore
@@ -52,7 +57,7 @@ def find_contents(fname):
     contents = []
     options = []
     if fname:
-        print "Loading: %s" % fname
+        print("Loading: %s" % fname)
         p = Path(fname)
         if p.type() == "Directory":
             d = p.load()
@@ -68,11 +73,11 @@ def find_contents(fname):
 
         drive_dir = configs.get('default_drive_dir')            
         for option in options:
-            print "Adding: %s" % unicode(option)
-            content = import_content(unicode(option), all_contents, drive_dir)
+            print("Adding: %s" % str(option))
+            content = import_content(str(option), all_contents, drive_dir)
             contents.append(content)
     else:
-        print "No file selected: %s" % fname
+        print("No file selected: %s" % fname)
 
     return contents
 
@@ -143,7 +148,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
             childItem = self.playlist[row]
             return self.createIndex(row, column, childItem)
         else:
-            print "Row out of range! row: %s column: %s parent: %s" % (row, column, parent)
+            print("Row out of range! row: %s column: %s parent: %s" % (row, column, parent))
             return QtCore.QModelIndex()
 
         ## if childItem:
@@ -231,7 +236,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
                 #otherwise, nothing:
                 return ''
             else:
-                return unicode(getattr(content, key))
+                return str(getattr(content, key))
 
             ## row = index.row()
             ## value = self.nodes[row]
@@ -434,7 +439,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         #item = self.getNode( indices[0] )
 
         #mimedata.setData('text/xml', item)
-        print json.dumps(items)
+        print(json.dumps(items))
 
         #everything = {'row_nums':row_nums, 'items':items}
         everything = {'items':items}
@@ -448,7 +453,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         #should pass in a parent id with mimedata
         #to enable removing from other PlaylistView objects
         
-        print 'dropMimeData %s %s %s %s %s' % (mimedata.data('json/content'), action, row, column, parent)
+        print('dropMimeData %s %s %s %s %s' % (mimedata.data('json/content'), action, row, column, parent))
         #print 'parent row: %s, column: %s' % (parent.row(), parent.column())
         
         everything = json.loads( str(mimedata.data('json/content')) )
@@ -473,7 +478,7 @@ class PlaylistModel(QtCore.QAbstractTableModel):
             for item in items:
                 (path, segment_id) = item
                 #it really should, unless it is a locally created Content obj
-                if all_contents.has_key(path):
+                if path in all_contents:
                     content = all_contents[path]
                     segment = content.get_segment(segment_id)
                     if segment in self.playlist:
@@ -487,23 +492,23 @@ class PlaylistModel(QtCore.QAbstractTableModel):
         start_pos = parent.row()
 
         self.beginInsertRows( QtCore.QModelIndex(), int(start_pos), int(len(items)+start_pos)-1 )
-        print "len pre-insert: %s" % len(self.playlist)
+        print("len pre-insert: %s" % len(self.playlist))
 
-        print "starting at row: %s" % start_pos
+        print("starting at row: %s" % start_pos)
         position = start_pos
         for item in items:
             (path, segment_id) = item
             #it really should, unless it is a locally created Content obj
-            if all_contents.has_key(path):
+            if path in all_contents:
                 content = all_contents[path]
                 segment = content.get_segment(segment_id)
                 #content = Content(content=item)
                 self.playlist.insert(position, segment)
                 position += 1
             else:
-                print "COULDN'T FIND CONTENT: %s, %s" % (path, segment_id)
+                print("COULDN'T FIND CONTENT: %s, %s" % (path, segment_id))
 
-        print "len pre-insert: %s" % len(self.playlist)
+        print("len pre-insert: %s" % len(self.playlist))
         self.endInsertRows()
             
         self.dataChanged.emit( parent, parent )
@@ -634,13 +639,13 @@ class PlaylistView(QtGui.QTableView):
         #This works, but the drop does not...
         #not sure why!
         mime_data = evt.mimeData()
-        print "DRAAAG!"
+        print("DRAAAG!")
         #print dir(mime_data)
         #print mime_data.data
         #print mime_data.property
         if mime_data.hasUrls():
             self.dropFile = mime_data.urls()[0].toLocalFile()
-            print self.dropFile
+            print(self.dropFile)
             #ideally this would happen in actual drop:
             self.add_media(self.dropFile)
             evt.acceptProposedAction()
@@ -648,8 +653,8 @@ class PlaylistView(QtGui.QTableView):
 
     def dropEvent(self, evt):
         mime_data = evt.mimeData()
-        print "DROPP!"
-        print self.dropFile
+        print("DROPP!")
+        print(self.dropFile)
         #print dir(mime_data)
         evt.acceptProposedAction()
         
@@ -694,7 +699,7 @@ class PlaylistView(QtGui.QTableView):
 
         if 'media' in self.model().key_order:
             media_index = self.model().key_order.index('media')
-            print media_index
+            print(media_index)
             self.setItemDelegateForColumn(self.model().key_order.index('media'), MediaComboDelegate(self))
             for row in range(0, self.model().rowCount(self)):
                 self.openPersistentEditor(self.model().index(row, media_index, self))
@@ -836,7 +841,7 @@ class PlaylistView(QtGui.QTableView):
 
         contents = find_contents(fname)
         
-        print "CONTENTS DURING LOAD: %s" % contents
+        print("CONTENTS DURING LOAD: %s" % contents)
         result = self.add_contents(contents)
             
         if not result:
@@ -956,7 +961,7 @@ class PlaylistWidget(QtGui.QWidget):
 
 
     def add_item(self, name=''):
-        print "ADD ITEM from PlaylistWidget"
+        print("ADD ITEM from PlaylistWidget")
         
     def remove_item(self, row=None):
         if row is None:
@@ -969,7 +974,7 @@ class PlaylistWidget(QtGui.QWidget):
             row = self.playlist_view.cur_index.row()
 
         content = self.playlist_view.model().playlist[row]
-        print content.path
+        print(content.path)
         file_browse(content.path)
 
 class MarksWidget(QtGui.QWidget):
@@ -1087,7 +1092,7 @@ class MarksWidget(QtGui.QWidget):
             #mark = "%s - %s" % (display_time.toString('h:mm:ss'), mark)
             #self.marks.addItem(mark)
         else:
-            print "NO player object assigned to self: %s" % self.player
+            print("NO player object assigned to self: %s" % self.player)
             #print "NO shared player object available: %s" % main_player
             #self.marks.addItem(mark)
             mark = Mark(mark, 0)
@@ -1134,9 +1139,9 @@ Segmentation fault: 11
                 self.sync()
 
         else:
-            print dir(item)
-            print "Item: %s" % item
-            raise TypeError, "WRONG TYPE SENT: %s" % type(item)
+            print(dir(item))
+            print("Item: %s" % item)
+            raise TypeError("WRONG TYPE SENT: %s" % type(item))
             
     def open_marks(self):
         pass
@@ -1250,7 +1255,7 @@ Segmentation fault: 11
             os.rename(destination, available)
 
         result = image.save(destination, "JPEG", quality=100)
-        print "Image Saved: %s" % destination
+        print("Image Saved: %s" % destination)
         #print "Null?: %s" % image.isNull()
         #print image.size()
         #print result
@@ -1284,7 +1289,7 @@ class TitleList(QtGui.QListWidget):
         if self.content:
             new_order = []
             for row in range(self.count()):
-                print self.item(row).text()
+                print(self.item(row).text())
                 new_order.append(self.item(row).text())
             #self.content.remainder['tracks'] = new_order
             self.content.titles = new_order
@@ -1365,7 +1370,7 @@ class ExportDialog(QtGui.QDialog):
         grid.addWidget(separateLabel, 6, 0)
         self.makeSeparate = QtGui.QCheckBox()
         state = QtCore.Qt.CheckState(1)
-        print state
+        print(state)
         self.makeSeparate.setCheckState(QtCore.Qt.Checked)
         grid.addWidget(self.makeSeparate, 6, 1)
 
@@ -1494,7 +1499,7 @@ class TitlesWidget(QtGui.QWidget):
             #print "RESULT: ", export.result()
 
             if export.result():
-                print "make it happen"
+                print("make it happen")
                 source = os.path.join(self.content.path, self.content.filename)
 
                 #self.status.setText("You pressed %s!" % button.text())
@@ -1502,7 +1507,7 @@ class TitlesWidget(QtGui.QWidget):
                 duration = properties[1]
                 bitrate = properties[2]
                 bitstr = "%sk" % bitrate
-                print "Bitrate: ", bitstr
+                print("Bitrate: ", bitstr)
 
                 extension = export.extensionEdit.text()
                 audio_only = export.audioOnly.isChecked()
@@ -1510,7 +1515,7 @@ class TitlesWidget(QtGui.QWidget):
 
                 keep_string = export.keepEdit.text()
                 keep_tags = keep_string.split(',')
-                print "Keep tags: ", keep_tags
+                print("Keep tags: ", keep_tags)
 
                 
                 destination = None
@@ -1521,14 +1526,14 @@ class TitlesWidget(QtGui.QWidget):
                     
                 #slice_media(source, destination, keep_tags=keep_tags, duration=duration, bitrate=bitstr, extension=extension, make_separate=make_separate, audio_only=audio_only)
             else:
-                print "nope!"
+                print("nope!")
 
             self.sync()
 
         else:
-            print "NO CONTENT assigned to self: %s" % self.content
-            print "can't export!"
-            print
+            print("NO CONTENT assigned to self: %s" % self.content)
+            print("can't export!")
+            print()
             
 
 
@@ -1559,9 +1564,9 @@ class TitlesWidget(QtGui.QWidget):
             self.sync()
 
         else:
-            print "NO CONTENT assigned to self: %s" % self.content
-            print "no titles to edit?"
-            print
+            print("NO CONTENT assigned to self: %s" % self.content)
+            print("no titles to edit?")
+            print()
             
     def on_changed(self, item):
         row = self.titles.row(item)
@@ -1710,10 +1715,10 @@ class TitlesWidget(QtGui.QWidget):
             #printing json instead of dict()...
             #just incase something isn't working as expected...
             #this can salvage changes
-            print json.dumps(self.content.to_dict())
-            print self.content.debug()
+            print(json.dumps(self.content.to_dict()))
+            print(self.content.debug())
         else:
-            print "NO CONTENT assigned to self: %s" % self.content
+            print("NO CONTENT assigned to self: %s" % self.content)
 
 
 class ContentWindow(QtGui.QMainWindow):
@@ -1781,9 +1786,9 @@ class ContentWindow(QtGui.QMainWindow):
                                 self, player.jumpb)
 
         nexts = QtGui.QShortcut(QtGui.QKeySequence('Alt+Down'),
-                                self, player.next)
+                                self, player.__next__)
         nexts = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Down'),
-                                self, player.next)
+                                self, player.__next__)
 
         prevs = QtGui.QShortcut(QtGui.QKeySequence('Alt+Up'),
                                 self, player.previous)

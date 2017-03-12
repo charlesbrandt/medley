@@ -8,10 +8,16 @@ These are too specific:
 Song, Podcast, Album, Image, Book, Movie, Scene, 
 
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import division
+from builtins import str
+from builtins import object
+from past.utils import old_div
 import os, re, copy, subprocess, time
 import hashlib
 
-from helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties, make_json_path, find_media, find_jsons
+from .helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties, make_json_path, find_media, find_jsons
 
 from moments.path import Path
 from moments.timestamp import Timestamp
@@ -119,7 +125,7 @@ class Mark(object):
         elif len(parts) == 2:
             self.from_hms(minutes=int(parts[0]), seconds=int(parts[1]))
         else:
-            raise ValueError, "Unknown number of parts for time: %s (%s)" % (parts, len(parts))
+            raise ValueError("Unknown number of parts for time: %s (%s)" % (parts, len(parts)))
             
         
     #def from_milliseconds(self, milli_seconds=None):
@@ -132,11 +138,11 @@ class Mark(object):
             milli_seconds = self.position
 
         ms = float(milli_seconds) % 1000
-        total_seconds = float(milli_seconds) / 1000
+        total_seconds = old_div(float(milli_seconds), 1000)
         seconds = (int(total_seconds) % 60)
-        total_minutes = (int(total_seconds) / 60)
+        total_minutes = (old_div(int(total_seconds), 60))
         minutes = total_minutes % 60
-        hours = total_minutes / 60
+        hours = old_div(total_minutes, 60)
         return (hours, minutes, seconds, ms)
 
     def from_hms(self, hours=0, minutes=0, seconds=0, ms=0):
@@ -167,7 +173,7 @@ class Mark(object):
 
     def total_seconds(self):
         #return int(self.position) / 100
-        return float(self.position) / 1000
+        return old_div(float(self.position), 1000)
 
     def as_tuple(self):
         """
@@ -203,8 +209,8 @@ class Mark(object):
         if self.bytes:
             result = "{name=%s,bytes=%s,time=%s}" % (new_tag, self.bytes, self.total_seconds())
         else:
-            bytes_per_second = bitrate / 8.0
-            bytes = int((float(self.position) * bytes_per_second) / 1000)
+            bytes_per_second = old_div(bitrate, 8.0)
+            bytes = int(old_div((float(self.position) * bytes_per_second), 1000))
             result = "{name=%s,bytes=%s,time=%s}" % (new_tag, bytes, self.total_seconds())
             self.bytes = bytes
         return result
@@ -278,7 +284,7 @@ class MarkList(list):
             cur_title = titles[title_index]
             title_index += 1
         elif len(titles) and (len(titles) <= title_index):
-            print "Not enough titles to apply to segments"
+            print("Not enough titles to apply to segments")
             #print "extra segments: %s tracks, %s segments" % (len(titles), segment_count)
 
         if len(new_segments):
@@ -289,7 +295,7 @@ class MarkList(list):
                 if not segment.title:
                     if segment.end:
                         #print "Segment End: ->%s<-, Segment Start: ->%s<-" % (segment.end.position, segment.start.position)
-                        segment_len = (segment.end.position - segment.start.position) / 1000
+                        segment_len = old_div((segment.end.position - segment.start.position), 1000)
                         segment_len = int(segment_len)
                     else:
                         segment_len = '?'
@@ -470,13 +476,13 @@ class MarkList(list):
                     if not tag in segment.tags:
                         segment.tags.append(tag)
 
-                print "Unmatched tag: %s" % next_mark.tag
+                print("Unmatched tag: %s" % next_mark.tag)
 
             #save the previous item for the next time around
             #last_mark = next_mark
 
         if len(titles) > segment_count:
-            print "Extra titles available: %s titles, %s segments" % (len(titles), segment_count)
+            print("Extra titles available: %s titles, %s segments" % (len(titles), segment_count))
 
         #last segment doesn't need an end mark...
         #that should signal play to end
@@ -519,8 +525,8 @@ class MarkList(list):
         segment.marks.append(start)
 
         for next_mark in self:
-            print
-            print next_mark.tag
+            print()
+            print(next_mark.tag)
             segment.end = next_mark
             segment_count += 1
 
@@ -577,7 +583,7 @@ class MarkList(list):
                 mark.seconds = int(j)
                 self.append(mark)
             except:
-                print "could not convert %s to int from: %s" % (j, source)
+                print("could not convert %s to int from: %s" % (j, source))
         return self
     
     def to_comma(self):
@@ -647,7 +653,7 @@ def import_content(source, all_contents={}, drive_dir=None):
     option = source
     #when importing content, should match the filename
     #other wise all media items in the folder will use the same name
-    json_source = find_json(unicode(option), limit_by_name=True)
+    json_source = find_json(str(option), limit_by_name=True)
     if not json_source:
         #we didn't find a matching content.json for the media source supplied
         #we should also check if there is only one media file in the directory
@@ -655,60 +661,60 @@ def import_content(source, all_contents={}, drive_dir=None):
         #in that case, it may make sense to go ahead
         #and update the content.json filename to be the same as the source
         files = find_media(option)
-        jsons = find_jsons(unicode(option))
-        print "Files:", files
-        print "JSONs:", jsons
+        jsons = find_jsons(str(option))
+        print("Files:", files)
+        print("JSONs:", jsons)
 
         if len(files) == 1 and len(jsons) == 1:
             #this is what we were expecting originally:
-            json_dest = make_json_path(unicode(option))
-            print "WARNING: automatically moving %s to %s" % (jsons[0], json_dest)
+            json_dest = make_json_path(str(option))
+            print("WARNING: automatically moving %s to %s" % (jsons[0], json_dest))
             os.rename(jsons[0], json_dest)
             #should be set now
             json_source = json_dest
         else:
             #ok... we tried... too many files to be sure. just make a new one
-            json_source = make_json_path(unicode(option))
+            json_source = make_json_path(str(option))
 
     #won't need json_objects, but need to create the json file if new
     json_objects = load_json(json_source, create=True)
 
-    if all_contents.has_key(json_source):
+    if json_source in all_contents:
         #print "Matched existing Content object with path: %s" % json_source
         content = all_contents[json_source]
     else:
         content = Content(json_source)
-        if ( (unicode(option) != json_source) and
-             (not unicode(option) in content.media) ):
-            content.media.append(unicode(option))
+        if ( (str(option) != json_source) and
+             (not str(option) in content.media) ):
+            content.media.append(str(option))
 
         #this only works if source is a moments.Path object:
         #content.filename = option.filename
         
-        content.filename = os.path.basename(unicode(option))
+        content.filename = os.path.basename(str(option))
 
         #set content_base here too
         #ideally find the path prefix where binary data (media) is
         #(based on local machine)
         #then find a unique suffix for specific content
-        content_path = os.path.dirname(unicode(option))
+        content_path = os.path.dirname(str(option))
         if not drive_dir:
-            print "WARNING: No path prefix set: %s" % drive_dir
+            print("WARNING: No path prefix set: %s" % drive_dir)
             #need to use drive_dir here... base_dir is not enough
             #dd_path = Path(content_path)
-            print "currnet base_dir:", content.base_dir
+            print("currnet base_dir:", content.base_dir)
             if re.search(content.base_dir, content_path):
-                print "removing base_dir: %s" % content.base_dir
+                print("removing base_dir: %s" % content.base_dir)
                 content.drive_dir = content_path.replace(content.base_dir, '')
             else:
                 content.drive_dir = content_path
 
-            print "Drive dir result: ", content.drive_dir
+            print("Drive dir result: ", content.drive_dir)
             
         else:
             dd_path = Path(drive_dir)
             content.base_dir = dd_path.to_relative(content_path)
-            print "SETTING content.base_dir TO: %s" % content.base_dir
+            print("SETTING content.base_dir TO: %s" % content.base_dir)
             content.drive_dir = drive_dir
 
         all_contents[json_source] = content
@@ -780,7 +786,7 @@ class SimpleContent(object):
         #i.e. autoload!
 
         if content and source:
-            raise ValueError, "Cannot initialize Content object with both source and dictionary: %s, %s" % (source, content) 
+            raise ValueError("Cannot initialize Content object with both source and dictionary: %s, %s" % (source, content)) 
 
         elif content:
             #what was passed in for manual initialization:
@@ -819,7 +825,7 @@ class SimpleContent(object):
                 # - updated filename
                 new_name = os.path.basename(source)
                 if new_name and new_name != self.filename:
-                    print "Updating self.filename: ->%s<- (type: %s) with new name: ->%s<- (type: %s)" % (self.filename, type(self.filename), new_name, type(new_name))
+                    print("Updating self.filename: ->%s<- (type: %s) with new name: ->%s<- (type: %s)" % (self.filename, type(self.filename), new_name, type(new_name)))
                     self.filename = new_name
 
             #base_dir will only be set if it already exists in the loaded json
@@ -898,18 +904,18 @@ class SimpleContent(object):
         #    raise ValueError, "No Content!"
 
         if debug:
-            print content
+            print(content)
 
         if not isinstance(content, dict):
             #print "%s" % content
-            print ""
-            print content
-            print self.json_source
-            raise ValueError, "Unknown type of content: %s" % type(content)
+            print("")
+            print(content)
+            print(self.json_source)
+            raise ValueError("Unknown type of content: %s" % type(content))
 
         #start keeping track of ultimate source for this content
         #if it ends up as part of another list, this is the way to get back
-        if content.has_key('json_source'):
+        if 'json_source' in content:
             option = content['json_source']
             if self.json_source and self.json_source != option:
                 #print "WARNING: over-writing old source."
@@ -920,36 +926,36 @@ class SimpleContent(object):
                 self.json_source = option
             del content['json_source']
 
-        if content.has_key('timestamp'):
+        if 'timestamp' in content:
             self.timestamp = Timestamp(content['timestamp'])
             del content['timestamp']
-        if content.has_key('date'):
+        if 'date' in content:
             self.timestamp = Timestamp(content['date'])
             del content['date']
             
-        if content.has_key('title'):
+        if 'title' in content:
             self.title = content['title']
             del content['title']
             
-        if content.has_key('description'):
+        if 'description' in content:
             self.description = content['description']
             del content['description']            
 
-        if content.has_key('sites'):
+        if 'sites' in content:
             self.sites = content['sites']
             del content['sites']
 
-        if content.has_key('people'):
+        if 'people' in content:
             for person in content['people']:
                 self.people.append(to_tag(person))
             del content['people']
             
-        if content.has_key('tags'):
+        if 'tags' in content:
             for tag in content['tags']:
                 self.tags.append(to_tag(tag))
             del content['tags']
 
-        if content.has_key('history'):
+        if 'history' in content:
             history = content['history']
             l = Log()
             l.from_string(history)
@@ -975,33 +981,33 @@ class SimpleContent(object):
 
         #deprecated: root is ambiguous here
         #will continue to load for older jsons
-        if content.has_key('root'):
+        if 'root' in content:
             self.base_dir = content['root']
             del content['root']
-        if content.has_key('content_base'):
+        if 'content_base' in content:
             self.base_dir = content['content_base']
             del content['content_base']
-        if content.has_key('base_dir'):
+        if 'base_dir' in content:
             self.base_dir = content['base_dir']
             del content['base_dir']
 
-        if content.has_key('drive_dir'):
+        if 'drive_dir' in content:
             self.drive_dir = content['drive_dir']
             del content['drive_dir']
 
         #no path here! filename only!
-        if content.has_key('filename'):
+        if 'filename' in content:
             self.filename = content['filename']
             del content['filename']
 
-        if content.has_key('hash'):
+        if 'hash' in content:
             self.hash = content['hash']
             del content['hash']
 
         if debug:
-            print "didn't convert the following keys for content: %s" % content.keys()
-            print content
-            print
+            print("didn't convert the following keys for content: %s" % list(content.keys()))
+            print(content)
+            print()
 
         #keep everything left over so we have it later for storing
         self.remainder = content
@@ -1018,10 +1024,10 @@ class SimpleContent(object):
 
         #print self.remainder
         snapshot = {}
-        for key, value in self.remainder.items():
+        for key, value in list(self.remainder.items()):
             if isinstance(value, list):
                 snapshot[key] = value[:]
-            elif isinstance(value, str) or isinstance(value, unicode):
+            elif isinstance(value, str) or isinstance(value, str):
                 snapshot[key] = value
             else:
                 #shouldn't be too many of these
@@ -1087,12 +1093,12 @@ class SimpleContent(object):
                 if self.json_source:
                     destination = self.json_source
                 else:
-                    raise ValueError, "unknown destination: %s and unknown source: %s" % (destination, self.json_source)
+                    raise ValueError("unknown destination: %s and unknown source: %s" % (destination, self.json_source))
 
             d = self.to_dict()
 
-            if d.has_key('json_source') and d['json_source'] != destination:
-                print "UPDATING json_source from: %s to %s" % (d['json_source'], destination)
+            if 'json_source' in d and d['json_source'] != destination:
+                print("UPDATING json_source from: %s to %s" % (d['json_source'], destination))
                 d['json_source'] = destination
 
             save_json(destination, d)
@@ -1115,11 +1121,11 @@ class SimpleContent(object):
         extensions = {}
 
         if debug:
-            print "Looking at Location: %s" % location
+            print("Looking at Location: %s" % location)
 
         if location and os.path.exists(location) and os.path.isdir(location):
             if debug: 
-                print "Location Available!: %s" % location
+                print("Location Available!: %s" % location)
             for root,dirs,files in os.walk(location):
                 for f in files:
                     ignore = False
@@ -1133,8 +1139,8 @@ class SimpleContent(object):
                         #    print "looking at: %s" % media
                         if mpath.type() == kind:
                             if debug:
-                                print "Found %s: %s" % (kind, f)
-                            if extensions.has_key(mpath.extension):
+                                print("Found %s: %s" % (kind, f))
+                            if mpath.extension in extensions:
                                 extensions[mpath.extension].append(media)
                             else:
                                 extensions[mpath.extension] = [ media ]
@@ -1150,44 +1156,44 @@ class SimpleContent(object):
         #if debug:
         #    print "found the following:"
 
-        if len(extensions.keys()) > 1:
+        if len(list(extensions.keys())) > 1:
             #more than one extension...
             #check for duplicate versions of the same file
 
             #could order some how... just sorting for now
             filenames = []
-            sorted_keys = extensions.keys()
+            sorted_keys = list(extensions.keys())
             sorted_keys.sort()
             if debug:
-                print "SORTED KEYS: %s" % sorted_keys
+                print("SORTED KEYS: %s" % sorted_keys)
             for ext in sorted_keys:
                 for media in extensions[ext][:]:
                     mpath = Path(media)
                     if mpath.name in filenames:
                         extensions[ext].remove(media)
-                        print "REMOVING DUPE: %s" % media
+                        print("REMOVING DUPE: %s" % media)
                     else:
                         filenames.append(mpath.name)
                     
                 
 
         combined = []
-        for key in extensions.keys():
+        for key in list(extensions.keys()):
             combined.extend(extensions[key])
 
             if debug:
-                print "%s %ss" % (len(extensions[key]), key)
+                print("%s %ss" % (len(extensions[key]), key))
 
         if debug:
-            print "Found %s media files" % (len(combined))
+            print("Found %s media files" % (len(combined)))
             #print combined
 
 
         if debug:
-            print "LIMIT BY NAME: %s, FILENAME: %s" % (limit_by_name, self.filename)
+            print("LIMIT BY NAME: %s, FILENAME: %s" % (limit_by_name, self.filename))
         if limit_by_name and self.filename:
             if debug:
-                print "using filename: %s to filter list" % self.filename
+                print("using filename: %s to filter list" % self.filename)
 
             accepted = []
             for item in combined:
@@ -1195,7 +1201,7 @@ class SimpleContent(object):
                     accepted.append(item)
 
             if debug:
-                print "The following items match: %s" % accepted
+                print("The following items match: %s" % accepted)
             combined = accepted
 
         shorts = []
@@ -1224,7 +1230,7 @@ class SimpleContent(object):
         path = os.path.join(self.path, self.filename)
 
         if not os.path.exists(path) or os.path.isdir(path):
-            print "Skipping Hash: File not found: %s" % path
+            print("Skipping Hash: File not found: %s" % path)
             return None
         else:
             md5 = hashlib.md5()
@@ -1247,11 +1253,11 @@ class SimpleContent(object):
         """
         if not self.hash or not content.hash:
             if not self.filename or not content.filename:
-                print self.debug()
-                print content.debug()
+                print(self.debug())
+                print(content.debug())
                 #may not be able to calculate hash if media file is not local:
                 #raise ValueError, "Cannot compare unless hash / filename exists"
-                print "Cannot compare unless hash / filename exists"
+                print("Cannot compare unless hash / filename exists")
                 #assume they're not equal
                 return False
             else:
@@ -1486,7 +1492,7 @@ class Content(SimpleContent):
             return getattr(self, attribute)
         else:
             #shouldn't get here:
-            raise ValueError, "Unexpected condition"
+            raise ValueError("Unexpected condition")
 
     #TODO:
     #These are a bit like global variables for the Content tree structure
@@ -1594,7 +1600,7 @@ class Content(SimpleContent):
 
                     #seems like if you're asking for a path
                     #and the parts aren't there, that's an error
-                    raise ValueError, "Incomplete drive_dir: %s (drive_dir).  Could not find drive_dir anywhere: %s" % (self.drive_dir, self.root.to_dict())
+                    raise ValueError("Incomplete drive_dir: %s (drive_dir).  Could not find drive_dir anywhere: %s" % (self.drive_dir, self.root.to_dict()))
 
             if not (self.base_dir):
                 bd_option = self._seek_up('base_dir')
@@ -1676,7 +1682,7 @@ class Content(SimpleContent):
                         next_segment = segment
 
                 if next_segment is None:
-                    raise ValueError, "Could not find segment_id: %s, in: %s" % (segment_id, self.to_dict())
+                    raise ValueError("Could not find segment_id: %s, in: %s" % (segment_id, self.to_dict()))
                 cur_segment = next_segment
 
             #print "found the following ids for segment path: %s" % path
@@ -1709,9 +1715,9 @@ class Content(SimpleContent):
         extracted = ''
 
         if self == self.root:
-            print "This segment covers the whole content object..."
-            print "not extracting"
-            print source
+            print("This segment covers the whole content object...")
+            print("not extracting")
+            print(source)
 
         else:
             #in case the end is not set for the segement,
@@ -1747,7 +1753,7 @@ class Content(SimpleContent):
             #if it already exists, this command won't exit cleanly
             if not os.path.exists(dest_part):
                 command = 'avconv -i %s -ss %s -t %s -vcodec copy -acodec copy "%s"' % (source, keep_start, duration, dest_part)
-                print command
+                print(command)
                 process = subprocess.Popen(command, shell=True,
                                            stdout=subprocess.PIPE,
                                            stderr=subprocess.PIPE)
@@ -1759,11 +1765,11 @@ class Content(SimpleContent):
                     #l = process.stderr.readline()
                     #l = process.stdout.readline()
                     #print l
-                    print "Processing: %s " % dest_part
+                    print("Processing: %s " % dest_part)
                     time.sleep(1)
 
                 #when process terminates, can finish printing the rest:
-                print process.stdout.read()
+                print(process.stdout.read())
 
             extracted = dest_part
 
@@ -1892,32 +1898,32 @@ class Content(SimpleContent):
         ##     del content['hash']
 
 
-        if content.has_key('image'):
+        if 'image' in content:
             self.image = content['image']
             del content['image']
 
-        if content.has_key('tracks'):
+        if 'tracks' in content:
             for title in content['tracks']:
                 self.titles.append(title)
             del content['tracks']
 
-        if content.has_key('status'):
+        if 'status' in content:
             self.status = content['status']
             del content['status']
 
-        if content.has_key('segment_id'):
+        if 'segment_id' in content:
             self.segment_id = content['segment_id']
             del content['segment_id']
 
-        if content.has_key('next_segment_id'):
+        if 'next_segment_id' in content:
             self.next_segment_id = content['next_segment_id']
             del content['next_segment_id']
 
-        if content.has_key('track_prefix'):
+        if 'track_prefix' in content:
             self.track_prefix = content['track_prefix']
             del content['track_prefix']
 
-        if content.has_key('marks'):
+        if 'marks' in content:
             ml = MarkList()
             ml.from_tuples(content['marks'])
             ## for mark in content['marks']:
@@ -1925,7 +1931,7 @@ class Content(SimpleContent):
             self.marks = ml
             del content['marks']
 
-        if content.has_key('segments'):
+        if 'segments' in content:
             #segments = []
             for seg in content['segments']:
                 #clear out drive_dir for sub-segments...
@@ -1941,19 +1947,19 @@ class Content(SimpleContent):
             #self.segments = segments
             del content['segments']
 
-        if content.has_key('start'):
+        if 'start' in content:
             mark = Mark()
             mark.seconds = float(content['start'])
             self.start = mark
             del content['start']
 
-        if content.has_key('end'):
+        if 'end' in content:
             mark = Mark()
             mark.seconds = float(content['end'])
             self.end = mark
             del content['end']
 
-        if content.has_key('media'):
+        if 'media' in content:
             self.media = content['media']
             del content['media']
 
@@ -1961,15 +1967,15 @@ class Content(SimpleContent):
         #site is only loaded for legacy json files...
         #loaded into self.sites
         #not saved
-        if content.has_key('site'):
+        if 'site' in content:
             self.sites.append(content['site'])
             del content['site']
 
 
         if debug:
-            print "didn't convert the following keys for content: %s" % content.keys()
-            print content
-            print
+            print("didn't convert the following keys for content: %s" % list(content.keys()))
+            print(content)
+            print()
 
         #keep everything left over so we have it later for storing
         self.remainder = content
@@ -1990,10 +1996,10 @@ class Content(SimpleContent):
 
         #print self.remainder
         snapshot = {}
-        for key, value in self.remainder.items():
+        for key, value in list(self.remainder.items()):
             if isinstance(value, list):
                 snapshot[key] = value[:]
-            elif isinstance(value, str) or isinstance(value, unicode):
+            elif isinstance(value, str) or isinstance(value, str):
                 snapshot[key] = value
             else:
                 #print "deep copy for type: %s : %s" % (type(value), value)
@@ -2110,7 +2116,7 @@ class Content(SimpleContent):
         
         if location and os.path.exists(location) and os.path.isdir(location):
             if debug:
-                print "Drive Available!: %s" % disk
+                print("Drive Available!: %s" % disk)
             for root,dirs,files in os.walk(location):
                 for f in files:
                     ignore = False
@@ -2139,11 +2145,11 @@ class Content(SimpleContent):
                     #regular expression might be better here:
                     if re.search(ignore, str(image)):
                         if debug:
-                            print "Removing: %s" % image
+                            print("Removing: %s" % image)
                         images.remove(image)
                         
             if debug:
-                print images
+                print(images)
             self.image = images[0]
         else:
             self.image = ''
@@ -2184,7 +2190,7 @@ class Content(SimpleContent):
         #options = self.find_extension()
         """
         if debug:
-            print "before looking at cache, found: %s items" % len(options)
+            print("before looking at cache, found: %s items" % len(options))
 
         matches = []
 
@@ -2197,14 +2203,14 @@ class Content(SimpleContent):
                     #then no need to rescan. remove it.
                     if item == m[0] and (len(m) > 2) and (m[1]):
                         if debug:
-                            print "skipping: %s because it matched %s" % (item, m)
+                            print("skipping: %s because it matched %s" % (item, m))
                         matches.append(m)
                         if item in options:
                             options.remove(item)
         
         if debug:
-            print "after looking at cache, matched: %s items" % len(matches)
-            print "still need to find: %s new items" % len(options)
+            print("after looking at cache, matched: %s items" % len(matches))
+            print("still need to find: %s new items" % len(options))
 
         for item in options:
             #dimensions = get_media_dimensions(item)
@@ -2212,10 +2218,10 @@ class Content(SimpleContent):
             self.end = Mark(seconds=duration)
             #print self.end
             if debug:
-                print "FOUND DIMENSIONS: %s" % dimensions
+                print("FOUND DIMENSIONS: %s" % dimensions)
             filesize = os.path.getsize(item)
             if debug:
-                print "FOUND FILE SIZE: %s" % filesize
+                print("FOUND FILE SIZE: %s" % filesize)
             matches.append( [item, dimensions, filesize] )
 
         self.media = matches

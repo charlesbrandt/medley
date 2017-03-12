@@ -22,6 +22,8 @@ or into a single playlist with tagged sections
 cd /c/videos 
 python /c/medley/scripts/update_playlist.py playlists/20121206-vinyl-toget.m3u .
 """
+from __future__ import print_function
+from builtins import str
 
 import os, sys, codecs
 import re
@@ -37,7 +39,7 @@ sys.path.insert(0, _module_dir)
 from make_playlist import ROOT
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 ## #media_check = re.compile('.*\.flv$')
 ## media_check = re.compile('(.*\.flv$|.*\.mp4$|.*\.mp3$)')
@@ -52,7 +54,7 @@ def scan_dir(m3u, subdir):
 
     m3u.extend( [ "%s/1.svg" % ROOT, "%s/2.svg" % ROOT, "%s/3.svg" % ROOT, "%s/4.svg" % ROOT, "%s.svg" % (subdir) ] )
 
-    for root,dirs,files in os.walk(unicode(subdir)):
+    for root,dirs,files in os.walk(str(subdir)):
         for f in files:
             #TODO:
             #general function is_media(f)
@@ -65,12 +67,12 @@ def scan_dir(m3u, subdir):
             if media_check.search(f):
                 if not media_file in m3u:
                     m3u.append(media_file)
-                    print "adding: %s" % media_file
+                    print("adding: %s" % media_file)
                 else:
                     #print "already have: %s" % media_file
                     pass
             else:
-                print "skipping: %s" % media_file
+                print("skipping: %s" % media_file)
     
 
 def add_new(source_list, source_dir, destination=None):
@@ -83,21 +85,21 @@ def add_new(source_list, source_dir, destination=None):
         subdirs = source_dir_path.load().directories
         #subdirs = os.listdir(source_dir)
         for subdir in subdirs:
-            print ""
+            print("")
             if check_ignore(str(subdir), ignores):
-                print "SKIP (IGNORES): %s" % subdir
+                print("SKIP (IGNORES): %s" % subdir)
             else:
-                print "SUBDIR: %s" % subdir
+                print("SUBDIR: %s" % subdir)
                 scan_dir(m3u, subdir)
 
         scan_dir(m3u, source_dir)
 
 
     else:
-        print "NOT A DIRECTORY: %s" % source_dir
+        print("NOT A DIRECTORY: %s" % source_dir)
 
-    print ""
-    print ""
+    print("")
+    print("")
     #for item in m3u:
     #    print item
     if destination is None:
@@ -105,7 +107,7 @@ def add_new(source_list, source_dir, destination=None):
         dest_name = Timestamp().compact(accuracy="day") + "-videos.m3u"
         destination = os.path.join(str(source_list_path.parent()), dest_name)
         
-    print "Saving to: %s" % destination
+    print("Saving to: %s" % destination)
     m3u.save(destination)
 
 def main():

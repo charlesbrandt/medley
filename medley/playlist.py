@@ -1,6 +1,11 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import str
+from builtins import next
+from builtins import object
 import os, codecs, re
-from helpers import save_json, load_json
-from content import Content
+from .helpers import save_json, load_json
+from .content import Content
 
 class Position(object):
     """
@@ -211,7 +216,7 @@ class PositionList(list):
         return self.get(self._position.previous())
 
     #def get_next(self):
-    def next(self):
+    def __next__(self):
         """
         get the next item in the list without changing position
         """
@@ -219,7 +224,7 @@ class PositionList(list):
             self.new = False
             return self.get()
         else:
-            return self.get(self._position.next())
+            return self.get(next(self._position))
 
     def go(self, position=None):
         """
@@ -231,8 +236,8 @@ class PositionList(list):
             #setting the position object's internal position:
             self._position.position = position
         #self.current = item
-        print self._position.debug()
-        print "passed position: %s" % position
+        print(self._position.debug())
+        print("passed position: %s" % position)
         return item
 
     #changing the interface to be the same as it is with Position object:
@@ -241,7 +246,7 @@ class PositionList(list):
         """
         go to the next item in the list (and change our position accordingly)
         """
-        return self.go(self._position.next())
+        return self.go(next(self._position))
         
     #def go_previous(self):
     def decrement(self):
@@ -354,7 +359,7 @@ class Playlist(PositionList):
             self.append(source)
             return True
         else:
-            print "Already have: %s" % source.path
+            print("Already have: %s" % source.path)
             return False
 
     def has_path(self, path):
@@ -405,28 +410,28 @@ class Playlist(PositionList):
         contents = []
         for item in items:
             if self.debug:
-                print item
-                print ""
+                print(item)
+                print("")
                 
             (json_source, segment_id) = item
-            if all_contents.has_key(json_source):
+            if json_source in all_contents:
                 if self.debug:
-                    print "Matched existing Content object with path: %s" % json_source
+                    print("Matched existing Content object with path: %s" % json_source)
                 content = all_contents[json_source]
             else:
                 try:
                     if self.debug:
-                        print "loading: %s" % json_source
+                        print("loading: %s" % json_source)
                     content = Content(json_source)
                     all_contents[json_source] = content
                 except:
-                    print "removing item. could not load: %s" % json_source
+                    print("removing item. could not load: %s" % json_source)
 
             #print json_source
             try:
                 segment = content.get_segment(segment_id)
             except:
-                raise ValueError, "Could not locate content... is it still available locally?"
+                raise ValueError("Could not locate content... is it still available locally?")
             #print segment.to_dict()
             #print ""
             #print ""

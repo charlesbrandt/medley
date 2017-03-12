@@ -20,11 +20,12 @@ it's best to note times on a single file instead of an iso
 
 
 """
+from __future__ import print_function
 from medley.helpers import get_media_properties
 from medley.slice_media import slice_media
 
 def usage():
-    print __doc__
+    print(__doc__)
         
 if __name__ == '__main__':
     source = None
@@ -45,7 +46,7 @@ if __name__ == '__main__':
     duration = properties[1]
     bitrate = properties[2]
     bitstr = "%sk" % bitrate
-    print bitstr
+    print(bitstr)
     #exit()
 
     slice_media(source, destination, keep_tags=['\+'], duration=duration, bitrate=bitstr)

@@ -1,3 +1,7 @@
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from builtins import object
 import os, json, re
 
 from PySide import QtGui, QtCore
@@ -82,7 +86,7 @@ class Node(object):
         if row < len(self.children):
             return self.children[row]
         else:
-            print "No child at row: %s" % row
+            print("No child at row: %s" % row)
             return None
     
     def childCount(self):
@@ -162,18 +166,18 @@ class Node(object):
         elif item:
             simple = item
         else:
-            raise ValueError, "No data to load from_json: %s" % data
+            raise ValueError("No data to load from_json: %s" % data)
 
         #print simple
         
-        if simple.has_key('name'):
+        if 'name' in simple:
             self.setName(simple['name'])
 
         #ok to load it if it has it, but probably better to load source
-        if simple.has_key('content'):
+        if 'content' in simple:
             self.content = simple['content']
 
-        if simple.has_key('source'):
+        if 'source' in simple:
             self.source = simple['source']
             if self.source:
                 #load self.source into self.content here
@@ -191,7 +195,7 @@ class Node(object):
                 #with an empty/new Playlist()
                 pass
 
-        if simple.has_key('children'):
+        if 'children' in simple:
             for item in simple['children']:
                 child = Node('child')
                 child.from_json(item=item)
@@ -436,10 +440,10 @@ class TreeModel(QtCore.QAbstractItemModel):
     def dropMimeData(self, mimedata, action, row, column, parent):
         #print dir(mimedata)
         #print mimedata.data.keys()
-        print 'dropMimeData %s %s %s %s' % (mimedata.data('text/json'), action, row, parent)
+        print('dropMimeData %s %s %s %s' % (mimedata.data('text/json'), action, row, parent))
 
         formats = mimedata.formats()
-        print "formats: %s" % formats
+        print("formats: %s" % formats)
         if 'text/json' in formats:
             item = Node('')
             item.from_json( str(mimedata.data('text/json')) )
@@ -447,10 +451,10 @@ class TreeModel(QtCore.QAbstractItemModel):
             dropParent.addChild( item )
             #self.insertRows( dropParent.numChildren()-1, 1, parentIndex )
         elif 'json/content' in formats:
-            print "Adding content to playlist"
+            print("Adding content to playlist")
             dropParent = self.getNode( parent )
             #self.cur_node = self.cur_index.internalPointer()
-            print "using content: %s" % dropParent.content
+            print("using content: %s" % dropParent.content)
             subtree = PlaylistModel(dropParent.content)
             subtree.dropMimeData(mimedata, action, row, column, parent)
             
@@ -506,12 +510,12 @@ class PlaylistsTreeView(QtGui.QTreeView):
         ##             #    print "Error loading previous configuration: %s" % self.configs['previously']
 
         if not previous:
-            print "Could not find a valid previous setup... starting blank"
+            print("Could not find a valid previous setup... starting blank")
             #self.playlists.root.from_json(item={})
             self.load_lists("blank.json")
 
         if cli_items:
-            print "Items passed in from cli: %s" % cli_items
+            print("Items passed in from cli: %s" % cli_items)
 
             #print root.children
             
@@ -640,7 +644,7 @@ class PlaylistsTreeView(QtGui.QTreeView):
             self.parent().change_selection(self.cur_node)
 
     def update_location(self, destination):
-        print "UPDATE LOCATION CALLED: %s" % destination
+        print("UPDATE LOCATION CALLED: %s" % destination)
         self.cur_node.source = destination
         self.cur_node.save()
 
@@ -689,10 +693,10 @@ class PlaylistsTreeView(QtGui.QTreeView):
             parts[-1] = 'json'
             json_name = '.'.join(parts)
             fname = os.path.join(os.path.dirname(fname), json_name)
-            print fname
+            print(fname)
 
         else:
-            print "UNKNOWN PLAYLIST FORMAT: %s" % fname
+            print("UNKNOWN PLAYLIST FORMAT: %s" % fname)
             
         #def insertRows(self, row, count, parentIndex=QtCore.QModelIndex()):
         
@@ -775,9 +779,9 @@ class PlaylistsTreeView(QtGui.QTreeView):
         else:
             fname, _ = QtGui.QFileDialog.getOpenFileName(self, 'Open file')
 
-        print "Children pre:"
+        print("Children pre:")
         for child in self.playlists.root.children:
-            print child.name
+            print(child.name)
             
         items = load_json(fname)
         #make a new node based on items root:
@@ -787,9 +791,9 @@ class PlaylistsTreeView(QtGui.QTreeView):
         child.from_json(item=items)
         self.setModel(self.playlists)
 
-        print "Children post:"
+        print("Children post:")
         for child in self.playlists.root.children:
-            print child.name
+            print(child.name)
         
 
     def open_lists(self):
@@ -842,7 +846,7 @@ class PlaylistsTreeView(QtGui.QTreeView):
 
         fname = dlg.selectedFiles()[0]
         if fname:
-            print "SAVE LISTS CALLED: %s" % fname
+            print("SAVE LISTS CALLED: %s" % fname)
 
             self.last_folder = os.path.dirname(fname)
 

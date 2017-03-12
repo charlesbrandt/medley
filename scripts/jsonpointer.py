@@ -31,6 +31,12 @@
 #
 
 from __future__ import unicode_literals
+from future import standard_library
+standard_library.install_aliases()
+from builtins import zip
+from builtins import map
+from builtins import str
+from builtins import object
 
 """ Identify specific nodes in a JSON document (RFC 6901) """
 
@@ -42,8 +48,8 @@ __license__ = 'Modified BSD License'
 
 
 try:
-    from urllib import unquote
-    from itertools import izip
+    from urllib.parse import unquote
+    
 except ImportError: # Python 3
     from urllib.parse import unquote
     izip = zip
@@ -136,7 +142,7 @@ class JsonPointer(object):
         if parts.pop(0) != '':
             raise JsonPointerException('location must starts with /')
 
-        parts = map(unquote, parts)
+        parts = list(map(unquote, parts))
         parts = [part.replace('~1', '/') for part in parts]
         parts = [part.replace('~0', '~') for part in parts]
         self.parts = parts
@@ -303,4 +309,4 @@ def pairwise(iterable):
     a, b = tee(iterable)
     for _ in b:
         break
-    return izip(a, b)
+    return zip(a, b)

@@ -23,6 +23,7 @@
 
 
 """
+from builtins import object
 from medley.helpers import load_json, save_json
 
 # simple place to keep track of all loaded content objects
@@ -47,7 +48,7 @@ class Configs(object):
 
         #aka drive_dir ??? (be consistent with content Object?)
         #maybe last_folder is a different configuration
-        if self.configs.has_key('last_folder'):
+        if 'last_folder' in self.configs:
             self.last_folder = self.config['last_folder']
         else:
             self.last_folder = '/'
@@ -58,7 +59,7 @@ class Configs(object):
         return blank if none exists
         """
 
-        if self.configs.has_key(key):
+        if key in self.configs:
             return self.configs[key]
         else:
             return ''

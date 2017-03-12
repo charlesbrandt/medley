@@ -13,11 +13,12 @@
 this functionality is now a method on the Content object itself
 adapted from split_media script
 """
+from __future__ import print_function
 
 import os, sys, codecs
 
 def usage():
-    print __doc__
+    print(__doc__)
     
 if __name__ == '__main__':
     source = None

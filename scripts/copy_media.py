@@ -29,6 +29,8 @@ translate also help with the destination if copy is enabled.
 the default for that is the local directory
 
 """
+from __future__ import print_function
+from builtins import str
 
 import sys, os, re
 import subprocess
@@ -64,13 +66,13 @@ def flatten_structure(source, destination):
     elif os.path.isfile(source) and mp3_check.search(source):
         all_audio.append(source)
 
-    print "found the following audio files in path: %s" % source
-    print all_audio
+    print("found the following audio files in path: %s" % source)
+    print(all_audio)
     for f in all_audio:
         f_path = Path(f)
         f_name = f_path.filename
         f_dest = os.path.join(destination, f_name)
-        print "copying: %s to %s" % (f, f_dest)
+        print("copying: %s to %s" % (f, f_dest))
         copy_file(f, f_dest)
     
 def flatten():
@@ -84,7 +86,7 @@ def make_destination(source, translate):
     else:
         (pre, post) = ('/c/media', '')
 
-    print "source: %s" % source
+    print("source: %s" % source)
     source = str(source)
     destination = source.replace(pre, post)
     #print "destination: %s" % destination
@@ -110,13 +112,13 @@ def copy_file(source, destination, verbose=False):
     """
     #if not destination:
     if os.path.exists(destination):
-        print "skipping: %s" % destination
+        print("skipping: %s" % destination)
         pass
     else:
         dest_path = os.path.dirname(destination)
         if not dest_path:
             dest_path = os.path.abspath('./')
-            print "USING PATH: %s" % dest_path
+            print("USING PATH: %s" % dest_path)
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
 
@@ -125,8 +127,8 @@ def copy_file(source, destination, verbose=False):
         command = 'rsync -av "%s" "%s"' % (source, destination)
         rsync = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if verbose:
-            print command
-            print rsync.communicate()[0]
+            print(command)
+            print(rsync.communicate()[0])
         else:
             rsync.communicate()[0]
             
@@ -148,12 +150,12 @@ def process_files(source_list, translate=None, action="copy", m3u_dest="temp.txt
     converter = Converter()
 
     if sl.extension == ".m3u":
-        print "M3U!"
+        print("M3U!")
         sources = converter.from_m3u(source_list)
     elif sl.extension == ".txt":
         sources = converter.from_journal(source_list)
     else:
-        print "UNKNOWN EXTENSION: %s" % sl.extension
+        print("UNKNOWN EXTENSION: %s" % sl.extension)
 
     
     new_sources = Sources()
@@ -164,22 +166,22 @@ def process_files(source_list, translate=None, action="copy", m3u_dest="temp.txt
         if os.path.exists(str(i.path)):
             destination = make_destination(i.path, translate)
             #print "SOURCE: %s" % i
-            print "DEST: %s" % destination
+            print("DEST: %s" % destination)
 
             if action == "copy":
-                print "Copy %03d: %s" % (counter, i.path)
+                print("Copy %03d: %s" % (counter, i.path))
                 copy_file(i.path, destination)
             if action == "m3u":
                 new_sources.append(Source(destination))
         else:
-            print "COULD NOT FIND FILE: %s" % i.path
+            print("COULD NOT FIND FILE: %s" % i.path)
         counter += 1
 
     if action == "m3u":
         #print len(new_sources)
         m3u = converter.to_m3u(new_sources, verify=False)
         #print m3u
-        print "SAVING M3U TO: %s" % m3u_dest
+        print("SAVING M3U TO: %s" % m3u_dest)
         f = open(m3u_dest, 'w')
         f.write(m3u)
         f.close()

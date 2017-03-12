@@ -32,6 +32,7 @@ see also:
 
 python automatic_json_lists.py source_directory "tag list separated by spaces"
 """
+from __future__ import print_function
 
 import os, sys, codecs, re
 
@@ -40,7 +41,7 @@ from medley.content import Content
 from medley.playlist import Playlist
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 
 #place to keep track of all loaded Content objects
@@ -186,7 +187,7 @@ def find_verified(content, root=True):
             verified.extend(result)
 
     if not matched and root:
-        print "Warning: no valid status (%s) for content: %s" % (all_status, content.json_source)
+        print("Warning: no valid status (%s) for content: %s" % (all_status, content.json_source))
         
     return verified
 
@@ -199,7 +200,7 @@ def scan_content(content, cur_lists):
 
     #even if there are multiple tags for one list,
     #they should all have a separate key that was created in make_empty_lists()
-    all_tags = cur_lists.keys()
+    all_tags = list(cur_lists.keys())
     
     verified = find_verified(content)
 
@@ -245,7 +246,7 @@ def scan_content(content, cur_lists):
                         ##     matched = True
                 
                 if not matched:                    
-                    print "Couldn't match: ", segment.tags
+                    print("Couldn't match: ", segment.tags)
 
                     #could append to misc, if wanted
                     cur_lists['misc'].append(segment)
@@ -266,7 +267,7 @@ def scan_content(content, cur_lists):
                     
             #print segment.status
 
-    print
+    print()
     #print content.debug(recurse=False)
 
 def find_jsons_and_update_lists(source, cur_lists, type=None):
@@ -291,19 +292,19 @@ def find_jsons_and_update_lists(source, cur_lists, type=None):
             if json_check.search(f):
                 #print current_file
                 result = load_json(current_file)
-                if isinstance(result, dict) and result.has_key('segments'):
+                if isinstance(result, dict) and 'segments' in result:
                     #going to assume this is a content object...
                     #reload it that way:
-                    if not current_file in all_contents.keys():
+                    if not current_file in list(all_contents.keys()):
                         content = Content(current_file)
                         scan_content(content, cur_lists)
                         all_contents[current_file] = content
                     else:
                         #shouldn't get this here:
-                        print "Duplicate json found: %s" % current_file
+                        print("Duplicate json found: %s" % current_file)
 
                 else:
-                    print "Skipping: %s... not a Content object" % current_file
+                    print("Skipping: %s... not a Content object" % current_file)
 
                 #print result
                 #print 
@@ -331,12 +332,12 @@ if __name__ == '__main__':
             if not os.path.isdir(source):
                 source = os.path.basedir(source)
         else:
-            print "Couldn't find path: %s" % source
+            print("Couldn't find path: %s" % source)
             exit()
 
 
         cur_lists, main_tags = make_empty_lists(tags)
-        print main_tags
+        print(main_tags)
 
         #do the main scan here:
         find_jsons_and_update_lists(source, cur_lists)
@@ -373,16 +374,16 @@ if __name__ == '__main__':
                             max_plus = plus_count
 
                     key = '%02d' % max_plus
-                    if ordered_plusses.has_key(key):
+                    if key in ordered_plusses:
                         ordered_plusses[key].append(item)
                     else:
                         ordered_plusses[key] = [ item ]
 
                 #now re-combine everything back to one list:
-                keys = ordered_plusses.keys()
+                keys = list(ordered_plusses.keys())
                 keys.sort()
                 keys.reverse()
-                print keys
+                print(keys)
                 ordered_list = []
                 for key in keys:
                     ordered_list.extend(ordered_plusses[key])
@@ -396,7 +397,7 @@ if __name__ == '__main__':
                 #anything on old list that is not on new list should be kept off
 
                 if os.path.exists(dest):
-                    print "WARNING: path exists! ", dest
+                    print("WARNING: path exists! ", dest)
 
                     ojson = load_json(dest)
                     original = Playlist()
@@ -404,8 +405,8 @@ if __name__ == '__main__':
                         original.load(dest, all_contents)
                     except:
                         #segment may not exist any longer
-                        print "COULD NOT LOAD PLAYLIST: %s" % dest
-                        print "order may be lost"
+                        print("COULD NOT LOAD PLAYLIST: %s" % dest)
+                        print("order may be lost")
                     ordered_list = []
 
                     original_pre = len(original)
@@ -422,11 +423,11 @@ if __name__ == '__main__':
                             #print "not in cur_list"
                             pass
 
-                    print "matched: %s (of %s) previously sorted items" % (len(ordered_list), original_pre)
+                    print("matched: %s (of %s) previously sorted items" % (len(ordered_list), original_pre))
                     if len(original):
-                        print "%s items on old list are not on new list (untagged)" % len(original)
+                        print("%s items on old list are not on new list (untagged)" % len(original))
                     if len(cur_list):
-                        print "ADDING: %s new items" % len(cur_list)
+                        print("ADDING: %s new items" % len(cur_list))
 
                     #add the ordered items to the end:
                     cur_list.extend(ordered_list)
@@ -441,14 +442,14 @@ if __name__ == '__main__':
                 #the downside is this requires updating any medley states
                 #that reference the corresponding (old) list tree.
 
-                print "saving to: ", dest
+                print("saving to: ", dest)
                 pl.save(dest)
                 lists_index['children'].append( { 'source':dest, 'name':main_tag, 'children':[] } )
 
 
         index_name = source_name + '.json'
         index_dest = os.path.join(source, index_name)
-        print "saving index to: %s" % index_dest
+        print("saving index to: %s" % index_dest)
         save_json(index_dest, lists_index)
 
         #print parse_tags("tag1 tag2 (group1 group2 group3) tag3 (groupx (groupy) groupz) tag4")

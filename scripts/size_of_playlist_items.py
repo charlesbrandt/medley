@@ -16,6 +16,7 @@ python size_of_playlist_items.py /media/path/to.m3u
 
 
 """
+from __future__ import print_function
 import os, sys, codecs
 import re
 
@@ -26,7 +27,7 @@ from medley.content import Content
 from moments.path import Path, check_ignore
 
 def usage():
-    print __doc__    
+    print(__doc__)    
 
 def size_of_list(source, media_root=None, ignores=['/c/',]):
     """
@@ -71,12 +72,12 @@ def size_of_list(source, media_root=None, ignores=['/c/',]):
 
             total_size += f.check_size()
             results = get_media_properties(item)
-            print results
+            print(results)
             total_length += results[1]
             total_items += 1
             #print item
 
-    print "found %s matching items" % total_items
+    print("found %s matching items" % total_items)
     return total_size, total_length, total_items
 
 def main():
@@ -95,7 +96,7 @@ def main():
             media_root = None
 
         result = size_of_list(source, media_root)
-        print result
+        print(result)
 
     else:
         usage()

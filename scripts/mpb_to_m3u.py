@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys, os, codecs
 
 from medley.marks import Marks
@@ -40,4 +41,4 @@ marks.update_locations('/mnt/sdcard/external_sd/', '/c/')
 #    print f_marks[key]
 
 marks.to_m3u(destination)
-print "Saved to: %s" % destination
+print("Saved to: %s" % destination)

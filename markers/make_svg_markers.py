@@ -12,6 +12,7 @@
 # generate markers for use in playlist sorting
 
 """
+from __future__ import print_function
 import re
 
 #2.0 alpha uses a viewer that doesn't work out of the box
@@ -55,9 +56,9 @@ try:
     import Cocoa
     manager = Cocoa.NSFontManager.sharedFontManager()
     font_families = list(manager.availableFontFamilies())
-    print font_families
+    print(font_families)
 except:
-    print "Not on a mac it seems"
+    print("Not on a mac it seems")
 
 #AveriaLibre-Regular, Asap-Regular, ArchitectsDaughter, AnonymousPro-Regular, AdventPro-Regular, CabinSketch-Regular, Condiment-Regular, Dosis-Regular, IMFePIrm28P, NanumGothic-Regular, Nunito-Regular, PoiretOne-Regular, Quicksand-Regular, Rokkitt-Regular, Sacramento-Regular, Simonetta-Regular, TerminalDosis-Regular, 
 
@@ -77,7 +78,7 @@ for content in markers:
     #if using styling in font name, may need to split by camel case too:
     #name = re.sub("([a-z])([A-Z])","\g<1> \g<2>",name)
     #(or you can do that manually when it is needed)
-    print name
+    print(name)
 
     bold = False
     italic = False

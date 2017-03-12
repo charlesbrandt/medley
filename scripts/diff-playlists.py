@@ -16,13 +16,14 @@ based off of very old script at:
 /c/alpha/player/diff-playlists.py
 
 """
+from __future__ import print_function
 import os, sys, codecs
 import re
 
 from medley import marks
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 def diff_playlists(fpath1, fpath2):
     """
@@ -53,7 +54,7 @@ def diff_playlists(fpath1, fpath2):
                 both.append(location)
         if not match:
             if cur_opt in p1_only:
-                print "P1 DUPE!!!: %s" % cur_opt
+                print("P1 DUPE!!!: %s" % cur_opt)
             else:
                 p1_only.append(cur_opt)
         cur_pos += 1
@@ -61,22 +62,22 @@ def diff_playlists(fpath1, fpath2):
     for cur_opt in p2:
         if not cur_opt in both:
             if cur_opt in p2_only:
-                print "P2 DUPE!!!: %s" % cur_opt
+                print("P2 DUPE!!!: %s" % cur_opt)
             else:
                 p2_only.append(cur_opt)
 
 
 
-    print "BOTH: %s" % both
-    print ""
+    print("BOTH: %s" % both)
+    print("")
 
-    print "P2 ONLY: %s" % p2_only
-    print ""
+    print("P2 ONLY: %s" % p2_only)
+    print("")
 
-    print "P1 ONLY: %s" % p1_only
-    print ""
+    print("P1 ONLY: %s" % p1_only)
+    print("")
 
-    print "BOTH: %s, P1 ONLY: %s, P2 ONLY: %s" % (len(both), len(p1_only), len(p2_only))
+    print("BOTH: %s, P1 ONLY: %s, P2 ONLY: %s" % (len(both), len(p1_only), len(p2_only)))
     
     #can save here, if needed:
     destination = "temp.m3u"

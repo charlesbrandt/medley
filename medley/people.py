@@ -12,12 +12,19 @@ might be good to have some qualities of Content referenced locally
 
 see also people_create.py 
 """
-import os, re, copy, json, urllib
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import input
+from builtins import object
+import os, re, copy, json, urllib.request, urllib.parse, urllib.error
 
-from collector import Cluster, CollectionSimple
-from content import SimpleContent
-from helpers import save_json, load_json
-from scraper import download_images
+from .collector import Cluster, CollectionSimple
+from .content import SimpleContent
+from .helpers import save_json, load_json
+from .scraper import download_images
 
 from moments.tag import to_tag
 from moments.timestamp import Timestamp
@@ -43,7 +50,7 @@ def create_person(name_tag, people, cluster_pos, root, skipped, ambi, auto_creat
     if (not options) and auto_create:
 
         #make a new Person object
-        print "Creating new: %s" % name_tag
+        print("Creating new: %s" % name_tag)
         p = Person(tag=name_tag)
         p.rating = cluster_pos
         p.save(dest_path)
@@ -57,11 +64,11 @@ def create_person(name_tag, people, cluster_pos, root, skipped, ambi, auto_creat
         #or create a new Person
         finished = False
         while not finished:
-            print ""
-            print "%s matched:" % name_tag
+            print("")
+            print("%s matched:" % name_tag)
             opt_count = 0
             for option in options:
-                print "%02d. %s" % (opt_count, option.tag)
+                print("%02d. %s" % (opt_count, option.tag))
                 opt_count += 1
                 #print options
 
@@ -69,7 +76,7 @@ def create_person(name_tag, people, cluster_pos, root, skipped, ambi, auto_creat
             #could also consider:
             #http://docs.python.org/2/library/cmd.html
             #via http://stackoverflow.com/questions/70797/python-and-user-input
-            action = raw_input("(M)erge with existing, create (N)ew, mark as (A)mbiguous, or (S)kip? ")
+            action = input("(M)erge with existing, create (N)ew, mark as (A)mbiguous, or (S)kip? ")
             number_match = False
             number = -1
             try:
@@ -83,23 +90,23 @@ def create_person(name_tag, people, cluster_pos, root, skipped, ambi, auto_creat
                 if len(options) == 1:
                     number = 0
                 elif not number_match:
-                    numstr = raw_input("Merge with which number? ")
+                    numstr = input("Merge with which number? ")
                     number = int(numstr)
 
                 if number < len(options):
                     try:
                         prompt = u"Make '" + name_tag + u"' the default? (y/N) "
-                        primary = raw_input(prompt)
+                        primary = input(prompt)
                     except:
                         prompt = u"Make '" + u"' the default? (y/N) "
-                        primary = raw_input(prompt)
+                        primary = input(prompt)
 
                     dest = options[number]
                     dest.tags.append(name_tag)
                     dest.save()
 
                     if (not primary) or primary.lower() == 'n':
-                        print "Merged %s to %s tags (%s)" % (name_tag, dest.tag, dest.tags)
+                        print("Merged %s to %s tags (%s)" % (name_tag, dest.tag, dest.tags))
                         finished = True
                     elif primary.lower() == 'y':
                         dest.update_default(name_tag)
@@ -109,9 +116,9 @@ def create_person(name_tag, people, cluster_pos, root, skipped, ambi, auto_creat
                         #remove old directory
                         finished = True
                     else:
-                        print "Unknown response: %s" % primary
+                        print("Unknown response: %s" % primary)
                 else:
-                    print "Number out of range (%s): %s" % (len(options), number)
+                    print("Number out of range (%s): %s" % (len(options), number))
             elif action.lower() == 'n':
                 #make a new Person object
                 p = Person(tag=name_tag)
@@ -119,11 +126,11 @@ def create_person(name_tag, people, cluster_pos, root, skipped, ambi, auto_creat
                 p.save(dest_path)
                 people.append(p)
                 finished = True
-                print "Created %s at %s" % (name_tag, dest_path)
+                print("Created %s at %s" % (name_tag, dest_path))
 
             elif action.lower() == 's':
                 skipped.append(name_tag)
-                print "Skipping: %s" % name_tag
+                print("Skipping: %s" % name_tag)
                 finished = True
 
             elif action.lower() == 'a':
@@ -131,11 +138,11 @@ def create_person(name_tag, people, cluster_pos, root, skipped, ambi, auto_creat
                 #added ambiguous_file as .source attribute on init
                 #ambi.save(ambiguous_file)
                 ambi.save()
-                print "Marked Ambiguous: %s" % name_tag
+                print("Marked Ambiguous: %s" % name_tag)
                 finished = True
 
             else:
-                print "Unknown response: %s" % action
+                print("Unknown response: %s" % action)
 
 
 class ContentPointer(object):
@@ -242,7 +249,7 @@ class Person(object):
         if source:
             #drive dir
             if debug:
-                print "using %s as source" % source
+                print("using %s as source" % source)
             self.root = source
             self.load()
         else:
@@ -266,7 +273,7 @@ class Person(object):
             self.root = root
 
         if not self.root:
-            raise ValueError, "No root specified: %s" % self.root
+            raise ValueError("No root specified: %s" % self.root)
         
         main_dir = self.main_dir()
         if not os.path.exists(main_dir):
@@ -317,16 +324,16 @@ class Person(object):
             self.root = root
 
         if not self.root:
-            raise ValueError, "Need a root to know where to save: %s" % self.root
+            raise ValueError("Need a root to know where to save: %s" % self.root)
          
         dest_file = self.make_path(self.root)
         #print dest_file
         temp_d = self.to_dict()
 
-        print
-        print "save:"
-        print temp_d['photo_order']
-        print
+        print()
+        print("save:")
+        print(temp_d['photo_order'])
+        print()
         
         #save_json(dest_file, self.__dict__)
         #print "Saving: %s to %s" % (temp_d, dest_file)
@@ -343,7 +350,7 @@ class Person(object):
         del result['root'] 
         
         if self.debug:
-            print "Loaded: %s" % result
+            print("Loaded: %s" % result)
         self.__dict__.update(result)
 
     #making this a separate call...
@@ -386,7 +393,7 @@ class Person(object):
         #update order with anything new
         self.content_order = self.contents.get_order()
         if debug:
-            print self.content_order
+            print(self.content_order)
 
         #update the count:
         self.count = len(self.contents)
@@ -420,7 +427,7 @@ class Person(object):
                 content_path = content.base_dir + '/' + content.filename
                 if content_path == item:
                     if debug:
-                        print "adding %s to new list" % item
+                        print("adding %s to new list" % item)
                     if not content in new_group:
                         new_group.append(content)
                     self.photos.remove(content)
@@ -463,19 +470,19 @@ class Person(object):
         rename our directory and main meta file accordingly
         """
         if not self.root:
-            raise ValueError, "No root specified: %s" % self.root
+            raise ValueError("No root specified: %s" % self.root)
         
         new_dir = os.path.join(os.path.dirname(self.root), new_tag)
-        print "New dir: ", new_dir
+        print("New dir: ", new_dir)
         if os.path.exists(new_dir):
-            raise ValueError, "Destination exists: %s (from %s)" % (new_dir, self.tag)
+            raise ValueError("Destination exists: %s (from %s)" % (new_dir, self.tag))
 
         original_file = self.make_path()
         #original_dir = os.path.join(self.root, self.tag)
 
         new_name = "%s.json" % new_tag
         new_file = os.path.join(self.root, new_name)
-        print "renaming: %s, %s" % (original_file, new_file)
+        print("renaming: %s, %s" % (original_file, new_file))
         #rename the file first, to make paths easier
         os.rename(original_file, new_file)
         
@@ -500,10 +507,10 @@ class Person(object):
 
         if update:
             if debug:
-                print "Loading content for: %s" % (self.tag)
+                print("Loading content for: %s" % (self.tag))
             self.load_content(debug=debug)
             if debug:
-                print self.to_dict()
+                print(self.to_dict())
                 
             #can only do something if we have some content
             if len(self.photos):
@@ -523,21 +530,21 @@ class Person(object):
                 if first.image:
                     self.image = first.image
                     if debug:
-                        print "updating %s image to %s" % (self.tag, self.image)
+                        print("updating %s image to %s" % (self.tag, self.image))
                     self.save()
                     
                 else:
                     if debug:
-                        print "No image associate with first content: %s" % self.tag
-                        print "%s contents total" % len(self.contents)
+                        print("No image associate with first content: %s" % self.tag)
+                        print("%s contents total" % len(self.contents))
                     
             else:
                 if debug:
-                    print "No content found for %s" % self.tag
+                    print("No content found for %s" % self.tag)
                 
         else:
             if debug:
-                print "Not updating: %s" % self.tag
+                print("Not updating: %s" % self.tag)
 
     def download_photos(self, urls, tags=[]):
         """
@@ -590,7 +597,7 @@ class People(list):
         self.meta_root = os.path.join(self.root, 'meta')
         if not os.path.exists(self.meta_root):
             self.meta_root = None
-            raise ValueError, "Could not find meta root in: %s" % source
+            raise ValueError("Could not find meta root in: %s" % source)
             
         ## if self.debug:
         ##     print source
@@ -616,7 +623,7 @@ class People(list):
         #don't want to log each entry separately
         self.cloud_file = os.path.join(self.meta_root, "people.txt")
         if not os.path.exists(self.cloud_file):
-            raise ValueError, "Could not find cloud file: %s" % self.cloud_file
+            raise ValueError("Could not find cloud file: %s" % self.cloud_file)
 
         #this loads the cluster:
         self.cluster = Cluster()
@@ -651,11 +658,11 @@ class People(list):
             for item in missing:
                 matches = self.get(item)
                 if len(matches):
-                    print "MISSING: %s, please move to: %s" % (item, matches[0])
+                    print("MISSING: %s, please move to: %s" % (item, matches[0]))
                 else:
-                    print "MISSING: %s" % (item)
+                    print("MISSING: %s" % (item))
 
-            raise ValueError, "Missing content detected... please fix"
+            raise ValueError("Missing content detected... please fix")
         
     #aka lookup
     def get(self, name):
@@ -734,9 +741,9 @@ class People(list):
         """
         opt_count = 0
         for option in self:
-            print "%s. %s" % (opt_count, option.tag)
+            print("%s. %s" % (opt_count, option.tag))
             opt_count += 1
-        print ""
+        print("")
 
     def everyone(self, alts=True):
         """
@@ -750,7 +757,7 @@ class People(list):
                     tags.append(ptag)
                 else:
                     #this shouldn't happen, should alert so it can be cleaned up
-                    print "WARNING: duplicate tag found in loaded People: %s" % ptag
+                    print("WARNING: duplicate tag found in loaded People: %s" % ptag)
         return tags
     
 class Group(object):

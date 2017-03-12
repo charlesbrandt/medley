@@ -12,12 +12,13 @@
 Take an audio file and replace the existing audio on a video file with it
 
 """
+from __future__ import print_function
 
 import os, sys, codecs, re
 import subprocess
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 def combine(video, audio, destination=None):
     """
@@ -30,7 +31,7 @@ def combine(video, audio, destination=None):
     #command = "avconv -i %s -i %s -c:v copy -c:a libvorbis %s" % (video, audio )
     
     command = "avconv -i %s -i %s -vcodec copy -acodec libvorbis -strict experimental -map 0:v:0 -map 1:a:0 %s" % (video, audio, destination)
-    print command
+    print(command)
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     process.wait()
     #print process.communicate()[0]

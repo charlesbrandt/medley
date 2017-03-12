@@ -15,13 +15,14 @@
 # in the copy_media script
 
 """
+from __future__ import print_function
 import sys, os, re
 from copy_media import process_files
 
 from moments.path import Path
 
 def usage():
-    print __doc__
+    print(__doc__)
     
 def main():
     if len (sys.argv) > 1:
@@ -34,8 +35,8 @@ def main():
 
         source = Path(f1)
         destination = os.path.abspath("./%s" % source.filename)
-        print source
-        print destination
+        print(source)
+        print(destination)
         if source != destination:
             process_files(f1, translate, action="m3u", m3u_dest=destination)
         else:

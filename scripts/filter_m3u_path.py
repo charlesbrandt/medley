@@ -8,6 +8,8 @@ python filter_m3u_path.py /c/music/playlists/20120122-little_white_earbuds.m3u .
 
 last option is the translate argument with format of pre:post
 """
+from __future__ import print_function
+from builtins import str
 import os, sys, re
 
 from moments.journal import Journal
@@ -46,7 +48,7 @@ if len(sys.argv) > 1:
     new_parts.insert(-1, "filtered")
     new_name = "-".join(new_parts)
     output = os.path.join(str(parent), new_name)
-    print output
+    print(output)
     #output = 'temp.m3u'
 
     source = file(source_name)
@@ -61,7 +63,7 @@ if len(sys.argv) > 1:
                 count += 1
                 
         destination.write(line)
-    print "%s updated from: %s" % (count, source_name)
-    print "and saved to: %s" % (output)
+    print("%s updated from: %s" % (count, source_name))
+    print("and saved to: %s" % (output))
     source.close()
     destination.close()

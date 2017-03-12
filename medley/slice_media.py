@@ -25,6 +25,7 @@ it's best to note times on a single file instead of an iso
 
 
 """
+from __future__ import print_function
 
 import os, sys, codecs, re
 import subprocess
@@ -35,7 +36,7 @@ from medley.content import Content
 from moments.tag import to_tag
 
 def usage():
-    print __doc__
+    print(__doc__)
 
 
 def make_destination(dest_prefix, part, extension, cur_tags=[]):
@@ -74,7 +75,7 @@ def extract_segment(source, dest_part, keep_start, cur_duration, bitrate, extens
     #via: http://superuser.com/questions/556463/converting-video-to-webm-with-ffmpeg-avconv
 
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print command
+    print(command)
     while process.poll() is None:
         #depending on which channel has output, can tailor that here
         l = process.stderr.readline()
@@ -104,7 +105,7 @@ def extract_audio(source, destination, keep_start, cur_duration):
     command = "avconv -i %s -ss %s -t %s -vn -ac 2 %s" % (source, keep_start, cur_duration, destination)
 
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print command
+    print(command)
     while process.poll() is None:
         l = process.stderr.readline()
 
@@ -244,17 +245,17 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     this may cause rough transitions between clips when re-joined later
     """
     #source must have the corresponding suffix to use for output
-    print "STARTING: ", datetime.now()
+    print("STARTING: ", datetime.now())
     base = os.path.dirname(source)
-    print "Path: ", base
+    print("Path: ", base)
     filename = os.path.basename(source)
-    print "Filename: ", filename
+    print("Filename: ", filename)
 
     edits_dir = os.path.join(base, "edits")
     if not os.path.exists(edits_dir):
         os.makedirs(edits_dir)
 
-    print "EDITS DIR: ", edits_dir
+    print("EDITS DIR: ", edits_dir)
     
     file_parts = filename.split('.')
     source_filename_prefix = '.'.join(file_parts[:-1])
@@ -265,13 +266,13 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
         destination = source_filename_prefix + ''
 
     destination = os.path.join(edits_dir, destination)
-    print "DESTINATION: ", destination
+    print("DESTINATION: ", destination)
     
     destination_json = destination + '.json'
     if os.path.exists(destination_json):
         #get rid of it...
         #don't want to load it
-        print "removing existing json to start fresh: ", destination_json
+        print("removing existing json to start fresh: ", destination_json)
         os.remove(destination_json)
 
     #final_dest = "%s.total.%s" % (destination, suffix)
@@ -280,12 +281,12 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     if os.path.exists(final_dest):
         #get rid of it...
         #don't want to load it 
-        print "removing existing destinatino to start fresh: ", final_dest
+        print("removing existing destinatino to start fresh: ", final_dest)
         os.remove(final_dest)
 
-    print "FINDING JSON FOR: %s" % source
+    print("FINDING JSON FOR: %s" % source)
     jfile = find_json(source, limit_by_name=False)
-    print "JSON FILE:", jfile
+    print("JSON FILE:", jfile)
 
     content = Content(jfile)
     #print content.debug()
@@ -311,7 +312,7 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
 
             dest_parts.append(dest_part)
     else:
-        print "Nothing found to keep: %s" % keeps
+        print("Nothing found to keep: %s" % keeps)
 
 
     #TODO:
@@ -323,7 +324,7 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     # now go through and update the content meta data
     # go through and create an updated content.json based on what was kept
 
-    print keeps
+    print(keeps)
 
     cur_pos = 0
     skip_duration = 0
@@ -358,12 +359,12 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     #save the new corresponding json file
     content_copy.save(destination_json)
 
-    print "All dest parts: ", dest_parts
+    print("All dest parts: ", dest_parts)
 
     #ffmpeg seems more versatile than avconv for joining files:
     #https://trac.ffmpeg.org/wiki/How%20to%20concatenate%20(join,%20merge)%20media%20files
     root = os.path.dirname(destination)
-    print root
+    print(root)
     file_list = os.path.join(root, "temp.txt")
     f = codecs.open(file_list, 'w', encoding='utf-8')    
     for dest_part in dest_parts:
@@ -371,11 +372,11 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     f.close()
     command = "ffmpeg -f concat -i %s -c copy %s" % (file_list, final_dest)
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print process.communicate()[0]
+    print(process.communicate()[0])
     #unfortunately, this creates a segmentation fault
     #Segmentation fault (core dumped)
     #this was caused by no files being listed in temp.txt
-    print
+    print()
 
     ## file_list = ''
     ## for dest_part in dest_parts:
@@ -388,7 +389,7 @@ def slice_media(source, destination=None, keep_tags=[], skip_tags=[], duration=N
     ## command = "avconv -i concat:%s -codec copy %s" % (file_list, final_dest)
     ## process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    print command
+    print(command)
     
     
         
@@ -414,7 +415,7 @@ if __name__ == '__main__':
     duration = properties[1]
     bitrate = properties[2]
     bitstr = "%sk" % bitrate
-    print bitstr
+    print(bitstr)
     #exit()
 
     #slice_media(source, destination, keep_tags=['\+'], bitrate='2M')
