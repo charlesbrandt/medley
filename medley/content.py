@@ -13,7 +13,7 @@ from __future__ import absolute_import
 from __future__ import division
 from builtins import str
 from builtins import object
-from past.utils import old_div
+#from past.utils import old_div
 import os, re, copy, subprocess, time
 import hashlib
 
@@ -138,11 +138,14 @@ class Mark(object):
             milli_seconds = self.position
 
         ms = float(milli_seconds) % 1000
-        total_seconds = old_div(float(milli_seconds), 1000)
+        #total_seconds = old_div(float(milli_seconds), 1000)
+        total_seconds = float(milli_seconds) // 1000
         seconds = (int(total_seconds) % 60)
-        total_minutes = (old_div(int(total_seconds), 60))
+        #total_minutes = (old_div(int(total_seconds), 60))
+        total_minutes = int(total_seconds) // 60
         minutes = total_minutes % 60
-        hours = old_div(total_minutes, 60)
+        #hours = old_div(total_minutes, 60)
+        hours = total_minutes // 60
         return (hours, minutes, seconds, ms)
 
     def from_hms(self, hours=0, minutes=0, seconds=0, ms=0):
@@ -173,7 +176,8 @@ class Mark(object):
 
     def total_seconds(self):
         #return int(self.position) / 100
-        return old_div(float(self.position), 1000)
+        #return old_div(float(self.position), 1000)
+        return float(self.position) // 1000
 
     def as_tuple(self):
         """
@@ -209,8 +213,10 @@ class Mark(object):
         if self.bytes:
             result = "{name=%s,bytes=%s,time=%s}" % (new_tag, self.bytes, self.total_seconds())
         else:
-            bytes_per_second = old_div(bitrate, 8.0)
-            bytes = int(old_div((float(self.position) * bytes_per_second), 1000))
+            #bytes_per_second = old_div(bitrate, 8.0)
+            bytes_per_second = bitrate / 8.0
+            #bytes = int(old_div((float(self.position) * bytes_per_second), 1000))
+            bytes = int( (float(self.position) * bytes_per_second) / 1000 ) 
             result = "{name=%s,bytes=%s,time=%s}" % (new_tag, bytes, self.total_seconds())
             self.bytes = bytes
         return result
@@ -295,7 +301,8 @@ class MarkList(list):
                 if not segment.title:
                     if segment.end:
                         #print "Segment End: ->%s<-, Segment Start: ->%s<-" % (segment.end.position, segment.start.position)
-                        segment_len = old_div((segment.end.position - segment.start.position), 1000)
+                        #segment_len = old_div((segment.end.position - segment.start.position), 1000)
+                        segment_len = (segment.end.position - segment.start.position) // 1000
                         segment_len = int(segment_len)
                     else:
                         segment_len = '?'
