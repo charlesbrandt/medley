@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 originally adapted from:
 http://stackoverflow.com/questions/4163740/qtreeview-with-drag-and-drop-support-in-pyqt?rq=1
@@ -26,7 +26,7 @@ difficulty getting phonon to use VLC back end.
 from __future__ import print_function
 from __future__ import division
 from builtins import next
-from past.utils import old_div
+#from past.utils import old_div
 
 import sys, os
 import platform
@@ -543,10 +543,12 @@ class PlayerWidget(QtGui.QWidget):
 
                 #time = self.player.currentTime()
                 time = self.MediaPlayer.get_position() * 1000
-                cur_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
+                #cur_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
+                cur_time = QtCore.QTime( (time // 3600000), ((time // 60000)) % 60, ((time // 1000)) % 60)
                 cur_text = cur_time.toString('mm:ss')
 
-                start_time = QtCore.QTime((old_div(self.start, 3600000)), (old_div(self.start, 60000)) % 60, (old_div(self.start, 1000)) % 60)
+                #start_time = QtCore.QTime((old_div(self.start, 3600000)), (old_div(self.start, 60000)) % 60, (old_div(self.start, 1000)) % 60)
+                start_time = QtCore.QTime( (self.start // 3600000), ((self.start // 60000)) % 60, ((self.start // 1000)) % 60)
                 start_text = start_time.toString('mm:ss')
 
                 #tried to trigger this
@@ -568,7 +570,8 @@ class PlayerWidget(QtGui.QWidget):
         """Set the position
         """
         # setting the position to where the slider was dragged
-        self.MediaPlayer.set_position(old_div(Position, 1000.0))
+        #self.MediaPlayer.set_position(old_div(Position, 1000.0))
+        self.MediaPlayer.set_position( Position / 1000.0 )
         # the vlc MediaPlayer needs a float value between 0 and 1, Qt
         # uses integer variables, so you need a factor; the higher the
         # factor, the more precise are the results
@@ -693,7 +696,8 @@ class PlayerWidget(QtGui.QWidget):
         """
         length = self.Media.get_duration()
         #print "length:", length
-        ratio = old_div((position * 1.0), length)
+        #ratio = old_div((position * 1.0), length)
+        ratio = (position * 1.0) / length
         #print "ratio:", ratio
         return ratio
 
@@ -787,8 +791,10 @@ class PlayerWidget(QtGui.QWidget):
             print("Reaching the end of a track, moving on.")
             next(self)
             
-        display_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
-        hours = old_div(time, 3600000)
+        #display_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
+        display_time = QtCore.QTime( (time // 3600000), ((time // 60000)) % 60, ((time // 1000)) % 60)
+        #hours = old_div(time, 3600000)
+        hours = (time / 3600000)
         if hours:
             self.time_passed.setText(display_time.toString('h:mm:ss'))
         else:
@@ -797,8 +803,10 @@ class PlayerWidget(QtGui.QWidget):
         #time = self.player.remainingTime()
         #time = self.MediaPlayer.get_length() - (self.MediaPlayer.get_position() * 1000)
         time = remain
-        remain_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
-        hours = old_div(time, 3600000)
+        #remain_time = QtCore.QTime((old_div(time, 3600000)), (old_div(time, 60000)) % 60, (old_div(time, 1000)) % 60)
+        remain_time = QtCore.QTime( (time // 3600000), ((time // 60000)) % 60, ((time // 1000)) % 60)
+        #hours = old_div(time, 3600000)
+        hours = (time / 3600000)
         remain_string = ''
         if hours:
             remain_string = remain_time.toString('h:mm:ss')
