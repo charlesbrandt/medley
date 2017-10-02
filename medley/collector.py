@@ -29,7 +29,7 @@ from moments.path import Path, check_ignore
 from moments.timestamp import Timestamp
 from moments.journal import Journal
 
-from medley.yapsy.PluginManager import PluginManager
+#from medley.yapsy.PluginManager import PluginManager
 
 class CollectionSimple(list):
     """
@@ -592,35 +592,35 @@ class CollectionSummary(object):
         self.json_data['meta_root'] = self.meta_root
         save_json(json_file, self.json_data) 
 
-    def load_scraper(self):
+    ## def load_scraper(self):
 
-        #print "loading logging"
-        #import logging
-        #logging.basicConfig(level=logging.DEBUG)
+    ##     #print "loading logging"
+    ##     #import logging
+    ##     #logging.basicConfig(level=logging.DEBUG)
         
-        print("loading scraper from: %s" % self.root)
-        # Build the manager
-        simplePluginManager = PluginManager(plugin_info_ext="medley-plugin")
-        # Tell it the default place(s) where to find plugins
-        #simplePluginManager.setPluginPlaces(["path/to/myplugins"])
-        simplePluginManager.setPluginPlaces([self.root])
-        # Load all plugins
-        simplePluginManager.collectPlugins()    
+    ##     print("loading scraper from: %s" % self.root)
+    ##     # Build the manager
+    ##     simplePluginManager = PluginManager(plugin_info_ext="medley-plugin")
+    ##     # Tell it the default place(s) where to find plugins
+    ##     #simplePluginManager.setPluginPlaces(["path/to/myplugins"])
+    ##     simplePluginManager.setPluginPlaces([self.root])
+    ##     # Load all plugins
+    ##     simplePluginManager.collectPlugins()    
 
-        number_found = len(simplePluginManager.getAllPlugins())
-        print("Activate all loaded plugins: %s" % number_found)
-        for plugin in simplePluginManager.getAllPlugins():
-            #plugin.plugin_object.print_name()
+    ##     number_found = len(simplePluginManager.getAllPlugins())
+    ##     print("Activate all loaded plugins: %s" % number_found)
+    ##     for plugin in simplePluginManager.getAllPlugins():
+    ##         #plugin.plugin_object.print_name()
             
-            print("Activating: %s" % plugin.name)
-            simplePluginManager.activatePluginByName(plugin.name)
+    ##         print("Activating: %s" % plugin.name)
+    ##         simplePluginManager.activatePluginByName(plugin.name)
 
-        #self.scraper = simplePluginManager.getPluginByName(plugin.name)
-        plugin = simplePluginManager.getPluginByName(self.name)
-        if plugin:
-            self.scraper = plugin.plugin_object
-        else:
-            self.scraper = None
+    ##     #self.scraper = simplePluginManager.getPluginByName(plugin.name)
+    ##     plugin = simplePluginManager.getPluginByName(self.name)
+    ##     if plugin:
+    ##         self.scraper = plugin.plugin_object
+    ##     else:
+    ##         self.scraper = None
         
 
     def load_collection(self, json_file=None):
