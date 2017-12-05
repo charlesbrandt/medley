@@ -137,6 +137,7 @@ class Mark(object):
         if milli_seconds is None:
             milli_seconds = self.position
 
+        print("MS:", milli_seconds)
         ms = float(milli_seconds) % 1000
         #total_seconds = old_div(float(milli_seconds), 1000)
         total_seconds = float(milli_seconds) // 1000

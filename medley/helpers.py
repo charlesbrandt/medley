@@ -304,11 +304,11 @@ def get_media_properties(movie_p, debug=False):
     lines = output.splitlines()
     for line in lines:
         #print line
-        if re.search('Stream', line):
-            if re.search('Video', line):
+        if re.search('Stream', str(line, 'utf-8')):
+            if re.search('Video', str(line, 'utf-8')):
                 #this is specific to the version of ffmpeg you are using
                 #adjust accordingly
-                parts = line.split(' ')
+                parts = str(line, 'utf-8').split(' ')
                 if debug:
                     print("FOUND: %s" % parts)
                 #dimensions = parts[-1]
@@ -321,10 +321,10 @@ def get_media_properties(movie_p, debug=False):
                     dimensions = dimensions[:-1]
                     
                 #dimensions = parts[-11]
-        elif re.search('Duration', line):
+        elif re.search('Duration', str(line, 'utf-8')):
             #print "DURATION!!"
             #print line
-            parts = line.split()
+            parts = str(line, 'utf-8').split()
             #print parts
             dstring = parts[1].replace(',', '')
             #print dstring
