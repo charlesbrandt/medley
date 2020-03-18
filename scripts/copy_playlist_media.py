@@ -12,8 +12,11 @@
 #
 
 # be sure to edit source_root and destination_root before running, then run:
-cd /c/medley/scripts
-python copy_playlist_media.py /media/path/to.m3u 
+cd ~/public/repos/medley/scripts
+python copy_playlist_media.py /media/path/to.m3u
+
+copy_media(source, source_root, destination_root)
+
 
 useful to use:
 
@@ -25,9 +28,9 @@ from builtins import str
 import os, sys, codecs
 import re, shutil
 
-from medley.marks import M3U
+from medley.formats import M3U
 
-from moments.path import Path
+from sortable.path import Path
 
 def usage():
     print(__doc__)    
@@ -35,17 +38,23 @@ def usage():
 def copy_media(source, source_root, destination_root):
     m3u = M3U(source)
 
+    print("Source root:", source_root)
+    print("Destination root:", destination_root)
     total_size = 0
     total_items = 0
     for item in m3u:
-        if re.match(source_root, item):
-            p = Path(item)
+        full_path = os.path.join(item.path, item.filename)
+        print("")
+        print("Starting:", str(full_path))
+        if re.match(str(source_root), str(full_path)):
+            p = Path(full_path)
             relative = p.to_relative(source_root)
+            print("relative pre:", relative)
             sparent = p.parent()
             destination = os.path.join(destination_root, relative)
             dpath = Path(destination)
             dparent = dpath.parent()
-            print(relative)
+            print("relative post:", relative)
             print(sparent)
             print(destination)
 
@@ -87,9 +96,8 @@ def main():
                 exit()
         source = sys.argv[1]
         if len(sys.argv) > 2:
-            destination = sys.argv[2]
-        else:
-            destination = None
+            source_root = sys.argv[2]
+            destination_root = sys.argv[3]
 
         copy_media(source, source_root, destination_root)
 

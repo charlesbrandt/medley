@@ -1,7 +1,7 @@
 """
 Main objects needed for sorting collections.
 
-Collection and Content may need to be customized for the specific type of colleciton in use. 
+Collection and Content may need to be customized for the specific type of colleciton in use.
 
 OVERVIEW:
 ============
@@ -25,7 +25,7 @@ from .helpers import load_json, save_json, find_json
 
 from .content import Content
 
-from moments.path import Path, check_ignore
+from sortable.path import Path, check_ignore
 from moments.timestamp import Timestamp
 from moments.journal import Journal
 
@@ -40,14 +40,14 @@ class CollectionSimple(list):
     """
     def __init__(self, source='', root='', contents=[], walk=False, as_dict=False, debug=False):
         """
-        source should be the full path to source        
+        source should be the full path to source
         """
         #this is a json representation of the whole Collection:
         self.source = source
 
         #can be useful to look back at how the object was loaded.
         self.walk = walk
-        
+
         #if we were passed a list of contents, apply them
         if len(contents):
             for s in contents:
@@ -74,7 +74,7 @@ class CollectionSimple(list):
             all_contents.append(d)
 
         return all_contents
-    
+
     def save(self, destination=None):
         if not destination:
             #maybe destination should default to source???
@@ -91,7 +91,7 @@ class CollectionSimple(list):
         """
         if source:
             self.source = source
-            
+
         # do the loading now:
         if self.source:
             if os.path.exists(self.source):
@@ -132,7 +132,7 @@ class CollectionSimple(list):
         """
         look for all json files that describe the content items
         these should have been generated externally (e.g. during scrape)
-        
+
         json files should contain the main attributes that a Content object has
         the rest will be kept in a remainder
 
@@ -143,7 +143,7 @@ class CollectionSimple(list):
 
         if not self.root:
             raise ValueError("Cannot rescan. No root set on collection: %s" % self.root)
-        
+
         #clear out anything else
         del self[:]
 
@@ -156,7 +156,7 @@ class CollectionSimple(list):
         #too many different names that might work in different contexts
         #ignores = ["contents", "collection", "incompletes"]
         #can pass them in if needed...
-        
+
         self_root_path = Path(self.root)
         parent = self_root_path.parent()
         if not os.path.isdir(self.root):
@@ -166,7 +166,7 @@ class CollectionSimple(list):
             #if we still don't have a directory, something is wrong with root
             assert os.path.isdir(self.root)
 
-        
+
         #instead of looking for ignores
         #will limit by convention
         #top level directory should only contain meta jsons
@@ -219,7 +219,7 @@ class CollectionSimple(list):
         this can be done more suscinctly with
         del self[:]
         self.extend(new_group)
-        
+
         """
         print("clearing contents: %s" % len(self))
 
@@ -230,9 +230,9 @@ class CollectionSimple(list):
 
         for item in new_group:
             self.append(item)
-            
+
         print("applied new order: %s" % len(self))
-        
+
     def apply_order(self, order, debug=False):
         """
         take an ordered list of base dirs
@@ -240,7 +240,7 @@ class CollectionSimple(list):
 
         return the length of new items found for adjusting cutoffs in caller
         """
-        
+
         new_group = []
         for item in order:
             for content in self[:]:
@@ -284,7 +284,7 @@ class Collection(CollectionSimple):
 
     When it comes to all of the data stored for a Collection,
     including the Content items, there are different ways to represent them.
-    
+
     Collections are typically local mirrors of remote content
     In some media applications, these could be considered a Subscription
     to an RSS feed.
@@ -301,7 +301,7 @@ class Collection(CollectionSimple):
     Collection.
 
     Looking at YAPSY for this.
-    
+
     """
     #seems like the __init__ from CollectionSimple should be adequate...
     #this one often defaults in a walk, which is not necessary here
@@ -309,7 +309,7 @@ class Collection(CollectionSimple):
     def old__init__(self, source='', root='', contents=[], walk=False, as_dict=False, debug=False):
         """
         source should be the full path to source
-        
+
         walk will force a walk, regardless of if a source is available
         """
         #this is a json representation of the whole Collection:
@@ -317,7 +317,7 @@ class Collection(CollectionSimple):
 
         #can be useful to look back at how the object was loaded.
         self.walk = walk
-        
+
         #if we were passed a list of contents, apply them
         if len(contents):
             for s in contents:
@@ -340,18 +340,18 @@ class Collection(CollectionSimple):
             print("LOADING COLLECTION SUMMARY AT: %s" % self.root)
             self.summary = CollectionSummary(self.root)
             #pass
-        
+
             #TODO:
-            #*2012.11.09 12:15:37 
+            #*2012.11.09 12:15:37
             #this should be optional or configurable
-            #can take a while to scan for a meta directory 
+            #can take a while to scan for a meta directory
             #with a lot of meta data
             #self.summary.load_scraper()
 
             #print "Finished loading scraper: %s" % self.summary.scraper
             #print type(self.summary.scraper)
             #print dir(self.summary.scraper)
-            
+
             #this also makes scraper available via:
             #self.summary.scraper
 
@@ -362,7 +362,7 @@ class Collection(CollectionSimple):
             else:
                 # couldn't find anything, so better walk
                 self.walk = True
-            
+
             #if we get this far, contents.json seems like a safer default
             #self.source = os.path.join(self.root, 'contents.json')
 
@@ -377,7 +377,7 @@ class Collection(CollectionSimple):
         else:
             #might want to create one from scratch.
             pass
-        
+
         #whether or not to update a content's source json file
         #or just make the changes to the list locally
         #
@@ -442,14 +442,14 @@ class Collection(CollectionSimple):
                                 ## #get rid of leading slash
                                 ## relative_root = relative_root[1:]
                                 ## json['root'] = relative_root
-                                
+
                                 ## if json.has_key('date'):
                                 ##     ts = Timestamp(json['date'])
                                 ## else:
                                 ##     ts = Timestamp(f.split('.')[0])
                                 ##     json['date'] = str(ts.compact(accuracy="day"))
                                 ## json_path = os.path.join(root, ts.filename(".json"))
-                                
+
                                 ## save_json(json_path, json)
 
                                 ## self.append(s)
@@ -504,7 +504,7 @@ class CollectionSummary(object):
         self.root = root
         #just incase meta files are not stored in the root of the collection
         self.meta_root = root
-        
+
         self.name = os.path.basename(root)
         if not self.name:
             #maybe there was a trailing slash... this should fix that:
@@ -536,7 +536,7 @@ class CollectionSummary(object):
         for l in self.locations:
             if os.path.exists(l):
                 self.available.append(l)
-        
+
 
         self.save()
 
@@ -567,7 +567,7 @@ class CollectionSummary(object):
             self.meta_root = os.path.join(self.root, 'meta')
             if not os.path.exists(alt_json_file):
                 print("WARNING: couldn't find json on collection load: %s" % (json_file))
-                                
+
 
         #now see if we have something
         if os.path.exists(json_file):
@@ -575,7 +575,7 @@ class CollectionSummary(object):
             if 'locations' in self.json_data:
                 self.locations = self.json_data['locations']
             if 'metas' in self.json_data:
-                self.metas = self.json_data['metas']        
+                self.metas = self.json_data['metas']
 
     def save(self, json_file=None):
         """
@@ -590,14 +590,14 @@ class CollectionSummary(object):
         self.json_data['name'] = self.name
         self.json_data['root'] = self.root
         self.json_data['meta_root'] = self.meta_root
-        save_json(json_file, self.json_data) 
+        save_json(json_file, self.json_data)
 
     ## def load_scraper(self):
 
     ##     #print "loading logging"
     ##     #import logging
     ##     #logging.basicConfig(level=logging.DEBUG)
-        
+
     ##     print("loading scraper from: %s" % self.root)
     ##     # Build the manager
     ##     simplePluginManager = PluginManager(plugin_info_ext="medley-plugin")
@@ -605,13 +605,13 @@ class CollectionSummary(object):
     ##     #simplePluginManager.setPluginPlaces(["path/to/myplugins"])
     ##     simplePluginManager.setPluginPlaces([self.root])
     ##     # Load all plugins
-    ##     simplePluginManager.collectPlugins()    
+    ##     simplePluginManager.collectPlugins()
 
     ##     number_found = len(simplePluginManager.getAllPlugins())
     ##     print("Activate all loaded plugins: %s" % number_found)
     ##     for plugin in simplePluginManager.getAllPlugins():
     ##         #plugin.plugin_object.print_name()
-            
+
     ##         print("Activating: %s" % plugin.name)
     ##         simplePluginManager.activatePluginByName(plugin.name)
 
@@ -621,7 +621,7 @@ class CollectionSummary(object):
     ##         self.scraper = plugin.plugin_object
     ##     else:
     ##         self.scraper = None
-        
+
 
     def load_collection(self, json_file=None):
         """
@@ -661,7 +661,7 @@ class CollectionSummary(object):
         for root in self.available:
             option = os.path.join(root, base_dir)
             print("Checking path: %s" % option)
-            if os.path.exists(option): 
+            if os.path.exists(option):
                 json = find_json(option)
                 if json:
                     print("FOUND: %s" % json)
@@ -738,7 +738,7 @@ class CollectionSummary(object):
             parts = re.findall(r'\w+', name)
             #print parts
             for part in parts:
-                try: 
+                try:
                     ts = Timestamp(part)
                     #print ts
                     if newest_date and (ts.datetime > newest_date.datetime):
@@ -750,13 +750,13 @@ class CollectionSummary(object):
                         newest_date = ts
                         newest_group = name
                     else:
-                        #must be an older item 
+                        #must be an older item
                         pass
-                    
+
                 except:
                     #must not be a datestring
                     pass
-                
+
         return newest_group
 
 
@@ -786,7 +786,7 @@ class CollectionSummary(object):
                 groups.append(name)
             else:
                 metas.append(name)
-            
+
         newest_meta = None
         newest_date = None
         #find newest meta now
@@ -797,7 +797,7 @@ class CollectionSummary(object):
             parts = re.findall(r'\w+', name)
             #print parts
             for part in parts:
-                try: 
+                try:
                     ts = Timestamp(part)
                     #print ts
                     if newest_date and (ts.datetime > newest_date.datetime):
@@ -809,20 +809,20 @@ class CollectionSummary(object):
                         newest_date = ts
                         newest_meta = name
                     else:
-                        #must be an older item 
+                        #must be an older item
                         pass
-                    
+
                 except:
                     #must not be a datestring
                     pass
-                
+
         return newest_meta
 
     def scan_metas(self):
         """
         go through our list of JSON meta files
         make sure any previously found ones still exist
-        add new ones        
+        add new ones
         """
         if not os.path.exists(self.meta_root):
             os.makedirs(self.meta_root)
@@ -839,7 +839,7 @@ class CollectionSummary(object):
 
         #*2012.11.09 11:47:34
         #not always ending in .json anymore
-        #(but should always have .json in the name)            
+        #(but should always have .json in the name)
         for o in options:
             if re.search('.*\.json', o) and not check_ignore(o, ignores):
                 if o not in self.metas:
@@ -863,7 +863,7 @@ class Collections(list):
 
         #keep track if we've already called load:
         self.loaded = False
-        
+
         # should be a list of paths only
         # if a path is relative (starts with './') use self.root
         # otherwise assume it is a full path
@@ -919,7 +919,7 @@ class Collections(list):
         options = self.scan()
         for option in options:
             self.add(option)
-    
+
     def load_summaries(self, collection_list=[]):
         """
         (re)load any collections
@@ -928,11 +928,11 @@ class Collections(list):
         """
         #clear out our contents first
         del self[:]
-        
+
         if collection_list:
             print("Updating Collections.paths to: %s" % collection_list)
             self.paths = collection_list
-            
+
         for path in self.paths:
             if re.match('^\.', path):
                 path = os.path.join(self.root, path[2:])
@@ -953,7 +953,7 @@ class Collections(list):
 
         if not self.loaded:
             self.load_summaries()
-            
+
         for collection_summary in self:
             if collection_summary.name == name:
                 if debug:
@@ -988,14 +988,13 @@ class Collections(list):
             if option.available:
                 available.append(option)
         return available
-            
-         
+
+
 
 class Cluster(list):
     """
     A Cluster is essentially a list of clouds.
     These are useful for grouping like items with like items.
-
 
     clusters were once referred to as groups
     but that is too generic of a name in this case
@@ -1013,7 +1012,7 @@ class Cluster(list):
 
         #used in from_cloud and to_cloud
         self.tag = None
-        
+
     def save(self, destination=None):
         """
         similar to save json, but custom formatting to make editing easier
@@ -1026,14 +1025,14 @@ class Cluster(list):
 
         if not destination:
             raise ValueError("No destination specified: %s" % destination)
-        
+
         json_file = codecs.open(destination, 'w', encoding='utf-8', errors='ignore')
         #split = json.dumps(ordered_list)
         split = json.dumps(self)
         split = split.replace('], ', ', ], \n')
         split = split.replace(']]', ', ]]')
         json_file.write(split)
-        json_file.close()    
+        json_file.close()
 
     def load(self, source=None, create=False):
         """
@@ -1043,7 +1042,7 @@ class Cluster(list):
 
         if not source:
             raise ValueError("No source specified: %s" % source)
-                
+
         if not os.path.exists(source):
             if create:
                 self.save(source)
@@ -1096,7 +1095,7 @@ class Cluster(list):
         self.extend(groups)
 
         return groups
-    
+
 
     def from_cloud(self, cloud_file, tag):
         """
@@ -1104,7 +1103,7 @@ class Cluster(list):
         less decoration in that case
 
         tag will be used to find the latest entry with that tag
-        
+
         """
         self.source = cloud_file
         self.tag = tag
@@ -1118,7 +1117,7 @@ class Cluster(list):
             ##     print "No data for: %s" % clouds.tags(tag)[0]
             ##     exit()
         else:
-            print("no ->%s<- tags found!" % tag)
+            print("no ->%s<- tags found in %s" % (tag, cloud_file))
             exit()
 
         #print len(lines)
@@ -1126,7 +1125,7 @@ class Cluster(list):
         for l in lines:
             new_group = l.split()
             groups.append(new_group)
-        
+
         del self[:]
         self.extend(groups)
 
@@ -1149,7 +1148,7 @@ class Cluster(list):
 
         if not tags:
             raise ValueError("Need a tag! (%s)" % tags)
-        
+
         data = ''
         ct = 0
         for group in self:
@@ -1158,7 +1157,7 @@ class Cluster(list):
             #    if str(i) in g:
             #        g.remove(str(i))
             #group.insert(0, str(ct))
-            
+
             data += " ".join(group) + '\n'
             ct += 1
 
@@ -1167,8 +1166,8 @@ class Cluster(list):
         clouds.make(data=data, tags=tags)
         clouds.save(destination)
         print("Saved cloud: %s" % destination)
-        
-    
+
+
     def remove(self, ignores):
         """
         go through lists and remove all matching items in ignores
@@ -1197,7 +1196,7 @@ class Cluster(list):
                         group.remove(item)
                     else:
                         print("keeping dupe: %s" % item)
-                        
+
             #print len(group)
 
         return flat
@@ -1239,7 +1238,7 @@ class Cluster(list):
         #remove from anywhere else first:
         self.remove( [item] )
         self[position].append(item)
-        
+
     def merge_in(self, incoming, add_new=False, keep_order=False):
         """
         take the incoming cluser and merge its items in, moving our items around
@@ -1281,7 +1280,7 @@ class Cluster(list):
 
                 #place to keep track of the new order being applied by incoming
                 new_sub = []
-                
+
                 for item in cur_incoming:
                     if (not item in self_all) and add_new:
                         if keep_order:
@@ -1301,7 +1300,7 @@ class Cluster(list):
                                     cur_self.append(item)
                                 else:
                                     new_sub.append(item)
-                                    
+
                                 if sub_ct < ct:
                                     print("down: %s (from %s to %s)" % (item, sub_ct, ct))
                                 else:

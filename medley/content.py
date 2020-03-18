@@ -2,10 +2,10 @@
 Content related objects.
 
 What best describes this object? Going with Content... other options were:
-Thing, Item, Medium, Source, 
+Thing, Item, Medium, Source,
 
 These are too specific:
-Song, Podcast, Album, Image, Book, Movie, Scene, 
+Song, Podcast, Album, Image, Book, Movie, Scene,
 
 """
 from __future__ import print_function
@@ -19,7 +19,7 @@ import hashlib
 
 from .helpers import save_json, find_json, load_json, get_media_dimensions, get_media_properties, make_json_path, find_media, find_jsons
 
-from moments.path import Path
+from sortable.path import Path
 from moments.timestamp import Timestamp
 from moments.tag import to_tag
 #for history:
@@ -35,7 +35,7 @@ class Mark(object):
     jump, bookmark, markpoint/MarkPoint
     """
     def __init__(self, tag='', position=0, source=None, length=None, created=None, bytes=None, title="", seconds=None):
-        #*2013.06.16 08:24:49 
+        #*2013.06.16 08:24:49
         #not sure how tag and title differ... (see note below)
         #also what about 'name' or 'description' (better in a segment)
 
@@ -46,9 +46,9 @@ class Mark(object):
         #also different ways of splitting tags up...
         #sometimes only use a space
         #sometimes use a comma
-        #see self.split_tags()        
+        #see self.split_tags()
         self.tag = tag
-        
+
         #once we've determined the real title of the mark location:
         #self.title = title
         #this is better represented in a segment instead of a mark
@@ -63,7 +63,7 @@ class Mark(object):
 
         if seconds:
             self.position = float(seconds) * 1000
-        
+
         #only used in mortplayer
         #assuming length should be ms?
         self.length = length
@@ -74,7 +74,7 @@ class Mark(object):
 
         #these are used in m3u lists
         self.bytes = bytes
-        
+
     def split_tags(self):
         """
         many different ways of specifying multiple tags
@@ -97,9 +97,9 @@ class Mark(object):
             for tag in raw_tags:
                 if tag:
                     tags.append(tag)
-            
+
         return tags
-    
+
     def __repr__(self):
         #return "%s, %s, %s, %s\n" % (self.position, self.tag, self.title, self.source)
         return "%s, %s, %s\n" % (self.position, self.tag, self.source)
@@ -126,8 +126,8 @@ class Mark(object):
             self.from_hms(minutes=int(parts[0]), seconds=int(parts[1]))
         else:
             raise ValueError("Unknown number of parts for time: %s (%s)" % (parts, len(parts)))
-            
-        
+
+
     #def from_milliseconds(self, milli_seconds=None):
     def as_hms(self, milli_seconds=None):
         """
@@ -194,7 +194,7 @@ class Mark(object):
         return (self.total_seconds(), self.tag)
 
     # FORMAT SPECIFC CONVERTERS:
-    
+
     def as_mortplayer(self):
         """
         return a string representation needed for mortplayer bookmarks
@@ -217,7 +217,7 @@ class Mark(object):
             #bytes_per_second = old_div(bitrate, 8.0)
             bytes_per_second = bitrate / 8.0
             #bytes = int(old_div((float(self.position) * bytes_per_second), 1000))
-            bytes = int( (float(self.position) * bytes_per_second) / 1000 ) 
+            bytes = int( (float(self.position) * bytes_per_second) / 1000 )
             result = "{name=%s,bytes=%s,time=%s}" % (new_tag, bytes, self.total_seconds())
             self.bytes = bytes
         return result
@@ -235,7 +235,7 @@ class MarkList(list):
     instead of a list of integers (as in MarkListSimple)
     use acutal Mark objects
     this adds complexity, but also makes the object more powerful
-    
+
     includes methods for comparing one list to anther for easier merging
 
     this is not format specific
@@ -243,7 +243,7 @@ class MarkList(list):
     """
     def __init__(self, items=[], comma=''):
         super(MarkList, self).__init__()
-        
+
         #self.extend(items)
         for item in items:
             if isinstance(item, Mark):
@@ -263,7 +263,7 @@ class MarkList(list):
         sorted() function is also available
         """
         super(MarkList, self).sort(key=lambda mark: mark.position)
-            
+
     def to_tuples(self):
 
         result = []
@@ -278,7 +278,7 @@ class MarkList(list):
             mark.seconds = t[0]
             mark.tag = t[1]
             self.append(mark)
-            
+
     def segment_helper(self, segment, new_segments, parent, titles, title_index):
         """
         need to do this step at the end of every segment
@@ -310,7 +310,7 @@ class MarkList(list):
                     new_title = "%s - Part %s - %s seconds" % (cur_title, count, segment_len)
                     segment.title = new_title
                     count += 1
-                    
+
                 parent.add_segment(segment)
         else:
             segment.title = cur_title
@@ -337,7 +337,7 @@ class MarkList(list):
         if not titles:
             #get titles from parent content object:
             titles = parent.titles
-        
+
         groups = [ ]
 
         #reset segment ID
@@ -352,7 +352,7 @@ class MarkList(list):
         else:
             #want to keep track of the latest one passed in, if it is.
             parent.track_prefix = default_pattern
-            
+
         in_talk = False
 
         last_mark = None
@@ -367,7 +367,7 @@ class MarkList(list):
         #not sure that this is what we want...
         #first tag may be talk, but it may be late in the first song
         #first_segment = True
-        
+
         segment = Content()
         segment.status = ''
         start = Mark("start", 0)
@@ -381,7 +381,7 @@ class MarkList(list):
         #buffer for holding segments that are not finished
         #due to talk subsegments
         new_segments = []
-        
+
         #current_group = [ Mark("start", 0, key) ]
         #for next_mark in f_marks[key]:
         for next_mark in self:
@@ -435,11 +435,11 @@ class MarkList(list):
 
                 new_segments.append(sub_segment)
                 #parent.add_segment(sub_segment)
-                    
+
                 ## if first_segment:
                 ##     #get rid of initial (default) (first) segment start:
                 ##     segment.marks.pop()
-                        
+
                 ##     segment.start = next_mark
                 ##     segment.marks.append(next_mark)
                 ##     first_segment = False
@@ -452,7 +452,7 @@ class MarkList(list):
                 segment.status = ''
                 segment.start = next_mark
                 segment.marks.append(next_mark)
-                
+
                 in_talk = False
 
             #this is the start of a new track / segment
@@ -468,7 +468,7 @@ class MarkList(list):
                                                   titles, title_index)
                 #clear these out
                 new_segments = []
-                
+
                 segment = Content()
                 segment.status = ''
                 segment.start = next_mark
@@ -494,7 +494,7 @@ class MarkList(list):
 
         #last segment doesn't need an end mark...
         #that should signal play to end
-        
+
         #don't forget last group found:
         #parent.add_segment(segment)
         self.segment_helper(segment, new_segments, parent, titles, title_index)
@@ -509,7 +509,7 @@ class MarkList(list):
 
         this version assumes all marks indicate a new segment
         instead of searching for only matching expressions
-        
+
         parent is still the main Content object that will hold all of these segments
         """
         groups = [ ]
@@ -540,7 +540,7 @@ class MarkList(list):
 
             #title_index = self.segment_helper(segment, new_segments, parent,
             #                                  titles, title_index)
-            
+
             #add previous track to parent
             parent.add_segment(segment)
 
@@ -566,7 +566,7 @@ class MarkList(list):
             if not re.match('\d', mark.tag):
                 mark.tag = "%s. %s" % (count, mark.tag)
             count += 1
-        
+
     def extract_titles(self):
         """
         go through the list of marks we have
@@ -593,7 +593,7 @@ class MarkList(list):
             except:
                 print("could not convert %s to int from: %s" % (j, source))
         return self
-    
+
     def to_comma(self):
         """
         combine self into a comma separated string
@@ -627,13 +627,13 @@ class MarkList(list):
         response = ''
         local = set(self)
         other = set(compare)
- 
+
         #check if either is a subset of the other
         #cset = set(c[0][1])
         #iset = set(i[0][1])
-        
+
         common = local.intersection(other)
-        
+
         if len(local.difference(other)) == 0:
             #same set!
             #could be the same item
@@ -654,10 +654,10 @@ def import_content(source, all_contents={}, drive_dir=None):
     and sometimes we want there to be one, if there is not already
 
     many of these checks need to happen before initializing the Content object
-    
+
     """
     content = None
-    
+
     option = source
     #when importing content, should match the filename
     #other wise all media items in the folder will use the same name
@@ -698,7 +698,7 @@ def import_content(source, all_contents={}, drive_dir=None):
 
         #this only works if source is a moments.Path object:
         #content.filename = option.filename
-        
+
         content.filename = os.path.basename(str(option))
 
         #set content_base here too
@@ -718,7 +718,7 @@ def import_content(source, all_contents={}, drive_dir=None):
                 content.drive_dir = content_path
 
             print("Drive dir result: ", content.drive_dir)
-            
+
         else:
             dd_path = Path(drive_dir)
             content.base_dir = dd_path.to_relative(content_path)
@@ -730,17 +730,36 @@ def import_content(source, all_contents={}, drive_dir=None):
 
     return content
 
+class ContentPointer(object):
+    """
+    Refer to a specific Content object
+    only hold the items necessary to Summarize/describe it locally
+    similar to what is done in playlists that refer to Content
+    should be easy to put the gist of this on a playlist
+    """
+    def __init__(self):
+        #where the full json source originates
+        self.original_path = ''
+        self.collection_name = ''
+
+        #may not always be up to date if parent directory changes
+        self.original_full_path = ''
+
+        #for estimating size later (even if it might not be available)
+        self.size = ''
+
+
 class SimpleContent(object):
     """
     Object to hold details of a particular piece of content (media)
 
     This type of content should never have a nested structure.
     The best example is a photo. Maybe there will be other types too.
-    
+
     """
     def __init__(self, source=None, content={}, base_dir='', debug=False):
 
-        #everything leading up to the base_dir 
+        #everything leading up to the base_dir
         #this is the start of the collection (collection root path)
         self.drive_dir = ''
 
@@ -752,7 +771,7 @@ class SimpleContent(object):
 
         #keep track of where this object's meta data is stored:
         self._json_source = ''
-        
+
         #the default content/media related filename associated with the content
         #moving this to a property (like path), to assist with searching
         self._filename = ''
@@ -794,7 +813,7 @@ class SimpleContent(object):
         #i.e. autoload!
 
         if content and source:
-            raise ValueError("Cannot initialize Content object with both source and dictionary: %s, %s" % (source, content)) 
+            raise ValueError("Cannot initialize Content object with both source and dictionary: %s, %s" % (source, content))
 
         elif content:
             #what was passed in for manual initialization:
@@ -803,7 +822,7 @@ class SimpleContent(object):
             self.load()
 
         elif source:
-            
+
             #we might not have self.json_source yet,
             #but we know we have source
             #source_dir = os.path.dirname(self.json_source)
@@ -851,7 +870,7 @@ class SimpleContent(object):
                     #update segments too... make sure everything is in sync:
                     #for segment in self.segments:
                     #    segment
-                        
+
                 else:
                     #base_dir didn't match our source_path
                     #this could happen in the case of copied content
@@ -865,14 +884,14 @@ class SimpleContent(object):
                 if self.drive_dir != source_dir:
                     #print "Updating self.drive_dir: ->%s<- (type: %s) to: ->%s<- (type: %s)" % (self.drive_dir, type(self.drive_dir), source_dir, type(source_dir))
                     self.drive_dir = source_dir
-                    
+
 
 
     def _get_filename(self):
         return self._filename
-            
+
     def _set_filename(self, name):
-        self._filename = name            
+        self._filename = name
 
     filename = property(_get_filename, _set_filename)
 
@@ -886,9 +905,9 @@ class SimpleContent(object):
 
     def _get_json_source(self):
         return self._json_source
-            
+
     def _set_json_source(self, name):
-        self._json_source = name            
+        self._json_source = name
 
     json_source = property(_get_json_source, _set_json_source)
 
@@ -918,7 +937,14 @@ class SimpleContent(object):
             #print "%s" % content
             print("")
             print(content)
-            print(self.json_source)
+            print("JSON:", self.json_source)
+            print("Base:", self.base_dir)
+
+            #could try to convert the found object
+            #this will vary based on the origina format
+            #for item in content:
+            #    print(item)
+
             raise ValueError("Unknown type of content: %s" % type(content))
 
         #start keeping track of ultimate source for this content
@@ -940,14 +966,14 @@ class SimpleContent(object):
         if 'date' in content:
             self.timestamp = Timestamp(content['date'])
             del content['date']
-            
+
         if 'title' in content:
             self.title = content['title']
             del content['title']
-            
+
         if 'description' in content:
             self.description = content['description']
-            del content['description']            
+            del content['description']
 
         if 'sites' in content:
             self.sites = content['sites']
@@ -957,7 +983,7 @@ class SimpleContent(object):
             for person in content['people']:
                 self.people.append(to_tag(person))
             del content['people']
-            
+
         if 'tags' in content:
             for tag in content['tags']:
                 self.tags.append(to_tag(tag))
@@ -984,7 +1010,7 @@ class SimpleContent(object):
 
             #return found_entries
             self.history = journal
-            
+
             del content['history']
 
         #deprecated: root is ambiguous here
@@ -1055,11 +1081,11 @@ class SimpleContent(object):
         if self.title or include_empty:
             snapshot['title'] = self.title
         if self.timestamp or include_empty:
-            if self.timestamp: 
+            if self.timestamp:
                 snapshot['timestamp'] = self.timestamp.compact()
             else:
                 snapshot['timestamp'] = ''
-                
+
         if self.base_dir or include_empty:
             snapshot['base_dir'] = self.base_dir
         if self.filename or include_empty:
@@ -1070,14 +1096,14 @@ class SimpleContent(object):
             snapshot['drive_dir'] = self.drive_dir
 
         if self.json_source or include_empty:
-            snapshot['json_source'] = self.json_source            
+            snapshot['json_source'] = self.json_source
 
         if self.history or include_empty:
             l = Log()
             l.from_entries(self.history.sort())
             snapshot['history'] = l.to_string()
             l.close()
-            
+
             #snapshot['history'] = self.history
 
         return snapshot
@@ -1125,14 +1151,14 @@ class SimpleContent(object):
         """
         if location is None:
             location = self.path
-        
+
         extensions = {}
 
         if debug:
             print("Looking at Location: %s" % location)
 
         if location and os.path.exists(location) and os.path.isdir(location):
-            if debug: 
+            if debug:
                 print("Location Available!: %s" % location)
             for root,dirs,files in os.walk(location):
                 for f in files:
@@ -1182,8 +1208,8 @@ class SimpleContent(object):
                         print("REMOVING DUPE: %s" % media)
                     else:
                         filenames.append(mpath.name)
-                    
-                
+
+
 
         combined = []
         for key in list(extensions.keys()):
@@ -1219,7 +1245,7 @@ class SimpleContent(object):
                 shorts.append(path.to_relative(self.drive_dir))
 
             combined = shorts
-            
+
         #at this point, could store result
         #or could look for sizes
         #or could generate generic summary files based on what we do know
@@ -1229,7 +1255,7 @@ class SimpleContent(object):
     def make_hash(self, filename=None):
         """
         via this excellent thread:
-        http://stackoverflow.com/questions/1131220/get-md5-hash-of-big-files-in-python        
+        http://stackoverflow.com/questions/1131220/get-md5-hash-of-big-files-in-python
         """
 
         if filename:
@@ -1242,8 +1268,8 @@ class SimpleContent(object):
             return None
         else:
             md5 = hashlib.md5()
-            with open(path, 'rb') as f: 
-                for chunk in iter(lambda: f.read(8192), b''): 
+            with open(path, 'rb') as f:
+                for chunk in iter(lambda: f.read(8192), b''):
                      md5.update(chunk)
 
             self.hash = md5.hexdigest()
@@ -1289,10 +1315,10 @@ class SimpleContent(object):
         elif new_entry:
             #want to keep the file the same, but nothing else
             moment.tags = Tags()
-            
+
         else:
             moment.tags = Tags()
-            
+
             created = self.path.created()
             if created and use_file_created:
                 moment.created = created
@@ -1307,16 +1333,16 @@ class SimpleContent(object):
         return moment
 
 
-    
+
 #aka NestedContent, or ContentTree
 class Content(SimpleContent):
     """
     Object to hold details of a particular piece of content (media)
 
     content varies wildly in scope
-    
+
     could be:
-        
+
         - a simple audio file (.wav, .mp3) representing a song
         - a podcast or mix tape containing many songs or segments
         - a movie clip
@@ -1324,7 +1350,7 @@ class Content(SimpleContent):
 
     the main content often has supporting meta data
     (e.g. cover art, etc)
-    
+
     or multiple, varying instances of the same content
     (e.g. different bitrates, non-compressed, different resoultions)
 
@@ -1364,7 +1390,7 @@ class Content(SimpleContent):
         #but even then, there could be a default, smaller version
         #plus, totally optional
         self.image = ''
-        
+
         self.marks = MarkList()
         #it is common to keep a separate list of titles
         #that are then paired with marks to create segments
@@ -1380,7 +1406,7 @@ class Content(SimpleContent):
         #
         #e.g. a single sub-track segment in a podcast
         #could be on another playlist
-        #and editing meta data on that segment in that playlist 
+        #and editing meta data on that segment in that playlist
         #will open + save changes to the original main Context json source file
         #
         #this is facilitated by a self.add_segment method
@@ -1391,7 +1417,7 @@ class Content(SimpleContent):
         #segments should list the full path of segment_ids from root to self
         #e.g. 1_4_2_1 (5 layers deep)
         self.segment_id = ''
-                
+
         #starting at 1 here... not an index, just an id
         self.next_segment_id = 1
 
@@ -1399,7 +1425,7 @@ class Content(SimpleContent):
         #when calling make_segments
         #(empty strings are also matched by default)
         self._track_prefix = ''
-        
+
 
 
         #this will allow Content objects to be recursively used in segments
@@ -1414,7 +1440,7 @@ class Content(SimpleContent):
         self.end = None
 
         # there are many different states that a piece of content could be in
-        # depending on the process being used to parse 
+        # depending on the process being used to parse
         #instead of complete, using a more general status field
         #can be customized based on process used to add/update meta data
         self.status = 'new'
@@ -1471,7 +1497,7 @@ class Content(SimpleContent):
                 return self.root._seek_up(attribute)
             else:
                 return None
-            
+
     def _seek_down(self, attribute='_filename', depth_first=True):
         """
         only look for the specified attribute by searching down
@@ -1495,7 +1521,7 @@ class Content(SimpleContent):
                     index += 1
                 else:
                     return None
-        
+
         elif hasattr(self, attribute):
             return getattr(self, attribute)
         else:
@@ -1517,13 +1543,13 @@ class Content(SimpleContent):
                     return ''
                     #don't call self.debug() if raising an error!
                     #raise ValueError, "Could not find filename anywhere"
-                
+
             return option
         else:
             return self._filename
-            
+
     def _set_filename(self, name):
-        self._filename = name            
+        self._filename = name
 
     filename = property(_get_filename, _set_filename)
 
@@ -1543,9 +1569,9 @@ class Content(SimpleContent):
                 return option
         else:
             return self._json_source
-            
+
     def _set_json_source(self, name):
-        self._json_source = name            
+        self._json_source = name
 
     json_source = property(_get_json_source, _set_json_source)
 
@@ -1557,28 +1583,28 @@ class Content(SimpleContent):
                 if not option:
                     #print "Could not find track_prefix anywhere"
                     return ''
-                
+
             return option
         else:
             return self._track_prefix
-            
+
     def _set_track_prefix(self, name):
-        self._track_prefix = name            
+        self._track_prefix = name
 
     track_prefix = property(_get_track_prefix, _set_track_prefix)
 
     def _get_path(self):
         """
         use self.drive_dir and self.base_dir to determine the current path
-        
+
         this is a better way to quickly determine the current full path
         this is useful for calls to __repr__ and __str__
-        
-        Content object might not always be part of a Collection 
+
+        Content object might not always be part of a Collection
         or the Collection may not be loaded (e.g. in a Playlist)
         all we really need in this case is the collection base
         (the part of the path that changes due to storage shifts / mounts)
-        
+
         previously, in Source objects, it was just .path
         but this can be brittle when drive locations change (as they often do)
 
@@ -1589,7 +1615,7 @@ class Content(SimpleContent):
           might not be able to rely on creator to do this
           and some levels may not have any media associated with it
           in which case it doesn't make much sense
-          
+
         - a way to scan the levels for the closest viable path
           this is tricky since it might not be obvious which way to go
           (trace up, or dig down)
@@ -1621,10 +1647,10 @@ class Content(SimpleContent):
 
                         #seems like if you're asking for a path
                         #and the parts aren't there, that's an error
-                        
+
                         #but if we're not using *both* basedir *and* drive_dir
                         #then this is overkill
-                        
+
                         #will keep error on drive dir... do need something.
                         #raise ValueError, "Incomplete base_dir: %s (base_dir).  Could not find base_dir anywhere: %s" % (self.base_dir, self.root.to_dict())
             else:
@@ -1634,10 +1660,10 @@ class Content(SimpleContent):
             return os.path.join(dd_option, bd_option)
         else:
             return os.path.join(self.drive_dir, self.base_dir)
-        
+
     def _set_path(self, name):
         self.parse_name(name)
-        
+
     path = property(_get_path, _set_path)
 
     def add_segment(self, segment):
@@ -1651,7 +1677,7 @@ class Content(SimpleContent):
         #this should be set during Content.__init__
         #otherwise it is not carried all the way down the chain
         #segment.root = self.root
-        
+
         if not segment.segment_id:
             #generate a new segment_id here
             #based on self.segment_id
@@ -1662,7 +1688,7 @@ class Content(SimpleContent):
             self.next_segment_id += 1
 
             segment.segment_id = new_id
-        
+
         self.segments.append(segment)
 
     def get_segment(self, segment_id):
@@ -1711,7 +1737,7 @@ class Content(SimpleContent):
         for segment in self.segments:
             self.titles.append(segment.title)
             self.marks.append(segment.start)
-        
+
     def extract_segment(self, destination, title=None):
         """
         adapted from split_media script
@@ -1748,14 +1774,14 @@ class Content(SimpleContent):
 
             if not title:
                 title_parts = self.title.split('. ')
-                main_title = title_parts[-1].replace(', ', '-')                
+                main_title = title_parts[-1].replace(', ', '-')
                 title = to_ascii2(main_title)
                 title = to_tag(title)
 
             #parts = self.filename.split('.')
             #
             #suffix = parts[-1]
-            
+
             dest_part = "%s/%s-%s" % (destination, title, self.filename)
 
             #if it already exists, this command won't exit cleanly
@@ -1801,7 +1827,7 @@ class Content(SimpleContent):
             content = self.content
 
         #following is handled by parent class SimpleContent.load():
-        
+
         ## #if we're trying to create a new Content object from scratch,
         ## #we don't want to raise this error.
         ## #if not content:
@@ -1836,15 +1862,15 @@ class Content(SimpleContent):
         ## if content.has_key('date'):
         ##     self.timestamp = Timestamp(content['date'])
         ##     del content['date']
-            
+
         ## if content.has_key('title'):
         ##     self.title = content['title']
         ##     del content['title']
-            
+
         ## if content.has_key('description'):
         ##     self.description = content['description']
         ##     del content['description']
-            
+
         ## if content.has_key('sites'):
         ##     self.sites = content['sites']
         ##     del content['sites']
@@ -1853,7 +1879,7 @@ class Content(SimpleContent):
         ##     for person in content['people']:
         ##         self.people.append(to_tag(person))
         ##     del content['people']
-            
+
         ## if content.has_key('tags'):
         ##     for tag in content['tags']:
         ##         self.tags.append(to_tag(tag))
@@ -1880,7 +1906,7 @@ class Content(SimpleContent):
 
         ##     #return found_entries
         ##     self.history = journal
-            
+
         ##     del content['history']
 
         ## #deprecated: root is ambiguous here
@@ -2031,7 +2057,7 @@ class Content(SimpleContent):
         if self.title or include_empty:
             snapshot['title'] = self.title
         if self.timestamp or include_empty:
-            if self.timestamp: 
+            if self.timestamp:
                 snapshot['timestamp'] = self.timestamp.compact()
             else:
                 snapshot['timestamp'] = ''
@@ -2053,7 +2079,7 @@ class Content(SimpleContent):
 
         if self.json_source or include_empty:
             snapshot['json_source'] = self.json_source
-            
+
         if self.start.total_seconds() or include_empty:
             snapshot['start'] = self.start.total_seconds()
 
@@ -2095,7 +2121,7 @@ class Content(SimpleContent):
             l.from_entries(self.history.sort())
             snapshot['history'] = l.to_string()
             l.close()
-            
+
             #snapshot['history'] = self.history
 
         #root can sometimes be full path to a specific drive
@@ -2121,7 +2147,7 @@ class Content(SimpleContent):
         #print "searching using: %s" % search
         media_check = re.compile(search)
         options = []
-        
+
         if location and os.path.exists(location) and os.path.isdir(location):
             if debug:
                 print("Drive Available!: %s" % disk)
@@ -2155,13 +2181,13 @@ class Content(SimpleContent):
                         if debug:
                             print("Removing: %s" % image)
                         images.remove(image)
-                        
+
             if debug:
                 print(images)
             self.image = images[0]
         else:
             self.image = ''
-        
+
     def check_new(self):
         """
         look at our own status
@@ -2179,15 +2205,15 @@ class Content(SimpleContent):
                 if not all_new:
                     return all_new
                 #otherwise keep looking
-                
+
         #if we make it here, it should be new
         assert all_new == True
-        return all_new        
+        return all_new
 
     def update_dimensions(self, options, force=False, debug=False):
         """
         compare options with our internal list of media
-        
+
         options is a list of paths to media
 
         #two common ways to generate them:
@@ -2215,7 +2241,7 @@ class Content(SimpleContent):
                         matches.append(m)
                         if item in options:
                             options.remove(item)
-        
+
         if debug:
             print("after looking at cache, matched: %s items" % len(matches))
             print("still need to find: %s new items" % len(options))
@@ -2241,7 +2267,7 @@ class Content(SimpleContent):
         make a printable representation of self that is easy to read and debug
         """
         result = ""
-        
+
 
         #these require that the string representation is working
         result += ''.ljust(indent) + str(self) + '\n'
@@ -2263,7 +2289,7 @@ class Content(SimpleContent):
 
         if self.media:
             result += ''.ljust(indent) + 'media: %s\n' % self.media
-            
+
         if self.start:
             result += ''.ljust(indent) + 'start: %s\n' % self.start.total_seconds()
         else:
@@ -2321,4 +2347,3 @@ class Content(SimpleContent):
 
         #print result
         return result
-

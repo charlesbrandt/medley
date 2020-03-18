@@ -35,7 +35,7 @@ http://tools.ietf.org/html/draft-ietf-appsawg-json-patch-02
 3. diff textually:
 http://stackoverflow.com/questions/4599456/textually-diffing-json
 
-python diff_json_and_merge.py /path/to/d1 /path/to/d2
+python3 sync_jsons.py /path/to/d1 /path/to/d2
 
 it is best if d1 is a subset of d2 (pruned collection derived from bigger one)
 
@@ -58,7 +58,8 @@ import json, codecs
 from difflib import Differ, unified_diff
 from pprint import pprint
 
-from moments.path import Path
+#from moments.path import Path
+from sortable.path import Path
 from moments.filters import unaccented_map
 
 def usage():
@@ -131,7 +132,7 @@ def diff_json(local, other):
                     'value': r,
                     'prev': l
                 })
-    
+
 
     result = []
     _recursive_diff(local, other, result)
@@ -173,11 +174,12 @@ def load_json(source_file):
 
 def diff_files(fname, path1, path2, indent, sync=False, use_system_diff=False):
 
+    print("Sync:", sync)
     #until we prove otherwise, we'll assume they're different
     is_difference = True
     added = False
     skipped = False
-    
+
     p1 = Path(path1)
     n1 = p1.load()
     n1.check_size()
@@ -193,8 +195,8 @@ def diff_files(fname, path1, path2, indent, sync=False, use_system_diff=False):
 
         #could do additional checks if desired
         #enabling another diff level will take longer, but will be more accurate:
-        f_a = file(path1)
-        f_b = file(path2)
+        f_a = open(path1)
+        f_b = open(path2)
         a = f_a.readlines()
         b = f_b.readlines()
         diff = unified_diff(a, b)
@@ -207,10 +209,12 @@ def diff_files(fname, path1, path2, indent, sync=False, use_system_diff=False):
             print("EQUAL sizes: %s %s" % (n1.size, n2.size))
             print(" %s - BOTH, DIFFERENT CONTENT" % fname.translate(unaccented_map()))
 
-            print("Exiting...  should investigate difference further")
+            #print("Exiting...  should investigate difference further")
             #this is not a common situation... should check what is going on
-            exit()
-            
+            #but it could be that the json was saved with the keys in a different order but with the same content
+            #exit()
+            print("Skipping, same size but differences")
+
         #could move it somewhere else:
         #os.rename(path1, os.path.join(d1, "dupes", fname))
         #os.rename(path2, os.path.join(d2, "merged", fname))
@@ -254,7 +258,7 @@ def diff_files(fname, path1, path2, indent, sync=False, use_system_diff=False):
             #diff_system( path1.translate(unaccented_map()),
             #             path2.translate(unaccented_map()) )
 
-            
+
             #import jsonpatch
             #src = load_json(path1)
             #dst = load_json(path2)
@@ -278,14 +282,14 @@ def diff_files(fname, path1, path2, indent, sync=False, use_system_diff=False):
             patch = jsonpatch.make_patch(src, dst)
             print(patch)
 
-            print("cp %s %s" % (path2, path1))
-            added = path2
-
             if sync:
-                #WARNING! THIS DOES THE COPY... WILL OVERWRITE!!!!
-                shutil.copy(path1, path2)
+                print("cp %s %s" % (path2, path1))
+                added = path2
 
-        
+                #WARNING! THIS DOES THE COPY... WILL OVERWRITE!!!!
+                shutil.copy(path2, path1)
+
+
         if use_system_diff:
             print("diffing: %s %s\n" % (path1, path2))
             try:
@@ -298,8 +302,8 @@ def diff_files(fname, path1, path2, indent, sync=False, use_system_diff=False):
 
 
 
-def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False, sync=True ):
-    
+def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False, sync=False):
+
     is_difference = False
     skipped = []
     added = []
@@ -313,12 +317,17 @@ def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False, sync=True
     d2 = p2.load()
     #d2 = make_node(dpath2, relative=False)
     d2.scan_directory()
-    d2contents = d2.listdir[:]
-    
-    for item in d1.listdir:
+    d2contents = os.listdir(str(d2.path))
+    #d2contents = d2.listdir[:]
+    print(d2contents)
+
+    d1contents = os.listdir(str(d1.path))
+
+    for item in d1contents:
         #items to ignore:
         if (item not in [ "ignore_me.txt", ".hg" ]):
 
+            print(item)
             #print datetime.now()
             n1path = os.path.join(dpath1, item)
             n2path = os.path.join(dpath2, item)
@@ -335,8 +344,8 @@ def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False, sync=True
 
                     #TODO:
                     #do comparison and merge of json objects here:
-                    (this_diff, this_added, this_skipped) = diff_files(item, n1path, n2path, indent, sync)
-                    
+                    (this_diff, this_added, this_skipped) = diff_files(item, n1path, n2path, indent, sync=sync)
+
                     is_difference |= this_diff
                     if this_diff:
                         print("For: %s" % n1path)
@@ -362,19 +371,19 @@ def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False, sync=True
                     d2contents.remove(item)
                     if show_both:
                         print("%s - BOTH" % item.translate(unaccented_map()))
-                
+
                 p1 = Path(n1path)
                 if p1.type() == "Directory":
                     if os.path.exists(n2path):
                         if recurse:
-                            (last_difference, last_added, last_skipped) = diff_dirs(n1path, n2path, recurse, indent+1, sync)
+                            (last_difference, last_added, last_skipped) = diff_dirs(n1path, n2path, recurse, indent+1, sync=sync)
                             is_difference |= last_difference
                             added.extend(last_added)
                             skipped.extend(last_skipped)
 
                             ## if last_difference:
                             ##     print "Differences found: %s" % n1path
-                            ##     #add a new line after finished with 
+                            ##     #add a new line after finished with
                             ##     if not indent:
                             ##         print "\n"
                         else:
@@ -382,7 +391,7 @@ def diff_dirs(dpath1, dpath2, recurse=True, indent=0, show_both=False, sync=True
                     else:
                         print("%s - D1 ONLY" % item.translate(unaccented_map()))
                         is_difference = True
-                        
+
 
     #if anything is left in d2contents, it must not have been in d1
     if len(d2contents):
@@ -407,11 +416,12 @@ if __name__ == '__main__':
         #        - if newer is smaller, show visual diff (or an alert at minimum)
 
         #debug mode to show what the differences are
-        (diff, added, skipped) = diff_dirs(d1, d2)
+        #(diff, added, skipped) = diff_dirs(d1, d2)
+        #when ready to really sync, uncomment:
+        (diff, added, skipped) = diff_dirs(d1, d2, sync=True)
 
         print("ADDED:")
         print('\n'.join(added))
 
         print("\nSKIPPED:")
         print('\n'.join(skipped))
-        

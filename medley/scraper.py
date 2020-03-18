@@ -23,7 +23,7 @@ import urllib.parse
 import http.cookiejar
 
 from moments.timestamp import Timestamp
-from moments.path import Path
+from sortable.path import Path
 
 try:
     import json
@@ -43,7 +43,7 @@ def download_image(url, destination_path, tags=[], alt_name="image", people=[], 
     download the image at the url to the destination_path directory
     update name if needed
     """
-    
+
     print()
     print(url)
     print("drive_dir", drive_dir)
@@ -165,7 +165,7 @@ def download_images(urls, destination_path, tags=[], alt_name="image", people=[]
     update names if needed
     """
     results = []
-    
+
     #for url in urls[:1]:
     for url in urls:
         if url:
@@ -256,7 +256,7 @@ def download(url, dest):
     very simple download that wraps python's urllib.urlretrieve() call
     """
 
-    #*2011.06.29 21:40:11 download_file python 
+    #*2011.06.29 21:40:11 download_file python
     #http://stackoverflow.com/questions/22676/how-do-i-download-a-file-over-http-using-python
     #urllib.urlretrieve ("http://www.example.com/songs/mp3.mp3", "mp3.mp3")
 
@@ -268,7 +268,7 @@ def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloa
     specialized download routine to use the browser to save files
     then poll for the file to be complete before moving on
 
-    driver is an instance of a selenium/webdriver instance running a browser 
+    driver is an instance of a selenium/webdriver instance running a browser
 
     if the download stalls, move on after a threshold is met
 
@@ -288,16 +288,25 @@ def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloa
     #until after you start the download
     #(that is, it only shows up in the directory.)
     #
-    #to work around that, 
+    #to work around that,
     #get the current files in the directory before starting the download
     #then look after and see what the difference is
     pre_files = os.listdir(browser_root)
 
+    driver.set_page_load_timeout(30)
     #this kicks off the actual download:
-    driver.get(link)
+    try:
+        #*2017.10.18 21:26:01
+        #this has been hanging in firefox
+        #the download is processed, but the driver doesn't see that
+        #catch the exception (after it times out)
+        #and then move on
+        driver.get(link)
+    except:
+        pass
 
     #make sure there has been time for .part to be created
-    time.sleep(30)
+    time.sleep(10)
 
     post_files = os.listdir(browser_root)
     new_files = []
@@ -337,8 +346,8 @@ def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloa
                     print("time to ping! %s, %s" % (now, ping_page))
                     driver.get(ping_page)
                     ping_start = Timestamp()
-            
-            
+
+
             #if the size has changed, something is happening
             #not stalled
             if new_size != size:
@@ -356,18 +365,19 @@ def download_with_browser_helper(driver, link, browser_root='/Users/user/Downloa
                     #check if stall_start was 25 minutes ago
 
                     if now.datetime > stall_start.future(minutes=25).datetime:
-                        print("stall threshold met. deleting: %s" % dest)
+                        print("stall threshold met. deleting: %s" % dpart)
                         dpartp.remove()
-                        dpath.remove()
+                        #download_dest.remove()
                         #if we get here, we know it didn't work
                         skipped = True
 
                         #log skips to make sure we go back:
                         skip_dest = os.path.join(browser_root, "skips.txt")
                         skip_file = codecs.open(skip_dest, 'a', encoding='utf-8', errors='ignore')
-                        skip_file.write(o)
+                        skip_file.write(dpart)
                         skip_file.write("\n")
-                        skip_file.write(json.dumps(scene))
+                        skip_file.write(link)
+                        skip_file.write("\n")
                         skip_file.write("\n")
                         skip_file.close()
                 else:
@@ -388,8 +398,10 @@ def move_download(source, destination):
     """
 
     escaped_dest = destination.replace(' ', '\\ ')
+    escaped_dest = escaped_dest.replace('(', '\\(')
+    escaped_dest = escaped_dest.replace(')', '\\)')
     command = "mv %s %s" % (str(source), escaped_dest)
-    #print command
+    print(command)
     mv = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
     mv.wait()
     #print "moved file to: %s" % dest
@@ -401,6 +413,7 @@ def download_with_browser(driver, link, destination_root, browser_dl_root='/User
         dest = os.path.join(destination_root, filename)
         print("Moving: %s to %s" % (downloaded_item, dest))
         move_download(downloaded_item, dest)
+        print("Finished moving: %s to %s" % (downloaded_item, dest))
         return dest
     else:
         print("No file downloaded: %s" % filename)
@@ -408,7 +421,7 @@ def download_with_browser(driver, link, destination_root, browser_dl_root='/User
 
 def save_current(driver, destination='./', page_id=1, prefix="site_name"):
     if not os.path.exists(destination):
-        os.makedirs(destination)        
+        os.makedirs(destination)
 
     #page = driver.get_page_source()
     page = driver.page_source

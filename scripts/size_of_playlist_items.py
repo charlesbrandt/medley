@@ -2,8 +2,8 @@
 """
 #
 # By: Charles Brandt [code at charlesbrandt dot com]
-# On: *2013.06.05 21:46:45 
-# License: MIT 
+# On: *2013.06.05 21:46:45
+# License: MIT
 
 # Requires:
 # moments
@@ -11,8 +11,8 @@
 # Description:
 go through all items in a playlist and determine the size the disk space that the items use
 
-cd /c/medley/scripts
-python size_of_playlist_items.py /media/path/to.m3u
+cd medley/scripts
+python3 size_of_playlist_items.py /media/path/to.m3u
 
 
 """
@@ -24,10 +24,10 @@ from medley.formats import M3U
 from medley.helpers import load_json, get_media_properties
 from medley.content import Content
 
-from moments.path import Path, check_ignore
+from sortable.path import Path, check_ignore
 
 def usage():
-    print(__doc__)    
+    print(__doc__)
 
 def summarize_items(items, media_root, ignores):
     """
@@ -43,12 +43,20 @@ def summarize_items(items, media_root, ignores):
     # only include summarized results for the list here
     # (may be more than one)
     summary = [ ]
-    
+
     total_size = 0
     total_items = 0
     #seconds?
     total_length = 0
     for item in items:
+        # make sure it's a path
+        try:
+            #if it's a content item (loaded from m3u)
+            item = os.path.join(item.path, item.filename)
+        except:
+            # otherwise just a normal path
+            item = str(item)
+        print("\nsize_of_list for: ", item)
         check_item = False
         #see if it's in the media_root that was passed in
         #force check in that case
@@ -63,26 +71,26 @@ def summarize_items(items, media_root, ignores):
             p = Path(item)
             f = p.load()
 
-            try:
-                results = get_media_properties(item)
-                cur_size = f.check_size()
-                total_size += cur_size
-            except:
-                print "missing: %s" % item
-            else: 
-                if results[0] != None:
-                    print results
-                    results = list(results)
-                    results.append(cur_size)
-                    results.append(item)
-                    total_length += results[1]
-                    total_items += 1
-                    #print item
-                    details.append(results)
-                else:
-                    print "skipping: %s" % item
-                
-    print "found %s matching items" % total_items
+            #try:
+            results = get_media_properties(item)
+            cur_size = f.check_size()
+            total_size += cur_size
+            #except:
+            #    print("missing: %s" % item)
+            #else:
+            if results[0] != None:
+                print(results)
+                results = list(results)
+                results.append(cur_size)
+                results.append(item)
+                total_length += results[1]
+                total_items += 1
+                #print item
+                details.append(results)
+            else:
+                print("skipping: %s" % item)
+
+    print("found %s matching items" % total_items)
     summary = [ total_size, total_length, total_items ]
     return (summary, details)
 
@@ -94,6 +102,10 @@ def size_of_list(source, media_root=None, ignores=['/c/',]):
     items = []
     if re.search('.m3u', source):
         items = M3U(source)
+        (summary, details) = summarize_items(items, media_root, ignores)
+        details.insert( 0, (source, ) )
+        summary.insert( 0, source )
+        return ([summary, ], details)
 
     elif re.search('.json', source):
         loaded = load_json(source)
@@ -112,11 +124,11 @@ def size_of_list(source, media_root=None, ignores=['/c/',]):
             details.insert( 0, (source, ) )
             summary.insert( 0, source )
             return ([summary, ], details)
-        
+
         elif isinstance(loaded, dict):
             #walk the tree to load each item individually
             #call size_of_list() recursively
-            print "dictionary found:"
+            print("dictionary found:")
             #print loaded
             summary_total = []
             details_total = []
@@ -129,36 +141,10 @@ def size_of_list(source, media_root=None, ignores=['/c/',]):
                 details_total.extend(details)
             return (summary_total, details_total)
 
-    total_size = 0
-    total_items = 0
-    #seconds?
-    total_length = 0
-    for item in items:
-        check_item = False
-        if media_root and re.match(media_root, item):
-            check_item = True
-        #elif not re.match(ignore, item):
-        elif not check_ignore(item, ignores):
-            check_item = True
-
-        if check_item:
-            p = Path(item)
-            f = p.load()
-
-            total_size += f.check_size()
-            results = get_media_properties(item)
-            print(results)
-            total_length += results[1]
-            total_items += 1
-            #print item
-
-    print("found %s matching items" % total_items)
-    return total_size, total_length, total_items
-
 def main():
     #requires that at least one argument is passed in to the script itself
     #(through sys.argv)
-    if len(sys.argv) > 1: 
+    if len(sys.argv) > 1:
         helps = ['--help', 'help', '-h']
         for i in helps:
             if i in sys.argv:
@@ -192,11 +178,14 @@ def main():
             f.write(','.join(new_detail))
             f.write('\n')
         f.close()
-        
+
+        print()
+        print("Details saved to: ", dest)
+
 
     else:
         usage()
         exit()
-        
+
 if __name__ == '__main__':
     main()

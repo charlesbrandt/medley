@@ -6,8 +6,6 @@ Medley: "a mixture, especially of heterogeneous elements; hodgepodge; jumble."
 
 Medley helps sort through collections of content.
 
-Welcome to Medley!
-
 Medley has 3 main parts:
 
 - A python library for storing and sorting meta data for content

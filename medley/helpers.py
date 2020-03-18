@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 # By: Charles Brandt [code at contextiskey dot com]
-# On: *2012.09.19 17:50:21 
+# On: *2012.09.19 17:50:21
 # License:  MIT
 
 # Description:
@@ -16,14 +16,16 @@ import logging
 import subprocess
 import zipfile
 
-from moments.path import Path
 from moments.journal import Journal
 from moments.tag import to_tag
+
+from sortable.path import Path
+
 
 def save_json(destination, json_objects):
     json_file = codecs.open(destination, 'w', encoding='utf-8', errors='ignore')
     json_file.write(json.dumps(json_objects))
-    json_file.close()    
+    json_file.close()
 
 def load_json(source_file, create=False):
     if not os.path.exists(source_file):
@@ -93,7 +95,7 @@ def find_jsons(item, limit_by_name=False, debug=False):
             d = parent.load()
             if debug:
                 print("%s not a directory, using: %s" % (item, parent))
-            
+
         matches = []
         for j in d.files:
             #if debug:
@@ -118,7 +120,7 @@ def find_jsons(item, limit_by_name=False, debug=False):
             print("Found the following: %s" % matches)
 
         return matches
-    
+
 def find_json(item, limit_by_name=False, debug=False):
     """
     take any string
@@ -138,7 +140,7 @@ def find_json(item, limit_by_name=False, debug=False):
     otherwise the default behavior will be to try to match the name
     if there is more than one json in the directory
     otherwise it won't be strict
-    
+
     """
     matches = find_jsons(item, limit_by_name, debug)
 
@@ -163,11 +165,28 @@ def find_json(item, limit_by_name=False, debug=False):
         #maybe this should be checked for directories too???
         if p.type() != "Directory":
             name = to_tag(p.name)
-            
-        if name: 
-            for match in matches:
-                if re.search(name, str(match)):
-                    found = match
+
+
+        # need to decide which is the best one
+        # probably will be the largest item
+
+        sizes = []
+        for item in matches:
+            sizes.append( ( os.path.getsize(str(item)), item) )
+
+        sizes.sort()
+        print(sizes)
+        matches = []
+        for item in sizes:
+            matches.append(item[1])
+
+        # last one should be biggest
+        
+        # (not necessarily the same name)
+        ## if name:
+        ##     for match in matches:
+        ##         if re.search(name, str(match)):
+        ##             found = match
 
         if found:
             logging.debug("find_json: matched name: %s" % found)
@@ -192,7 +211,7 @@ def find_htmls(item):
         if re.search('.*\.html$', o):
             html = os.path.join(root, o)
             matches.append(html)
-            
+
     return matches
 
 def find_media(item):
@@ -215,7 +234,7 @@ def find_media(item):
     matches.extend(root.movies)
     return matches
 
-    
+
 def find_zips(item):
     p = Path(item)
     if p.type() == "Directory":
@@ -230,9 +249,9 @@ def find_zips(item):
         if re.search('.*\.zip$', o):
             zipf = os.path.join(root, o)
             matches.append(zipf)
-            
+
     return matches
-    
+
 def get_media_dimensions(movie_p, debug=False):
     """
     expects a full path to a media item
@@ -241,8 +260,8 @@ def get_media_dimensions(movie_p, debug=False):
 
     sudo apt-get install libav-tools
     """
-    #command1 = "ffmpeg -i %s" % (movie_p)
-    command1 = "avconv -i %s" % (movie_p)
+    command1 = "ffmpeg -i %s" % (movie_p)
+    #command1 = "avconv -i %s" % (movie_p)
     #print command1
     process = subprocess.Popen(command1, shell=True,
                                stdout=subprocess.PIPE,
@@ -255,11 +274,11 @@ def get_media_dimensions(movie_p, debug=False):
     lines = output.splitlines()
     for line in lines:
         #print line
-        if re.search('Stream', line):
-            if re.search('Video', line):
+        if re.search('Stream', str(line, 'utf-8')):
+            if re.search('Video', str(line, 'utf-8')):
                 #this is specific to the version of ffmpeg you are using
                 #adjust accordingly
-                parts = line.split(' ')
+                parts = str(line, 'utf-8').split(' ')
                 if debug:
                     print("FOUND: %s" % parts)
                 #size = parts[-1]
@@ -270,13 +289,13 @@ def get_media_dimensions(movie_p, debug=False):
                 #get rid of trailing commas:
                 if re.search(',$', size):
                     size = size[:-1]
-                    
+
                 #size = parts[-11]
 
     #print size
     return size
 
-def get_media_properties(movie_p, debug=False):
+def get_media_properties(movie_p, debug=True):
     """
     expects a full path to a media item
     use ffmpeg/avconv to query media for dimensions
@@ -287,9 +306,9 @@ def get_media_properties(movie_p, debug=False):
 
     sudo apt-get install libav-tools
     """
-    #command1 = "ffmpeg -i %s" % (movie_p)
-    command1 = 'avconv -i "%s"' % (movie_p)
-    #print command1
+    command1 = 'ffmpeg -i "%s"' % (movie_p)
+    #command1 = 'avconv -i "%s"' % (movie_p)
+    print(command1)
     process = subprocess.Popen(command1, shell=True,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
@@ -300,10 +319,10 @@ def get_media_properties(movie_p, debug=False):
     dimensions = None
     seconds = None
     bitrate = None
-    
+
     lines = output.splitlines()
     for line in lines:
-        #print line
+        print(line)
         if re.search('Stream', str(line, 'utf-8')):
             if re.search('Video', str(line, 'utf-8')):
                 #this is specific to the version of ffmpeg you are using
@@ -319,7 +338,7 @@ def get_media_properties(movie_p, debug=False):
                 #get rid of trailing commas:
                 if re.search(',$', dimensions):
                     dimensions = dimensions[:-1]
-                    
+
                 #dimensions = parts[-11]
         elif re.search('Duration', str(line, 'utf-8')):
             #print "DURATION!!"
@@ -339,14 +358,14 @@ def get_media_properties(movie_p, debug=False):
 
     if not seconds:
         print("\n\n")
-        print("Warning! Could not parse output from avconv!!")
+        print("Warning! Could not parse output from ffmpeg/avconv!!")
         print("Media file probably corrupt")
         for line in lines:
             print(line)
 
         #optional to raise an error here:
         #raise ValueError, "Invalid media. See above output"
-        
+
     #could return filesize if needed (content.update_dimensions handles this)
     #filesize = os.path.getsize(movie_p)
 
@@ -359,7 +378,7 @@ def grab_frame(movie_p, position, destination=None, debug=False):
     use ffmpeg/avconv to extract a frame from the specified file
 
     position is in seconds
-    
+
     sudo apt-get install libav-tools
 
     http://blog.roberthallam.org/2010/06/extract-a-single-image-from-a-video-using-ffmpeg/comment-page-1/
@@ -368,12 +387,13 @@ def grab_frame(movie_p, position, destination=None, debug=False):
     if not destination:
         parent = os.path.dirname(movie_p)
         destination = os.path.join(parent, '1.jpg')
-        
+
     #command1 = "ffmpeg -i %s" % (movie_p)
     #command1 = "avconv -i %s" % (movie_p)
     #command1 = "ffmpeg -ss %s -i %s -t 1 -s 480x300 -f image2 imagefile.jpg" % (position, movie_p)
     #command1 = "avconv -ss %s -i %s -t 1 -f image2 1.jpg" % (position, movie_p)
-    command1 = "avconv -ss %s -i %s -t 1 -f image2 %s" % (position, movie_p, destination)
+    #command1 = "avconv -ss %s -i %s -t 1 -f image2 %s" % (position, movie_p, destination)
+    command1 = "ffmpeg -ss %s -i %s -t 1 -f image2 %s" % (position, movie_p, destination)
     #print command1
     process = subprocess.Popen(command1, shell=True,
                                stdout=subprocess.PIPE,
@@ -389,7 +409,7 @@ def extract_zip(zip_file, debug=False):
     >>> os.path.split(a)
     ('', 'hello')
     """
-    
+
     sources = []
     zipp = Path(zip_file)
     #print zipp.name
@@ -398,7 +418,7 @@ def extract_zip(zip_file, debug=False):
     #sources.append(zip_root)
     if not os.path.exists(zip_root):
         os.makedirs(zip_root)
-        
+
     zfile = zipfile.ZipFile(zip_file)
     for name in zfile.namelist():
         (dirname, filename) = os.path.split(name)
@@ -429,7 +449,7 @@ def load_cloud(cloud_name, cloud_file):
 
     if not os.path.exists(cloud_file):
         raise ValueError("Couldn't find cloud file: %s" % cloud_file)
-    
+
     clouds = Journal(cloud_file)
 
     if clouds:
@@ -466,7 +486,7 @@ def find_and_load_json(item, debug=False):
         else:
             parent = p.parent()
             d = parent.load()
-            
+
         loaded = None
         for j in d.files:
             if re.search('.*\.json', str(j)):
@@ -477,7 +497,5 @@ def find_and_load_json(item, debug=False):
                 loaded = load_json(match)
                 #jso = file(os.path.join(str(parent), str(j)))
                 #loaded = json.loads(jso.read())
-                
+
     return loaded
-
-

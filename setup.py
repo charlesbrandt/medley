@@ -8,10 +8,10 @@ setup(
     author_email='code@charlesbrandt.com',
     packages=['medley'],
     scripts=[],
-    url='https://bitbucket.org/cbrandt/medley/',
+    url='https://github.com/charlesbrandt/medley/',
     license='LICENSE.txt',
     description='Objects to help process and sort collections and their contents.',
-    long_description=open('README.txt').read(),
+    long_description=open('README.md').read(),
     install_requires=[
     ],
 )

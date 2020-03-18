@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
 # By: Charles Brandt [code at contextiskey dot com]
-# On: *2012.04.24 13:05:58 
-# License:  MIT 
+# On: *2012.04.24 13:05:58
+# License:  MIT
 
 # Description:
 Generalized collection of marks / position times associated with a specific media file
@@ -13,20 +13,21 @@ but a single source could have many marks associated with it (no concept of this
 load in the tab delimited bookmark exported by Mort Player (on Android)
 
 """
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
-from future import standard_library
-standard_library.install_aliases()
+## from __future__ import print_function
+## from __future__ import absolute_import
+## from __future__ import division
+## from future import standard_library
+## standard_library.install_aliases()
 from builtins import str
 from builtins import object
-from past.utils import old_div
+#from past.utils import old_div
 
 import os, sys, codecs, re
 import logging
 
 from moments.timestamp import Timestamp
-from moments.path import Path
+#from moments.path import Path
+from sortable.path import Path
 
 from .content import Mark, Content, MarkList, import_content
 from .helpers import make_json_path
@@ -37,10 +38,12 @@ def usage():
 class M3U(list):
     """
     have come up with many different ways to convert M3U files
-    but never an object to represent one natively
+    this is an object to represent one natively
 
     the most simple format is simply a list of strings,
     where each string represents a path to a specific media
+
+    however, this creates a list of medley Content objects
 
     """
     def __init__(self, source=None):
@@ -63,7 +66,7 @@ class M3U(list):
 
         if source is None:
             raise ValueError("Need a source sooner or later: %s" % source)
-        
+
         print("opening: %s" % source)
         #for reading unicode
         f = codecs.open(source, 'r', encoding='utf-8')
@@ -99,14 +102,15 @@ class M3U(list):
                         time = fulltime.split('=')[1]
 
                         bytes_per_second = 24032.0
-                        ms = (old_div(float(bytes), bytes_per_second)) * 1000
+                        #ms = (old_div(float(bytes), bytes_per_second)) * 1000
+                        ms = float(bytes) // bytes_per_second * 1000
                         ms = int(ms)
 
                         ## if int(time) < 0:
                         ##     # need to figure out time based on bytes
-                        ##     # sometimes vlc gives negative values 
+                        ##     # sometimes vlc gives negative values
                         ##     # that doesn't help
-                        ##     # also [2012.10.12 11:24:19] 
+                        ##     # also [2012.10.12 11:24:19]
                         ##     # not just negative values that can be wrong
                         ##     #
                         ##     # this value could change based on encoding:
@@ -117,7 +121,7 @@ class M3U(list):
                         ##     ms = int(ms)
                         ## else:
                         ##     ms = int(time) * 1000
-                        
+
                     else:
                         raise ValueError("Unknown number of sub parts in bookmarks: %s" % sub_parts)
 
@@ -126,6 +130,12 @@ class M3U(list):
                 #must have a filename here
                 #now we can process mark options
                 location = line.strip()
+
+                # if line starts with 'file:/', remove it
+                location = location.replace('file://', '')
+
+                print(location)
+
                 #content = Content()
                 #content.media.append(location)
                 if os.path.exists(location):
@@ -151,7 +161,7 @@ class M3U(list):
                         content.load()
                 else:
                     print("Skipping: %s" % location)
-                    
+
         f.close()
 
         return self
@@ -166,7 +176,7 @@ class M3U(list):
 
         if destination is None:
             raise ValueError("Need a destination sooner or later: %s" % destination)
-        
+
         print("opening: %s" % destination)
         f = codecs.open(destination, 'w', encoding='utf-8')
 
@@ -182,7 +192,7 @@ class M3U(list):
             else:
                 path = item
                 bookmarks = ''
-                
+
             if (verify and os.path.exists(path)) or (not verify):
                 #TODO:
                 #could use an ID3 library to load this information here:
@@ -194,7 +204,7 @@ class M3U(list):
                 #have been converted to strings along the way
                 #m3u += u"#EXTINF:{0}\r\n".format(title)
                 m3u += u"#EXTINF:%s,%s - %s\r\n" % (str(length), str(artist), str(title))
-                
+
                 if bookmarks:
                     m3u += "#EXTVLCOPT:bookmarks=%s\r\n" % bookmarks
 
@@ -212,18 +222,18 @@ class M3U(list):
         f.write(m3u)
         f.close()
         return m3u
-        
+
 
 
 
 class TextIndex(object):
-    
+
     #previously Marks.save_marks
     #outputs a text list of media and track lists
     def save_marks(self, files):
         for key in list(files.keys()):
             files[key].sort()
-            pre_parts = key.split('/') 
+            pre_parts = key.split('/')
             parts = pre_parts[-1].split('.')
             destination = parts[0] + '.txt'
             f = codecs.open(destination, 'w', encoding='utf-8')
@@ -262,8 +272,8 @@ class MortplayerBookmarks(list):
     to avoid a collosal 'Converter' type object again.
 
 
-    
-    
+
+
     marks is a dictionary of files and their corresponding Mark objects
 
     can probably just use a standard dictionary for this
@@ -279,7 +289,7 @@ class MortplayerBookmarks(list):
     def __init__(self, source=None):
         self.source = source
 
-    
+
     #def from_mortplayer(self, source=None):
     def load(self, source=None):
         """
@@ -291,7 +301,7 @@ class MortplayerBookmarks(list):
 
         if source is None:
             raise ValueError("Need a source sooner or later: %s" % source)
-        
+
         print("opening: %s" % source)
         #for reading unicode
         f = codecs.open(source, 'r', encoding='utf-8')
@@ -300,7 +310,8 @@ class MortplayerBookmarks(list):
             (location, number, name, ms1, end, utime) = line.strip().split('\t')
             if number == "1":
                 created = Timestamp()
-                created.from_epoch(old_div(float(utime), 1000))
+                #created.from_epoch(old_div(float(utime), 1000))
+                created.from_epoch(float(utime) // 1000)
                 #print "*%s %s" % (created, name)
 
                 ## #print (location, number, name, ms1, end, utime)
@@ -373,7 +384,7 @@ class MortplayerBookmarks(list):
         f = codecs.open(destination, 'w', encoding='utf-8')
         f.write(m3u)
         f.close()
-                
+
         return m3u
 
 
@@ -392,7 +403,7 @@ class MortplayerBookmarks(list):
             if location in files:
                 files[location].append(mark)
             else:
-                files[location] = [ mark ] 
+                files[location] = [ mark ]
 
         return files
 
@@ -419,7 +430,7 @@ class MortplayerBookmarks(list):
             f_marks = self.group_marks_by_file()
 
         new_f_marks = {}
-        
+
         for key in list(f_marks.keys()):
             #could find default pattern and insert it here instead of "start"
             file_groups = [ ]
@@ -447,7 +458,7 @@ class MortplayerBookmarks(list):
                     #is the same
                     #would be nice to identify...
                     #might be one of the manual steps
-                    
+
                     current_group.append( next_mark )
                     in_talk = False
 
@@ -465,7 +476,7 @@ class MortplayerBookmarks(list):
             #don't forget last group found:
             file_groups.append(current_group)
             new_f_marks[key] = file_groups
-            
+
         return new_f_marks
 
 
@@ -476,7 +487,7 @@ class MortplayerBookmarks(list):
     def update_locations(self, old_prefix, new_prefix):
         """
         only update locations for loaded marks
-        
+
         """
         for mark in self:
             #year = date[0:4]
@@ -484,7 +495,7 @@ class MortplayerBookmarks(list):
             #new_source = os.path.join(prefix, year, date, correct_name)
             relative = Path(mark.source).to_relative(old_prefix)
             new_source = os.path.join(new_prefix, relative)
-            
+
             if new_source != mark.source:
                 logging.debug("original source: %s" % mark.source)
                 logging.debug("new source: %s" % new_source)
@@ -500,7 +511,7 @@ class MortplayerBookmarks(list):
     #def find_bookmarks(source):
     def find_pluses(self, source):
 
-        log_check = re.compile('.*\.mpb$')    
+        log_check = re.compile('.*\.mpb$')
         if os.path.isdir(source):
             f_marks = {}
             for root,dirs,files in os.walk(source):
@@ -539,7 +550,7 @@ class MortplayerBookmarks(list):
         go through all bookmark files (mpb) and update any old locations to be the new one in use
         (don't want to lose those marks!)
         """
-        log_check = re.compile('.*\.mpb$')    
+        log_check = re.compile('.*\.mpb$')
         if os.path.isdir(source):
             for root,dirs,files in os.walk(source):
                 for f in files:
@@ -557,7 +568,7 @@ class MortplayerBookmarks(list):
                             if len(name_parts) == 3:
                                 #print "new name format: %s" % parts[-1]
                                 correct_name = parts[-1]
-                                date = correct_name.split('-')[1]                        
+                                date = correct_name.split('-')[1]
                             else:
                                 #print "old name format: %s" % parts[-1]
                                 date = ''.join(name_parts[1:4])
@@ -585,8 +596,8 @@ class MortplayerBookmarks(list):
 
         (should also populate f_marks via group_marks_by_file)
         """
-        log_check = re.compile('.*\.mpb$')    
-        text_check = re.compile('.*\.txt$')    
+        log_check = re.compile('.*\.mpb$')
+        text_check = re.compile('.*\.txt$')
         f_marks = {}
         if os.path.isdir(source):
             for root,dirs,files in os.walk(source):
@@ -615,7 +626,7 @@ class MortplayerBookmarks(list):
         find and load all bookmarks under source
         return results
         """
-        log_check = re.compile('.*\.mpb$')    
+        log_check = re.compile('.*\.mpb$')
         f_marks = {}
         if os.path.isdir(source):
             for root,dirs,files in os.walk(source):
@@ -639,7 +650,7 @@ class iPhoneBookmarks(list):
     """
     def __init__(self, source=None):
         self.source = source
-    
+
     def load(self, source=None):
         """
         read in the source
@@ -650,7 +661,7 @@ class iPhoneBookmarks(list):
 
         if source is None:
             raise ValueError("Need a source sooner or later: %s" % source)
-        
+
         print("opening: %s" % source)
         #for reading unicode
         f = codecs.open(source, 'r', encoding='utf-8')
@@ -670,7 +681,7 @@ class iPhoneBookmarks(list):
                     cur_mark = None
                 if len(cur_list):
                     groups[cur_track] = cur_list
-                    
+
                 found_track = True
                 #cut off "Track: " prefix
                 cur_track = line[7:]
@@ -680,11 +691,11 @@ class iPhoneBookmarks(list):
             elif re.match("Bookmark: ", line):
                 if cur_mark:
                     cur_list.append(cur_mark)
-                
+
                 cur_mark = Mark()
                 #TODO: convert date here
                 cur_mark.tag = line[10:].strip()
-                    
+
             elif re.match("Start Time: ", line):
                 time = line[12:]
                 cur_mark.from_time(time)
@@ -697,7 +708,7 @@ class iPhoneBookmarks(list):
             else:
                 #other lines that we don't need to worry about:
                 print("Skipping line: %s" % line)
-                
+
             ## (location, number, name, ms1, end, utime) = line.strip().split('\t')
             ## if number == "1":
             ##     created = Timestamp()
@@ -729,7 +740,7 @@ class iPhoneBookmarks(list):
             return groups
         else:
             return groups
-        
+
 
     def save(self, destination='temp.mpb'):
         """
@@ -747,7 +758,7 @@ class iPhoneBookmarks(list):
 class Converter(object):
     """
     Sources generator
-    
+
     a collection of routines used to convert to and from a Sources list
 
     approaches Sources generation from many different levels
@@ -755,7 +766,7 @@ class Converter(object):
     rather than bog down and clutter the Sources object directly
     can just generate or convert it here
     """
-    
+
     def __init__(self, path=None, sources=None):
         """
         accept a path as the source
@@ -770,7 +781,7 @@ class Converter(object):
         self.path = path
 
         #if path is not None:
-            
+
         ## if sources is None:
         ##     self.sources = Sources()
         ## else:
@@ -789,7 +800,7 @@ class Converter(object):
 
         sources = self.from_journal(path, sort)
         return sources
-            
+
 
     def from_entry(self, entry):
         """
@@ -816,7 +827,7 @@ class Converter(object):
                     exit()
                 jumpstr = parts[sl_pos+1]
                 jumps = Jumps(jumpstr)
-                
+
                 try:
                     source_file = parts[sl_pos+2]
                 except:
@@ -826,13 +837,13 @@ class Converter(object):
 
                 #get rid of surrounding quotes here
                 source_file = source_file.replace('"', '')
-                
+
                 source.path = source_file
                 source.jumps = jumps
                 source.entry = entry
                 #print "adding source: %s" % source
                 sources.append( source )
-                
+
             elif line.strip():
                 #this will not work with entries that have file paths
                 #and other comments/text in them:
@@ -844,7 +855,7 @@ class Converter(object):
                     source_file = source_file.replace('media/', '')
                     source_file = '/c/' + source_file
                 #elif re.match('^graphics', source_file):
-                
+
                 ## if re.match('^/', source_file):
                 ##     source = Source()
                 ##     source.path = source_file
@@ -863,7 +874,7 @@ class Converter(object):
             #if source.entry:
             #    print "Source: %s, entry: %s" % (source, source.entry.render())
 
-                
+
         return sources
 
     def from_entries(self, entries, sources=None):
@@ -877,7 +888,7 @@ class Converter(object):
             sources = Sources()
         for e in entries:
             sources.extend(self.from_entry(e))
-            
+
         sources.update()
         return sources
 
@@ -892,7 +903,7 @@ class Converter(object):
         """
         #if destination is None:
         destination = Sources()
-        
+
         ## freq = Association()
         ## for i in pl:
         ##     freq.associate(i, i[0])
@@ -1003,7 +1014,7 @@ class Converter(object):
             else:
                 #in this case, the list should have been the same
                 pass
-            
+
         items = condensed
         print("After Condensing: %s" % len(items))
 
@@ -1052,14 +1063,14 @@ class Converter(object):
 
         destination.update()
         return destination
-    
+
     def from_copy_all_urls(self, data):
         """
         parse a buffer that contains output from copy all urls as a list
 
         for now skipping title lines... will need those for export
         """
-        
+
         for line in data.splitlines():
             if line.startswith('http://') or line.startswith('/'):
                 self.append(line.strip())
@@ -1075,7 +1086,7 @@ class Converter(object):
             print(i.render())
 
         sources = self.from_entries(j, sources)
-            
+
         print(len(sources))
         if sort:
             #condense and sort will change the order of an entry list
@@ -1107,7 +1118,7 @@ class Converter(object):
                 moment = source.as_moment()
                 moment.tags.union(tags)
                 j.update_entry(moment)
-                
+
         j.to_file(destination)
 
     def to_links(self, prefix='/dir'):
@@ -1118,7 +1129,7 @@ class Converter(object):
             links += "\r\n"
         return links
 
-    def to_xspf(self, filename=None):        
+    def to_xspf(self, filename=None):
         xspf = StringIO.StringIO("Hello")
         xml = XmlWriter(xspf, indentAmount='  ')
 
@@ -1150,7 +1161,7 @@ class Converter(object):
 
         xml.end() # trackList
         xml.end() # playlist
-        
+
         xspf.seek(0)
         return xspf.read()
 
@@ -1178,11 +1189,10 @@ def main():
         #check_bookmark_availability(source)
         #find_pluses(source)
         merge_all_bookmarks_with_tracks(source)
-        
+
     else:
         usage()
         exit()
-        
+
 if __name__ == '__main__':
     main()
-
