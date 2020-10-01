@@ -67,8 +67,9 @@ def extract_segment(args):
     duration = end_seconds - start_seconds
 
 
+    
     #works, but distorted
-    command = "ffmpeg -ss %s -t %s -i %s -vcodec copy -acodec copy -preset veryslow %s" % (start_seconds, duration, args.source, dest)
+    command = 'ffmpeg -ss %s -t %s -i "%s" -vcodec copy -acodec copy -preset veryslow %s' % (start_seconds, duration, args.source, dest)
 
     #this one didn't work
     #command = "ffmpeg -ss %s -to %s -i %s -vcodec copy -acodec copy -preset veryslow %s" % (start_seconds, end_seconds, args.source, args.destination)
